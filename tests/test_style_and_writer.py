@@ -1,0 +1,103 @@
+"""Unit tests for Gemini response handling, fail-closed schema validation, and plain-English style."""
+
+import unittest
+from unittest.mock import patch, MagicMock
+import urllib.error
+
+from src.article_writer import ArticleWriter
+from src.research import ResearchBrief
+from src.topic_discovery import TopicItem
+
+
+class TestStyleAndWriter(unittest.TestCase):
+    """Test suite for Gemini response validation and style requirements."""
+
+    def setUp(self):
+        self.writer = ArticleWriter(api_key="mock-api-key")
+        self.topic = TopicItem(
+            id="test-topic",
+            topic="How to Use Gemini API",
+            category="AI Tools",
+            primary_intent="Tutorial",
+            priority=1,
+            requires_screenshot=False,
+            target_url="https://ai.google.dev",
+            target_audience="Developers",
+        )
+        self.brief = ResearchBrief(
+            topic_id="test-topic",
+            topic_title="How to Use Gemini API",
+            target_url="https://ai.google.dev",
+        )
+
+    def test_malformed_gemini_json_fails_closed_in_live_mode(self):
+        """In live mode, if Gemini returns invalid JSON and repair fails, it must fail closed and NOT use fallback."""
+        with patch.object(self.writer, "_call_gemini_rest") as mock_call:
+            mock_call.return_value = "This is not valid JSON at all!"
+
+            with self.assertRaises(RuntimeError) as cm:
+                self.writer.write_article(self.topic, self.brief, dry_run=False)
+
+            self.assertIn("could not be parsed as JSON", str(cm.exception))
+
+    def test_missing_required_fields_fails_schema_validation(self):
+        """If Gemini returns JSON missing required fields (e.g. title or html_content), it must fail."""
+        with patch.object(self.writer, "_call_gemini_rest") as mock_call:
+            # Missing html_content and title
+            mock_call.return_value = '{"summary": "Just a summary"}'
+
+            with self.assertRaises(RuntimeError) as cm:
+                self.writer.write_article(self.topic, self.brief, dry_run=False)
+
+            self.assertIn("failed schema validation", str(cm.exception))
+
+    def test_gemini_api_error_does_not_log_secret_key(self):
+        """HTTP error from Gemini must redact API key from exception message."""
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError(
+                url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSySecretKey123",
+                code=400,
+                msg="Bad Request",
+                hdrs={},
+                fp=MagicMock(read=lambda: b'{"error": {"message": "Invalid request parameters key=AIzaSySecretKey123"}}'),
+            )
+
+            with self.assertRaises(RuntimeError) as cm:
+                self.writer._call_gemini_rest("Test prompt")
+
+            err_str = str(cm.exception)
+            self.assertNotIn("AIzaSySecretKey123", err_str)
+            self.assertIn("[REDACTED]", err_str)
+
+    def test_dry_run_fixture_contains_no_ai_cliches(self):
+        """Dry run text fixtures must comply with plain-English rules and contain no generic AI cliches."""
+        fixture = self.writer._generate_dry_run_fixture(self.topic, self.brief)
+        html = fixture["html_content"].lower()
+
+        cliches = [
+            "in today's fast-paced digital world",
+            "unlock the power",
+            "delve into",
+            "embark on a journey",
+            "game-changer",
+            "look no further",
+        ]
+        for c in cliches:
+            self.assertNotIn(c, html, f"Forbidden cliché found in dry run fixture: '{c}'")
+
+    def test_article_draft_contains_slug_and_featured_image_brief(self):
+        """ArticleDraft output must carry suggested_slug and structured featured_image_brief."""
+        draft = self.writer.write_article(self.topic, self.brief, dry_run=True)
+        self.assertTrue(draft.suggested_slug)
+        self.assertNotIn(" ", draft.suggested_slug)
+        self.assertIsInstance(draft.featured_image_brief, dict)
+        self.assertIn("description", draft.featured_image_brief)
+        self.assertIn("alt_text", draft.featured_image_brief)
+        self.assertIn("aspect_ratio", draft.featured_image_brief)
+        draft_dict = draft.to_dict()
+        self.assertIn("suggested_slug", draft_dict)
+        self.assertIn("featured_image_brief", draft_dict)
+
+
+if __name__ == "__main__":
+    unittest.main()

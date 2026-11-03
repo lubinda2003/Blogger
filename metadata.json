@@ -1,0 +1,6 @@
+{
+  "name": "Blogger Content Automation Engine",
+  "description": "Production Python CLI pipeline and GitHub Actions workflow for automated research, Gemini article drafting, quality gates, and Blogger publishing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

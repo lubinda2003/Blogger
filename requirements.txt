@@ -1,0 +1,22 @@
+# Blogger Content Engine - Python 3.11+ Dependencies
+# Pinned version strategy for reproducible GitHub Actions Ubuntu runner builds
+
+# Official Google GenAI SDK for Gemini API
+google-genai==0.1.1
+google-generativeai==0.8.3
+
+# HTTP Client with connection pooling and retries
+requests==2.31.0
+urllib3==2.2.1
+
+# Data validation & Configuration
+pydantic==2.6.4
+pyyaml==6.0.1
+
+# Headless browser automation for genuine screenshot capture
+playwright==1.42.0
+
+# Testing Framework & Mocks
+pytest==8.1.1
+pytest-mock==3.12.0
+pytest-cov==4.1.0

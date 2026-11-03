@@ -1,0 +1,116 @@
+name: Blogger Content Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry-run mode (tests pipeline without modifying Blogger)"
+        type: boolean
+        required: true
+        default: true
+      publish_mode:
+        description: "Publish mode: 'draft' (default, safe for review) or 'publish'"
+        type: choice
+        options:
+          - draft
+          - publish
+        default: draft
+      topic_id:
+        description: "Optional specific topic ID from data/topics.csv (leave empty for auto-priority)"
+        type: string
+        required: false
+        default: ""
+
+  # Scheduled automation is commented out for initial testing and safety.
+  # Uncomment the schedule below only after end-to-end testing in draft mode.
+  # schedule:
+  #   - cron: "0 8 * * *" # Daily at 08:00 UTC
+
+permissions:
+  contents: read
+
+# Concurrency group ensures only one pipeline runs at a time, preventing state collisions
+concurrency:
+  group: blogger-content-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      # actions/checkout@v4 pinned to reviewed commit SHA
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # actions/setup-python@v5 pinned to reviewed commit SHA
+      - name: Set up Python 3.11
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # Persistent state restoration: restore processed_topics.json across runs
+      - name: Restore Processed Topics State Cache
+        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        id: state-cache
+        with:
+          path: data/processed_topics.json
+          key: blogger-pipeline-state-${{ github.run_id }}
+          restore-keys: |
+            blogger-pipeline-state-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright Chromium
+        run: |
+          playwright install --with-deps chromium
+
+      - name: Run Editorial & Publishing Pipeline
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+          CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL }}
+          CLOUDFLARE_WORKER_SECRET: ${{ secrets.CLOUDFLARE_WORKER_SECRET }}
+          PUBLISH_MODE: ${{ inputs.publish_mode || 'draft' }}
+          DRY_RUN: ${{ inputs.dry_run != false }}
+          TOPIC_ID: ${{ inputs.topic_id }}
+        run: |
+          ARGS=""
+          if [ "$DRY_RUN" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          else
+            ARGS="$ARGS --live"
+          fi
+          ARGS="$ARGS --publish-mode $PUBLISH_MODE"
+          if [ -n "$TOPIC_ID" ]; then
+            ARGS="$ARGS --topic-id $TOPIC_ID"
+          fi
+          python -m src.main $ARGS
+
+      # Save updated state to cache
+      - name: Save Processed Topics State Cache
+        uses: actions/cache/save@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
+        if: always()
+        with:
+          path: data/processed_topics.json
+          key: blogger-pipeline-state-${{ github.run_id }}
+
+      # actions/upload-artifact@v4 pinned to reviewed commit SHA
+      - name: Upload Run Artifacts and Execution Reports
+        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        if: always()
+        with:
+          name: content-pipeline-report
+          path: |
+            output/
+            data/processed_topics.json
+          if-no-files-found: warn
+          retention-days: 14

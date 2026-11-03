@@ -1,0 +1,20 @@
+name = "digital-toolkit-worker"
+main = "index.ts"
+compatibility_date = "2024-03-01"
+
+# Environment variables (override in Cloudflare dashboard or wrangler secret)
+[vars]
+PUBLICATION_NAME = "The Digital Toolkit"
+WEBSITE_URL = "https://digitaltoolkitguide.blogspot.com/"
+TAGLINE = "Discover smarter tools. Work better. Do more."
+
+# Cloudflare D1 Database binding for persistent topic and run history
+# Existing database: "digital-toolkit-db"
+# IMPORTANT: Replace the placeholder below with your real Cloudflare D1 UUID.
+# To find your database UUID, run in terminal:
+#   npx wrangler d1 info digital-toolkit-db
+# or find it in Cloudflare Dashboard: Workers & Pages -> D1 -> digital-toolkit-db
+[[d1_databases]]
+binding = "DB"
+database_name = "digital-toolkit-db"
+database_id = "<YOUR_D1_DATABASE_ID_FROM_CLOUDFLARE>"

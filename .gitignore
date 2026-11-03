@@ -1,0 +1,71 @@
+# Git ignore rules for Blogger Content Automation Engine
+# Never commit secrets, tokens, virtual environments, or run-specific outputs
+
+# Secrets and environment variables
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+client_secrets.json
+token.json
+.blogger_refresh_token*
+
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+dist-server/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Playwright & Browser artifacts
+.playwright/
+test-results/
+playwright-report/
+
+# Node & Frontend dependencies
+node_modules/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Output files from runs (except keep directory)
+output/*
+!output/.gitkeep
+
+# IDE and OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo

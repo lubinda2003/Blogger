@@ -1,0 +1,49 @@
+{
+  "publication": {
+    "name": "The Digital Toolkit",
+    "website_url": "https://digitaltoolkitguide.blogspot.com/",
+    "tagline": "Discover smarter tools. Work better. Do more.",
+    "target_audience": "International (Students, Freelancers, Entrepreneurs, Small-Business Owners, Remote Workers)"
+  },
+  "pipeline": {
+    "dry_run": true,
+    "publish_mode": "draft",
+    "max_articles_per_run": 1,
+    "zambia_context_enabled": false
+  },
+  "categories": {
+    "weights": {
+      "Artificial Intelligence and AI Tools": 0.35,
+      "Software and Productivity": 0.30,
+      "Digital Business Tools": 0.20,
+      "Tutorials and Practical Solutions": 0.15
+    }
+  },
+  "blogger": {
+    "blog_id": "",
+    "default_labels": [
+      "Digital Toolkit",
+      "AI Tools",
+      "Productivity"
+    ],
+    "auto_reconcile": true
+  },
+  "cloudflare_worker": {
+    "worker_name": "digital-toolkit-worker",
+    "d1_database": "digital-toolkit-db",
+    "worker_url": "",
+    "auth_token": ""
+  },
+  "gemini": {
+    "model": "gemini-2.5-flash",
+    "temperature": 0.3,
+    "max_output_tokens": 4096
+  },
+  "editorial": {
+    "min_word_count": 800,
+    "max_word_count": 2500,
+    "min_credible_sources": 2,
+    "require_faq": true,
+    "featured_image_brief": true
+  }
+}

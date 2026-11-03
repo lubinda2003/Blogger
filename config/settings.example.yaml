@@ -1,0 +1,85 @@
+# The Digital Toolkit - Content Automation Engine Settings
+# Publication: The Digital Toolkit (https://digitaltoolkitguide.blogspot.com/)
+# Tagline: Discover smarter tools. Work better. Do more.
+
+publication:
+  name: "The Digital Toolkit"
+  website_url: "https://digitaltoolkitguide.blogspot.com/"
+  tagline: "Discover smarter tools. Work better. Do more."
+  target_audience: "International (Students, Freelancers, Entrepreneurs, Remote Workers)"
+
+pipeline:
+  max_articles_per_run: 1
+  dry_run: true
+  publish_mode: "draft" # Always "draft" by default. Set to "publish" only after manual inspection.
+  locale: "en-US"
+  timezone: "UTC"
+  zambia_context_enabled: false # International audience focus; Zambia details optional when relevant
+
+categories:
+  weights:
+    "Artificial Intelligence and AI Tools": 0.35
+    "Software and Productivity": 0.30
+    "Digital Business Tools": 0.20
+    "Tutorials and Practical Solutions": 0.15
+
+topic_queue:
+  csv_path: "data/topics.csv"
+  processed_json_path: "data/processed_topics.json"
+  auto_deduplicate: true
+  rss_sources:
+    - name: "Google AI Blog"
+      url: "https://blog.google/technology/ai/rss/"
+      enabled: false
+
+gemini:
+  model: "gemini-2.5-flash"
+  temperature: 0.3
+  max_output_tokens: 4096
+  request_timeout_seconds: 60
+  max_retries: 3
+  backoff_factor: 2.0
+
+editorial:
+  min_word_count: 800
+  max_word_count: 2400
+  min_credible_sources: 2
+  require_faq: true
+  require_step_by_step: true
+  require_last_checked_date: true
+  featured_image_brief: true
+  approved_affiliate_domains:
+    - "notion.so"
+    - "gumroad.com"
+    - "upwork.com"
+    - "payoneer.com"
+  forbidden_phrases:
+    - "get rich quick"
+    - "guaranteed income"
+    - "make $500 today"
+    - "passive income secret"
+    - "100% risk free money"
+    - "overnight success"
+
+playwright:
+  headless: true
+  viewport:
+    width: 1280
+    height: 800
+  device_scale_factor: 1.0
+  navigation_timeout_ms: 30000
+  wait_until: "networkidle"
+  max_retries: 2
+
+blogger:
+  blog_id: "" # Configured in GitHub Secrets: BLOGGER_BLOG_ID
+  default_labels:
+    - "Digital Toolkit"
+    - "AI Tools"
+    - "Productivity"
+  auto_reconcile: true
+
+cloudflare_worker:
+  # Optional Cloudflare Worker backend for persistent D1 telemetry and shared services
+  worker_url: "" # Configured via CLOUDFLARE_WORKER_URL secret
+  auth_token: "" # Configured via CLOUDFLARE_WORKER_SECRET
