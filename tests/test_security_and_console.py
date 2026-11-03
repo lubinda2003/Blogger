@@ -36,6 +36,8 @@ class TestSecurityAndConsole(unittest.TestCase):
         'worker/index.ts',
         'worker/wrangler.toml',
         'worker/schema.sql',
+        'worker/package.json',
+        'worker/tsconfig.json',
         'templates/article_prompt.md',
         'tests/test_quality_checks.py',
         'tests/test_deduplication.py',

@@ -257,6 +257,25 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here
                 </button>
               </div>
             </div>
+
+            {/* Step 5 */}
+            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-200">
+                  Step 5: Cloudflare Workers Builds (Git Settings)
+                </span>
+                <span className="text-[11px] text-sky-400 font-mono">Workers & Pages Dashboard</span>
+              </div>
+              <p className="text-slate-400">
+                When connecting your repository in Cloudflare Dashboard under <strong>Workers & Pages &gt; Connect to Git</strong>, configure:
+              </p>
+              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
+                <div><span className="text-sky-400">Worker name:</span> digital-toolkit-worker</div>
+                <div><span className="text-sky-400">Root directory:</span> worker <span className="text-emerald-400">(← Prevents Cloudflare from running pip or touching Python)</span></div>
+                <div><span className="text-sky-400">Build command:</span> npx wrangler deploy --dry-run <span className="text-slate-500">(or leave empty)</span></div>
+                <div><span className="text-sky-400">Deploy command:</span> npx wrangler deploy</div>
+              </div>
+            </div>
           </div>
         </section>
 

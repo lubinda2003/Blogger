@@ -261,9 +261,17 @@ The Worker is configured as `digital-toolkit-worker` bound to the existing datab
    ```
 
 5. **Deploy the Worker:**
-   ```bash
-   cd worker && npx wrangler deploy
-   ```
+   - **Option A: Via CLI**
+     ```bash
+     cd worker && npx wrangler deploy
+     ```
+   - **Option B: Via Cloudflare Workers Builds (Git Integration)**
+     When connecting your GitHub repository to Cloudflare Workers Builds in the Cloudflare Dashboard (**Workers & Pages > Connect to Git**):
+     - **Worker Name**: `digital-toolkit-worker`
+     - **Root directory**: `worker` *(CRITICAL: This directs Cloudflare into the `worker/` subfolder, ensuring it deploys only the TypeScript Worker and never attempts to install root Python dependencies)*
+     - **Build command**: `npx wrangler deploy --dry-run` *(or leave empty)*
+     - **Deploy command**: `npx wrangler deploy`
+     - **Environment variables**: Add `WORKER_API_SECRET` under Worker Settings > Variables.
 
 ### Step 7: Configure GitHub Repository Secrets
 In your GitHub repository, navigate to **Settings > Secrets and variables > Actions > New repository secret**:
