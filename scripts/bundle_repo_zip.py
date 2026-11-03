@@ -40,7 +40,6 @@ INCLUDED_PREFIXES = [
     "worker",
     "LICENSE",
     "README.md",
-    "requirements.txt",
     "package.json",
     "server.ts",
     "tsconfig.json",

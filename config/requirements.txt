@@ -1,5 +1,6 @@
-# Blogger Content Engine - Python 3.11+ Dependencies
-# Pinned version strategy for reproducible GitHub Actions Ubuntu runner builds
+# The Digital Toolkit - Python 3.11+ Dependencies (GitHub Actions Automation Runner)
+# Note: Python dependencies are exclusively for GitHub Actions content pipeline and test workflows.
+# Cloudflare Workers Builds deploys only the TypeScript Worker from worker/ and does not use this file.
 
 # Official Google GenAI SDK for Gemini API
 google-genai>=0.1.0

@@ -47,7 +47,7 @@ class TestSecurityAndConsole(unittest.TestCase):
         'tests/test_security_and_console.py',
         'tests/test_cloudflare_worker.py',
         'scripts/get_blogger_refresh_token.py',
-        'requirements.txt',
+        'config/requirements.txt',
         'README.md',
         'LICENSE',
         '.gitignore',
