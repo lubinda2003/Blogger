@@ -298,6 +298,75 @@ class TestCloudflareWorkerClient(unittest.TestCase):
             cfg = load_config()
             self.assertEqual(cfg.cloudflare_worker_secret, "alias-secret-key")
 
+    def test_client_headers_include_user_agent_and_accept(self):
+        """Client must include descriptive User-Agent, Accept, and optional CF Access headers."""
+        client = CloudflareWorkerClient(
+            worker_url="https://worker.example.workers.dev",
+            auth_token="my-secret",
+            cf_access_client_id="my-access-id",
+            cf_access_client_secret="my-access-secret",
+        )
+        headers = client._headers()
+        self.assertEqual(headers["Content-Type"], "application/json")
+        self.assertEqual(headers["Accept"], "application/json")
+        self.assertIn("DigitalToolkitContentEngine", headers["User-Agent"])
+        self.assertNotIn("Python-urllib", headers["User-Agent"])
+        self.assertEqual(headers["Authorization"], "Bearer my-secret")
+        self.assertEqual(headers["CF-Access-Client-Id"], "my-access-id")
+        self.assertEqual(headers["CF-Access-Client-Secret"], "my-access-secret")
+
+    def test_client_diagnoses_cloudflare_edge_403_rejection(self):
+        """HTTP 403 from Cloudflare Edge must be diagnosed with CF-Ray and edge origin."""
+        import urllib.error
+        client = CloudflareWorkerClient(
+            worker_url="https://worker.example.workers.dev",
+            auth_token="valid-secret-token",
+        )
+
+        mock_headers = {
+            "server": "cloudflare",
+            "cf-ray": "89abcdef12345678-LHR",
+            "content-type": "text/html; charset=UTF-8",
+        }
+
+        html_body = b"<!DOCTYPE html><html><head><title>Access denied | Error 1020</title></head><body>Error 1020 Ray ID: 89abcdef12345678</body></html>"
+
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError(
+                url="https://worker.example.workers.dev/api/topics/processed",
+                code=403,
+                msg="Forbidden",
+                hdrs=mock_headers,
+                fp=MagicMock(read=lambda: html_body),
+            )
+
+            topics = client.get_processed_topics(raise_on_error=False)
+            self.assertEqual(topics, [])
+            self.assertIsNotNone(client.last_error)
+            self.assertIn("403", client.last_error)
+            self.assertIn("Cloudflare Edge", client.last_error)
+            self.assertIn("89abcdef12345678-LHR", client.last_error)
+            self.assertIn("X-Worker-Served-By' header is absent", client.last_error)
+            self.assertIn("Error 1020", client.last_error)
+            # Ensure sensitive secret token is NEVER exposed
+            self.assertNotIn("valid-secret-token", client.last_error)
+
+    def test_sanitize_response_body_redacts_secrets_and_handles_html(self):
+        """sanitize_response_body must redact bearer tokens and parse HTML error titles."""
+        from src.cloudflare_client import sanitize_response_body
+
+        # Test secret redaction
+        secret_json = '{"error": "Unauthorized", "token": "sensitive_token_value_123"}'
+        sanitized = sanitize_response_body(secret_json)
+        self.assertNotIn("sensitive_token_value_123", sanitized)
+        self.assertIn("[REDACTED]", sanitized)
+
+        # Test HTML title parsing
+        html = '<html><head><title>403 Forbidden - Cloudflare</title></head><body><h1>Attention Required!</h1></body></html>'
+        sanitized_html = sanitize_response_body(html)
+        self.assertIn("403 Forbidden - Cloudflare", sanitized_html)
+        self.assertIn("Attention Required!", sanitized_html)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -80,6 +80,8 @@ jobs:
           CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL || secrets.WORKER_URL }}
           CLOUDFLARE_WORKER_SECRET: ${{ secrets.CLOUDFLARE_WORKER_SECRET || secrets.WORKER_API_SECRET || secrets.WORKER_API_KEY }}
           WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET || secrets.CLOUDFLARE_WORKER_SECRET || secrets.WORKER_API_KEY }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID || secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET || secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
           PUBLISH_MODE: ${{ inputs.publish_mode || 'draft' }}
           DRY_RUN: ${{ inputs.dry_run != false }}
           TOPIC_ID: ${{ inputs.topic_id }}

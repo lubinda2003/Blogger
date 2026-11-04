@@ -45,6 +45,8 @@ class AppConfig:
     # Cloudflare Worker backend
     cloudflare_worker_url: Optional[str] = None
     cloudflare_worker_secret: Optional[str] = field(default=None, repr=False)
+    cf_access_client_id: Optional[str] = field(default=None, repr=False)
+    cf_access_client_secret: Optional[str] = field(default=None, repr=False)
 
     # Playwright browser parameters
     screenshot_viewport_width: int = 1280
@@ -189,6 +191,22 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
     )
     cf_secret = raw_worker_secret.strip().strip('"').strip("'") if raw_worker_secret else None
 
+    raw_access_id = (
+        os.getenv("CF_ACCESS_CLIENT_ID")
+        or os.getenv("CLOUDFLARE_ACCESS_CLIENT_ID")
+        or worker_cfg.get("cf_access_client_id")
+        or None
+    )
+    cf_access_id = raw_access_id.strip().strip('"').strip("'") if raw_access_id else None
+
+    raw_access_secret = (
+        os.getenv("CF_ACCESS_CLIENT_SECRET")
+        or os.getenv("CLOUDFLARE_ACCESS_CLIENT_SECRET")
+        or worker_cfg.get("cf_access_client_secret")
+        or None
+    )
+    cf_access_sec = raw_access_secret.strip().strip('"').strip("'") if raw_access_secret else None
+
     config = AppConfig(
         dry_run=dry_run,
         publish_mode=publish_mode,
@@ -206,6 +224,8 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         zambia_context_enabled=zambia_enabled,
         cloudflare_worker_url=cf_url,
         cloudflare_worker_secret=cf_secret,
+        cf_access_client_id=cf_access_id,
+        cf_access_client_secret=cf_access_sec,
         min_word_count=min_words,
         max_word_count=max_words,
         min_credible_sources=min_sources,

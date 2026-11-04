@@ -47,6 +47,113 @@ def inspect_wrangler_d1_config(wrangler_path: str = "worker/wrangler.toml") -> T
         return False, f"Failed to inspect wrangler.toml: {e}"
 
 
+def sanitize_response_body(body: str, max_length: int = 300) -> str:
+    """Sanitize and summarize an HTTP response body, redacting secrets and parsing HTML titles."""
+    if not body or not body.strip():
+        return "(empty response body)"
+
+    # Redact sensitive credentials, authorization bearer tokens, cookies, or secrets
+    sanitized = re.sub(
+        r"(Bearer\s+)[A-Za-z0-9_\-\.~+/=]+", r"\1[REDACTED]", body, flags=re.IGNORECASE
+    )
+    sanitized = re.sub(
+        r"(client_secret|api_key|token|secret|password|authorization)[\"']?\s*[:=]\s*[\"']?[A-Za-z0-9_\-\.~+/=]+",
+        r"\1: [REDACTED]",
+        sanitized,
+        flags=re.IGNORECASE,
+    )
+
+    # If HTML error page from Cloudflare Edge / WAF
+    lower = sanitized.lower()
+    if "<html" in lower or "<!doctype" in lower:
+        title_match = re.search(r"<title>(.*?)</title>", sanitized, re.IGNORECASE | re.DOTALL)
+        h1_match = re.search(r"<h1[^>]*>(.*?)</h1>", sanitized, re.IGNORECASE | re.DOTALL)
+        title = " ".join(title_match.group(1).split()) if title_match else "No Title"
+        h1 = " ".join(h1_match.group(1).split()) if h1_match else None
+
+        signatures = []
+        if "1020" in sanitized:
+            signatures.append("Cloudflare Error 1020 (Access Denied / WAF Rule)")
+        if "1010" in sanitized:
+            signatures.append("Cloudflare Error 1010 (Browser Integrity Check / Python-urllib blocked)")
+        if "1015" in sanitized:
+            signatures.append("Cloudflare Error 1015 (Rate Limited)")
+        if "just a moment" in lower or "cf-mitigated" in lower or "challenge-platform" in lower:
+            signatures.append("Cloudflare Interactive Challenge / Bot Fight Mode")
+        if "cloudflare access" in lower or "cdn-cgi/access" in lower:
+            signatures.append("Cloudflare Access / Zero Trust application login required")
+
+        summary = f"HTML page received. Title: '{title}'"
+        if h1:
+            summary += f", Heading: '{h1}'"
+        if signatures:
+            summary += f". Detected signature: {'; '.join(signatures)}"
+        return summary
+
+    single_line = " ".join(sanitized.split())
+    if len(single_line) > max_length:
+        return single_line[:max_length] + "..."
+    return single_line
+
+
+def format_http_error_report(
+    req: urllib.request.Request,
+    e: urllib.error.HTTPError,
+    auth_token: Optional[str] = None,
+    prefix_message: str = "",
+) -> str:
+    """Produce a safe, non-sensitive diagnostic error report distinguishing Worker from Cloudflare Edge."""
+    headers = e.headers or {}
+    cf_ray = headers.get("cf-ray") or headers.get("CF-RAY")
+    server = headers.get("server") or headers.get("Server") or "Unknown"
+    worker_marker = headers.get("x-worker-served-by") or headers.get("X-Worker-Served-By")
+    endpoint = req.full_url
+    method = req.get_method()
+    code = e.code
+
+    err_body = e.read().decode("utf-8", errors="ignore")
+    body_summary = sanitize_response_body(err_body)
+    token_status = f"present (length: {len(auth_token)})" if auth_token else "MISSING / UNSET"
+
+    base_msg = f"{prefix_message}: {body_summary}" if prefix_message else f"HTTP {code}: {body_summary}"
+
+    diagnostic_lines = [
+        base_msg,
+        f"[HTTP {code} SAFE Auth Diagnostic Report]",
+        f"  - Request: {method} {endpoint}",
+        f"  - Client Bearer Token: {token_status}",
+    ]
+
+    if worker_marker:
+        diagnostic_lines.append(f"  - Response Origin: Worker Application (X-Worker-Served-By: '{worker_marker}')")
+    else:
+        diagnostic_lines.append(f"  - Response Origin: Cloudflare Edge / Security Layer (Server: '{server}', CF-Ray: '{cf_ray or 'N/A'}')")
+        diagnostic_lines.append(f"  - Rejection Note: 'X-Worker-Served-By' header is absent. Request was intercepted by Cloudflare Edge BEFORE reaching worker/index.ts.")
+
+    if code == 403:
+        if not worker_marker:
+            diagnostic_lines.append(
+                "  - Likely Causes:\n"
+                "    1. Cloudflare Browser Integrity Check (BIC) or Bot Fight Mode blocking requests from GitHub Actions / Python.\n"
+                "    2. Cloudflare WAF Custom Rule / Security Level blocking traffic to this endpoint.\n"
+                "    3. Cloudflare Access (Zero Trust) application configured on the domain requiring Service Tokens (CF-Access-Client-Id / CF-Access-Client-Secret).\n"
+                f"    -> Look up CF-Ray '{cf_ray or 'N/A'}' in Cloudflare Dashboard under Security > Events for the exact trigger."
+            )
+        else:
+            diagnostic_lines.append("  - Root Cause: Worker application returned HTTP 403.")
+    elif code == 401:
+        if worker_marker:
+            diagnostic_lines.append(
+                "  - Likely Cause: Worker Bearer authentication failed. Ensure CLOUDFLARE_WORKER_SECRET in GitHub Secrets matches WORKER_API_SECRET in Cloudflare Worker Variables."
+            )
+        else:
+            diagnostic_lines.append(
+                f"  - Likely Cause: Cloudflare Edge authentication failed (CF-Ray: {cf_ray or 'N/A'})."
+            )
+
+    return "\n".join(diagnostic_lines)
+
+
 class CloudflareWorkerClient:
     """Client for communicating with The Digital Toolkit supporting Cloudflare Worker."""
 
@@ -54,10 +161,18 @@ class CloudflareWorkerClient:
         self,
         worker_url: Optional[str] = None,
         auth_token: Optional[str] = None,
+        cf_access_client_id: Optional[str] = None,
+        cf_access_client_secret: Optional[str] = None,
         timeout: int = 15,
     ):
         self.worker_url = (worker_url or "").strip().strip('"').strip("'").rstrip("/")
         self.auth_token = auth_token.strip().strip('"').strip("'") if auth_token else None
+        self.cf_access_client_id = (
+            cf_access_client_id.strip().strip('"').strip("'") if cf_access_client_id else None
+        )
+        self.cf_access_client_secret = (
+            cf_access_client_secret.strip().strip('"').strip("'") if cf_access_client_secret else None
+        )
         self.timeout = timeout
         self.last_error: Optional[str] = None
 
@@ -73,9 +188,16 @@ class CloudflareWorkerClient:
         return bool(self.worker_url)
 
     def _headers(self) -> Dict[str, str]:
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "User-Agent": "DigitalToolkitContentEngine/1.0 (+https://digitaltoolkitguide.blogspot.com/; GitHubActions/1.0)",
+        }
         if self.auth_token:
             headers["Authorization"] = f"Bearer {self.auth_token}"
+        if self.cf_access_client_id and self.cf_access_client_secret:
+            headers["CF-Access-Client-Id"] = self.cf_access_client_id
+            headers["CF-Access-Client-Secret"] = self.cf_access_client_secret
         return headers
 
     def get_processed_topics(self, raise_on_error: bool = False) -> List[Dict[str, Any]]:
@@ -102,21 +224,12 @@ class CloudflareWorkerClient:
                     return []
                 return data.get("processed", [])
         except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            try:
-                err_json = json.loads(err_body)
-                err_detail = err_json.get("error", err_body)
-            except Exception:
-                err_detail = err_body
-            if e.code == 401:
-                token_status = f"present (length: {len(self.auth_token)})" if self.auth_token else "MISSING / UNSET"
-                err_msg = (
-                    f"Cloudflare Worker returned HTTP 401 for processed topics: {err_detail} "
-                    f"[Auth Diagnostic: Client token is {token_status}. "
-                    f"Ensure CLOUDFLARE_WORKER_SECRET in GitHub Secrets matches WORKER_API_SECRET in Cloudflare Worker Variables]"
-                )
-            else:
-                err_msg = f"Cloudflare Worker returned HTTP {e.code} for processed topics: {err_detail}"
+            err_msg = format_http_error_report(
+                req=req,
+                e=e,
+                auth_token=self.auth_token,
+                prefix_message=f"Cloudflare Worker returned HTTP {e.code} for processed topics",
+            )
             self.last_error = err_msg
             logger.error(err_msg)
             if raise_on_error:
@@ -174,21 +287,12 @@ class CloudflareWorkerClient:
                     raise RuntimeError(f"Failed to record topic in D1: {err_msg}")
                 return False
         except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            try:
-                err_json = json.loads(err_body)
-                err_detail = err_json.get("error", err_body)
-            except Exception:
-                err_detail = err_body
-            if e.code == 401:
-                token_status = f"present (length: {len(self.auth_token)})" if self.auth_token else "MISSING / UNSET"
-                err_msg = (
-                    f"Failed to record topic in D1 (HTTP 401): {err_detail} "
-                    f"[Auth Diagnostic: Client token is {token_status}. "
-                    f"Ensure CLOUDFLARE_WORKER_SECRET matches WORKER_API_SECRET in Cloudflare]"
-                )
-            else:
-                err_msg = f"Failed to record topic in D1 (HTTP {e.code}): {err_detail}"
+            err_msg = format_http_error_report(
+                req=req,
+                e=e,
+                auth_token=self.auth_token,
+                prefix_message=f"Failed to record topic in D1 (HTTP {e.code})",
+            )
             self.last_error = err_msg
             logger.error(err_msg)
             if raise_on_error:
@@ -249,21 +353,12 @@ class CloudflareWorkerClient:
                     raise RuntimeError(f"Cloudflare Worker record_run failed: {err_msg}")
                 return False
         except urllib.error.HTTPError as e:
-            err_body = e.read().decode("utf-8", errors="ignore")
-            try:
-                err_json = json.loads(err_body)
-                err_detail = err_json.get("error", err_body)
-            except Exception:
-                err_detail = err_body
-            if e.code == 401:
-                token_status = f"present (length: {len(self.auth_token)})" if self.auth_token else "MISSING / UNSET"
-                err_msg = (
-                    f"Cloudflare Worker record_run failed (HTTP 401): {err_detail} "
-                    f"[Auth Diagnostic: Client token is {token_status}. "
-                    f"Ensure CLOUDFLARE_WORKER_SECRET matches WORKER_API_SECRET in Cloudflare]"
-                )
-            else:
-                err_msg = f"Cloudflare Worker record_run failed (HTTP {e.code}): {err_detail}"
+            err_msg = format_http_error_report(
+                req=req,
+                e=e,
+                auth_token=self.auth_token,
+                prefix_message=f"Cloudflare Worker record_run failed (HTTP {e.code})",
+            )
             self.last_error = err_msg
             logger.error(err_msg)
             if raise_on_error:

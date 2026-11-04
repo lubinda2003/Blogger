@@ -35,11 +35,14 @@ export default {
     const url = new URL(request.url);
     const { pathname } = url;
 
-    // CORS headers for local / cross-origin inspection
+    // CORS & Identification headers (enables client to distinguish Worker from Edge WAF)
     const corsHeaders = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, CF-Access-Client-Id, CF-Access-Client-Secret, X-Worker-Served-By',
+      'Access-Control-Expose-Headers': 'X-Worker-Served-By',
+      'X-Worker-Served-By': 'digital-toolkit-worker',
+      'X-Content-Type-Options': 'nosniff',
     };
 
     if (request.method === 'OPTIONS') {

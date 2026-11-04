@@ -79,6 +79,8 @@ def run_pipeline(
     cf_client = CloudflareWorkerClient(
         worker_url=config.cloudflare_worker_url,
         auth_token=config.cloudflare_worker_secret,
+        cf_access_client_id=config.cf_access_client_id,
+        cf_access_client_secret=config.cf_access_client_secret,
     )
 
     if config.local_only:
