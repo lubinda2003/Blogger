@@ -56,10 +56,17 @@ class CloudflareWorkerClient:
         auth_token: Optional[str] = None,
         timeout: int = 15,
     ):
-        self.worker_url = (worker_url or "").rstrip("/")
-        self.auth_token = auth_token
+        self.worker_url = (worker_url or "").strip().strip('"').strip("'").rstrip("/")
+        self.auth_token = auth_token.strip().strip('"').strip("'") if auth_token else None
         self.timeout = timeout
         self.last_error: Optional[str] = None
+
+        if self.worker_url and not self.auth_token:
+            logger.warning(
+                "[AUTH CONFIG WARNING] CLOUDFLARE_WORKER_URL is configured, but auth token is unset or empty. "
+                "Requests will be sent without an Authorization Bearer header and will receive HTTP 401 from the Worker. "
+                "Configure CLOUDFLARE_WORKER_SECRET in GitHub Secrets to match WORKER_API_SECRET on the Worker."
+            )
 
     @property
     def is_configured(self) -> bool:
@@ -101,7 +108,15 @@ class CloudflareWorkerClient:
                 err_detail = err_json.get("error", err_body)
             except Exception:
                 err_detail = err_body
-            err_msg = f"Cloudflare Worker returned HTTP {e.code} for processed topics: {err_detail}"
+            if e.code == 401:
+                token_status = f"present (length: {len(self.auth_token)})" if self.auth_token else "MISSING / UNSET"
+                err_msg = (
+                    f"Cloudflare Worker returned HTTP 401 for processed topics: {err_detail} "
+                    f"[Auth Diagnostic: Client token is {token_status}. "
+                    f"Ensure CLOUDFLARE_WORKER_SECRET in GitHub Secrets matches WORKER_API_SECRET in Cloudflare Worker Variables]"
+                )
+            else:
+                err_msg = f"Cloudflare Worker returned HTTP {e.code} for processed topics: {err_detail}"
             self.last_error = err_msg
             logger.error(err_msg)
             if raise_on_error:
@@ -165,7 +180,15 @@ class CloudflareWorkerClient:
                 err_detail = err_json.get("error", err_body)
             except Exception:
                 err_detail = err_body
-            err_msg = f"Failed to record topic in D1 (HTTP {e.code}): {err_detail}"
+            if e.code == 401:
+                token_status = f"present (length: {len(self.auth_token)})" if self.auth_token else "MISSING / UNSET"
+                err_msg = (
+                    f"Failed to record topic in D1 (HTTP 401): {err_detail} "
+                    f"[Auth Diagnostic: Client token is {token_status}. "
+                    f"Ensure CLOUDFLARE_WORKER_SECRET matches WORKER_API_SECRET in Cloudflare]"
+                )
+            else:
+                err_msg = f"Failed to record topic in D1 (HTTP {e.code}): {err_detail}"
             self.last_error = err_msg
             logger.error(err_msg)
             if raise_on_error:
@@ -232,7 +255,15 @@ class CloudflareWorkerClient:
                 err_detail = err_json.get("error", err_body)
             except Exception:
                 err_detail = err_body
-            err_msg = f"Cloudflare Worker record_run failed (HTTP {e.code}): {err_detail}"
+            if e.code == 401:
+                token_status = f"present (length: {len(self.auth_token)})" if self.auth_token else "MISSING / UNSET"
+                err_msg = (
+                    f"Cloudflare Worker record_run failed (HTTP 401): {err_detail} "
+                    f"[Auth Diagnostic: Client token is {token_status}. "
+                    f"Ensure CLOUDFLARE_WORKER_SECRET matches WORKER_API_SECRET in Cloudflare]"
+                )
+            else:
+                err_msg = f"Cloudflare Worker record_run failed (HTTP {e.code}): {err_detail}"
             self.last_error = err_msg
             logger.error(err_msg)
             if raise_on_error:

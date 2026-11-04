@@ -284,7 +284,7 @@ In your GitHub repository, navigate to **Settings > Secrets and variables > Acti
 | `BLOGGER_CLIENT_SECRET` | OAuth2 token exchange | `GOCSPX-...` |
 | `BLOGGER_REFRESH_TOKEN` | Blogger post authorization | `1//04...` |
 | `CLOUDFLARE_WORKER_URL` | *(Optional)* D1 state & telemetry | `https://digital-toolkit-worker.<subdomain>.workers.dev` |
-| `CLOUDFLARE_WORKER_SECRET`| *(Optional)* D1 API authentication | Shared bearer secret matching WORKER_API_SECRET |
+| `CLOUDFLARE_WORKER_SECRET`| *(Optional)* D1 API authentication | Shared bearer secret matching WORKER_API_SECRET on Cloudflare (WORKER_API_SECRET is also accepted as alias) |
 | `CLOUDFLARE_API_TOKEN` | *(Optional)* Worker deployment CI | Cloudflare API token with Edit Workers permissions |
 | `CLOUDFLARE_ACCOUNT_ID` | *(Optional)* Worker deployment CI | Cloudflare account ID |
 | `SCREENSHOT_HOST_URL` | *(Optional)* Image hosting | HTTPS endpoint to receive and host PNGs |

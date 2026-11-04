@@ -23,6 +23,8 @@ export interface D1Database {
 export interface Env {
   DB?: D1Database;
   WORKER_API_SECRET?: string;
+  CLOUDFLARE_WORKER_SECRET?: string;
+  WORKER_API_KEY?: string;
   PUBLICATION_NAME?: string;
   WEBSITE_URL?: string;
   TAGLINE?: string;
@@ -62,11 +64,15 @@ export default {
     }
 
     // Authentication Guard for Protected API endpoints (Fail-Closed)
-    // If WORKER_API_SECRET is unset, or header does not match, reject immediately.
-    const secret = env.WORKER_API_SECRET ? env.WORKER_API_SECRET.trim() : '';
+    // Supports WORKER_API_SECRET, CLOUDFLARE_WORKER_SECRET, or WORKER_API_KEY
+    const rawSecret = env.WORKER_API_SECRET || env.CLOUDFLARE_WORKER_SECRET || env.WORKER_API_KEY || '';
+    const secret = rawSecret.trim().replace(/^["']|["']$/g, '');
     if (!secret) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Worker API secret is not configured on server', success: false }),
+        JSON.stringify({
+          error: 'Unauthorized: Worker API secret is not configured on server (set WORKER_API_SECRET in Worker Settings > Variables)',
+          success: false,
+        }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -75,9 +81,40 @@ export default {
     }
 
     const authHeader = (request.headers.get('Authorization') || '').trim();
-    if (authHeader !== `Bearer ${secret}`) {
+    if (!authHeader) {
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Invalid or missing Bearer token', success: false }),
+        JSON.stringify({
+          error: 'Unauthorized: Missing Authorization header (expected Bearer <token>)',
+          success: false,
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (!match) {
+      return new Response(
+        JSON.stringify({
+          error: 'Unauthorized: Invalid Authorization scheme (expected Bearer <token>)',
+          success: false,
+        }),
+        {
+          status: 401,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        }
+      );
+    }
+
+    const clientToken = match[1].trim().replace(/^["']|["']$/g, '');
+    if (clientToken !== secret) {
+      return new Response(
+        JSON.stringify({
+          error: 'Unauthorized: Bearer token does not match configured secret',
+          success: false,
+        }),
         {
           status: 401,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },

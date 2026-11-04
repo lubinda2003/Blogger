@@ -77,8 +77,9 @@ jobs:
           BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
-          CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL }}
-          CLOUDFLARE_WORKER_SECRET: ${{ secrets.CLOUDFLARE_WORKER_SECRET }}
+          CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL || secrets.WORKER_URL }}
+          CLOUDFLARE_WORKER_SECRET: ${{ secrets.CLOUDFLARE_WORKER_SECRET || secrets.WORKER_API_SECRET || secrets.WORKER_API_KEY }}
+          WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET || secrets.CLOUDFLARE_WORKER_SECRET || secrets.WORKER_API_KEY }}
           PUBLISH_MODE: ${{ inputs.publish_mode || 'draft' }}
           DRY_RUN: ${{ inputs.dry_run != false }}
           TOPIC_ID: ${{ inputs.topic_id }}

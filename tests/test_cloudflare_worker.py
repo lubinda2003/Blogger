@@ -251,8 +251,55 @@ class TestCloudflareWorkerClient(unittest.TestCase):
             self.assertIsNotNone(client.last_error)
             self.assertIn("401", client.last_error)
             self.assertIn("Unauthorized", client.last_error)
+            self.assertIn("Auth Diagnostic", client.last_error)
+            self.assertIn("present (length: 9)", client.last_error)
+            # Must not expose the secret token itself
+            self.assertNotIn("bad-token", client.last_error)
+
+    def test_client_sanitizes_token_quotes_and_whitespace(self):
+        """Client must strip whitespace and surrounding quotes from worker URL and auth token."""
+        client = CloudflareWorkerClient(
+            worker_url='  "https://worker.example.workers.dev/"  ',
+            auth_token="  'my-secret-key'  ",
+        )
+        self.assertEqual(client.worker_url, "https://worker.example.workers.dev")
+        self.assertEqual(client.auth_token, "my-secret-key")
+        headers = client._headers()
+        self.assertEqual(headers["Authorization"], "Bearer my-secret-key")
+
+    def test_client_diagnostics_when_token_is_missing(self):
+        """When worker URL is set but token is None/empty, HTTP 401 reports token as MISSING / UNSET."""
+        import urllib.error
+        client = CloudflareWorkerClient(worker_url="https://worker.example.workers.dev", auth_token=None)
+
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError(
+                url="https://worker.example.workers.dev/api/topics/processed",
+                code=401,
+                msg="Unauthorized",
+                hdrs={},
+                fp=MagicMock(read=lambda: b'{"error": "Unauthorized: Missing Authorization header (expected Bearer <token>)", "success": false}'),
+            )
+            topics = client.get_processed_topics(raise_on_error=False)
+            self.assertEqual(topics, [])
+            self.assertIn("401", client.last_error)
+            self.assertIn("MISSING / UNSET", client.last_error)
+
+    def test_config_loads_worker_secret_aliases(self):
+        """load_config must recognize WORKER_API_SECRET as alias for CLOUDFLARE_WORKER_SECRET."""
+        import os
+        from src.config import load_config
+
+        # Test WORKER_API_SECRET alias with surrounding quotes
+        with patch.dict(os.environ, {"WORKER_API_SECRET": '"alias-secret-key"'}, clear=False):
+            # Ensure CLOUDFLARE_WORKER_SECRET is not set
+            if "CLOUDFLARE_WORKER_SECRET" in os.environ:
+                del os.environ["CLOUDFLARE_WORKER_SECRET"]
+            cfg = load_config()
+            self.assertEqual(cfg.cloudflare_worker_secret, "alias-secret-key")
 
 
 if __name__ == "__main__":
     unittest.main()
+
 

@@ -299,7 +299,7 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here
               { name: 'BLOGGER_CLIENT_SECRET', desc: 'Google Cloud OAuth 2.0 Client Secret.' },
               { name: 'BLOGGER_REFRESH_TOKEN', desc: 'OAuth 2.0 Refresh Token with blogger scope.' },
               { name: 'CLOUDFLARE_WORKER_URL', desc: 'URL of deployed digital-toolkit-worker (e.g. https://digital-toolkit-worker.workers.dev).' },
-              { name: 'CLOUDFLARE_WORKER_SECRET', desc: 'Secret matching WORKER_API_SECRET for D1 authorization.' },
+              { name: 'CLOUDFLARE_WORKER_SECRET', desc: 'Bearer token matching WORKER_API_SECRET on Cloudflare (WORKER_API_SECRET is also accepted as alias).' },
               { name: 'CLOUDFLARE_API_TOKEN', desc: 'Worker deployment token (for deploy-worker.yml).' }
             ].map((secret) => (
               <div key={secret.name} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-start justify-between gap-3">
