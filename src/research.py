@@ -20,6 +20,7 @@ class SourceCitation:
     url: str
     retrieval_date: str
     verified: bool = False
+    content_extraction_success: bool = False
     http_status: Optional[int] = None
     evidence_excerpt: str = ""
     verified_claims: List[str] = field(default_factory=list)
@@ -32,6 +33,7 @@ class SourceCitation:
             "url": self.url,
             "retrieval_date": self.retrieval_date,
             "verified": self.verified,
+            "content_extraction_success": self.content_extraction_success,
             "http_status": self.http_status,
             "evidence_excerpt": self.evidence_excerpt,
             "verified_claims": self.verified_claims,
@@ -194,40 +196,17 @@ class ResearchCollector:
         excerpt = self.find_supporting_excerpt(claim, content_corpus)
         return excerpt is not None
 
-    def verify_and_fetch_source(self, url: str) -> Tuple[bool, Optional[int], str, str, Optional[str]]:
-        """Verify URL and retrieve real page title and evidence excerpt.
+    def verify_and_fetch_source(self, url: str) -> Tuple[bool, Optional[int], str, str, str, Optional[str]]:
+        """Verify URL and retrieve real page title, evidence excerpt, and canonical URL.
 
-        Returns: (verified, status_code, title, excerpt, error_message)
+        Returns: (extraction_success, status_code, title, excerpt, final_url, error_message)
         """
         self.last_fetched_content = ""
         if not url or not (url.startswith("http://") or url.startswith("https://")):
-            return False, None, "", "", "Invalid URL scheme. Must start with http:// or https://"
+            return False, None, "", "", url, "Invalid URL scheme. Must start with http:// or https://"
 
-        # Step 1: Attempt HEAD request
-        head_ok = False
         status_code = None
-        try:
-            req = urllib.request.Request(
-                url,
-                headers={"User-Agent": self.USER_AGENT, "Accept": "text/html,application/xhtml+xml"},
-                method="HEAD",
-            )
-            with urllib.request.urlopen(req, timeout=self.request_timeout) as resp:
-                status_code = resp.status
-                if status_code in (200, 301, 302, 307, 308):
-                    head_ok = True
-        except urllib.error.HTTPError as e:
-            status_code = e.code
-            # Some servers block HEAD with 403 or 405 but allow GET
-            if status_code in (403, 405):
-                head_ok = False
-            else:
-                return False, status_code, "", "", f"HTTP error {status_code}"
-        except Exception as e:
-            # HEAD failed; will fall back to GET
-            head_ok = False
-
-        # Step 2: GET request (retrieve up to 32KB of HTML to extract title and excerpt)
+        final_url = url
         try:
             get_req = urllib.request.Request(
                 url,
@@ -236,18 +215,19 @@ class ResearchCollector:
             )
             with urllib.request.urlopen(get_req, timeout=self.request_timeout) as resp:
                 status_code = resp.status
+                final_url = resp.url or url
                 if status_code < 200 or status_code >= 400:
-                    return False, status_code, "", "", f"HTTP status {status_code}"
+                    return False, status_code, "", "", final_url, f"HTTP status {status_code}"
 
                 chunk = resp.read(32768).decode("utf-8", errors="ignore")
                 page_title = self._extract_title(chunk)
                 excerpt = self._extract_excerpt(chunk)
                 self.last_fetched_content = chunk
 
-                # Check for soft-404 or anti-bot / error responses disguised as HTTP 200
                 title_lower = (page_title or "").lower()
                 excerpt_lower = (excerpt or "").lower()
-                combined_headers = f"{title_lower} {excerpt_lower}"
+                chunk_lower = chunk.lower()
+                combined = f"{title_lower} {excerpt_lower} {chunk_lower[:2000]}"
 
                 error_signatures = [
                     r"\b404\s+not\s+found\b",
@@ -258,19 +238,23 @@ class ResearchCollector:
                     r"\bblocked\s+by\s+security\b",
                     r"\bplease\s+enable\s+javascript\b",
                     r"\bverify\s+you\s+are\s+human\b",
+                    r"cloudflare\s+ray\s+id",
+                    r"just\s+a\s+moment\.\.\.",
                 ]
-                if any(re.search(pat, combined_headers) for pat in error_signatures):
-                    return False, status_code, page_title or url, excerpt, "Page returned HTTP 200 but content indicates missing page, error, or access barrier."
+                if any(re.search(pat, combined) for pat in error_signatures):
+                    return False, status_code, page_title or final_url, excerpt, final_url, "Page returned HTTP 200 but content indicates missing page, error, anti-bot challenge, or access barrier."
 
-                if len(chunk.strip()) < 30:
-                    return False, status_code, page_title or url, excerpt, "Page returned HTTP 200 but response body was empty or trivially short."
+                stripped_body = re.sub(r"<(script|style|svg|noscript)[^>]*>.*?</\1>", " ", chunk, flags=re.IGNORECASE | re.DOTALL)
+                stripped_body = re.sub(r"<[^>]+>", " ", stripped_body).strip()
+                if len(stripped_body) < 100:
+                    return False, status_code, page_title or final_url, excerpt, final_url, "JavaScript-rendered SPA page or trivially short response body (< 100 characters)."
 
-                return True, status_code, page_title or url, excerpt, None
+                return True, status_code, page_title or final_url, excerpt, final_url, None
 
         except urllib.error.HTTPError as e:
-            return False, e.code, "", "", f"HTTP GET failed with code {e.code}"
+            return False, e.code, "", "", url, f"HTTP request failed with code {e.code}"
         except Exception as e:
-            return False, None, "", "", f"Connection failed: {str(e)}"
+            return False, None, "", "", url, f"Connection failed: {str(e)}"
 
     def _extract_title(self, html_text: str) -> str:
         """Extract title tag content safely."""
@@ -281,8 +265,7 @@ class ResearchCollector:
         return ""
 
     def _extract_excerpt(self, html_text: str) -> str:
-        """Extract meta description or first substantive paragraph as evidence."""
-        # Check meta description
+        """Extract meta description, first substantive heading, or paragraph as evidence."""
         meta_match = re.search(
             r'<meta[^>]+(?:name|property)=["\'](?:description|og:description)["\'][^>]+content=["\']([^"\']+)["\']',
             html_text,
@@ -291,13 +274,13 @@ class ResearchCollector:
         if meta_match:
             return html.unescape(meta_match.group(1).strip())
 
-        # Fallback to first clean paragraph
-        p_matches = re.findall(r"<p[^>]*>(.*?)</p>", html_text, re.IGNORECASE | re.DOTALL)
-        for p in p_matches:
-            stripped = re.sub(r"<[^>]+>", " ", p)
-            cleaned = re.sub(r"\s+", " ", stripped).strip()
-            if len(cleaned) > 40:
-                return html.unescape(cleaned[:250])
+        for tag in ("h1", "h2", "p"):
+            matches = re.findall(rf"<{tag}[^>]*>(.*?)</{tag}>", html_text, re.IGNORECASE | re.DOTALL)
+            for m in matches:
+                stripped = re.sub(r"<[^>]+>", " ", m)
+                cleaned = re.sub(r"\s+", " ", stripped).strip()
+                if len(cleaned) > 25:
+                    return html.unescape(cleaned[:250])
         return ""
 
     def conduct_research(
@@ -474,9 +457,8 @@ class ResearchCollector:
             else:
                 # LIVE MODE: Actually verify URL
                 logger.info(f"Verifying live source: {url}")
-                ok, status, real_title, excerpt, err = self.verify_and_fetch_source(url)
+                ok, status, real_title, excerpt, canonical_url, err = self.verify_and_fetch_source(url)
                 if ok:
-                    # Check claims against retrieved text
                     corpus = f"{real_title} {excerpt} {self.last_fetched_content}".strip()
                     verified_claims: List[str] = []
                     unverified_claims: List[str] = []
@@ -491,7 +473,6 @@ class ResearchCollector:
                         else:
                             unverified_claims.append(c)
 
-                    # Only mark source as verified if it actually supports claims (or if no claims specified, topic is mentioned)
                     topic_supported = False
                     if not claims:
                         sup = self.find_supporting_excerpt(topic_title, corpus)
@@ -499,48 +480,37 @@ class ResearchCollector:
                             topic_supported = True
                             supporting_excerpt = sup
 
-                    if verified_claims or (not claims and topic_supported):
-                        brief.sources.append(
-                            SourceCitation(
-                                title=real_title or title,
-                                url=url,
-                                retrieval_date=today,
-                                verified=True,
-                                http_status=status,
-                                evidence_excerpt=supporting_excerpt or excerpt,
-                                verified_claims=verified_claims,
-                                unverified_claims=unverified_claims,
-                            )
+                    is_verified = bool(verified_claims) or (not claims and topic_supported)
+                    fail_msg = None if is_verified else (
+                        f"HTTP {status} received from {canonical_url}, content extraction succeeded, but retrieved content does not support required claims."
+                    )
+
+                    brief.sources.append(
+                        SourceCitation(
+                            title=real_title or title,
+                            url=canonical_url,
+                            retrieval_date=today,
+                            verified=is_verified,
+                            content_extraction_success=True,
+                            http_status=status,
+                            evidence_excerpt=supporting_excerpt or excerpt,
+                            verified_claims=verified_claims,
+                            unverified_claims=unverified_claims,
+                            failure_reason=fail_msg,
                         )
-                    else:
-                        fail_msg = (
-                            f"HTTP 200 received from {url}, but retrieved content does not support the required claims. "
-                            "Marked as unverified (needs manual review)."
-                        )
-                        logger.warning(fail_msg)
-                        brief.sources.append(
-                            SourceCitation(
-                                title=real_title or title,
-                                url=url,
-                                retrieval_date=today,
-                                verified=False,
-                                http_status=status,
-                                evidence_excerpt=excerpt,
-                                failure_reason=fail_msg,
-                                verified_claims=[],
-                                unverified_claims=claims,
-                            )
-                        )
+                    )
                 else:
-                    logger.warning(f"Source verification failed for {url}: {err} (HTTP {status})")
+                    fail_msg = err or f"Source verification or content extraction failed for {url} (HTTP {status})"
+                    logger.warning(fail_msg)
                     brief.sources.append(
                         SourceCitation(
                             title=title,
                             url=url,
                             retrieval_date=today,
                             verified=False,
+                            content_extraction_success=False,
                             http_status=status,
-                            failure_reason=err,
+                            failure_reason=fail_msg,
                             verified_claims=[],
                             unverified_claims=claims,
                         )

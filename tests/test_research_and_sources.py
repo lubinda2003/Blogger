@@ -24,10 +24,10 @@ class TestResearchAndSources(unittest.TestCase):
                 fp=MagicMock(read=lambda: b"Not found"),
             )
 
-            ok, status, title, excerpt, err = self.collector.verify_and_fetch_source("https://example.com/notfound")
+            ok, status, title, excerpt, final_url, err = self.collector.verify_and_fetch_source("https://example.com/notfound")
             self.assertFalse(ok)
             self.assertEqual(status, 404)
-            self.assertIn("HTTP error 404", err)
+            self.assertIn("HTTP request failed with code 404", err)
 
     def test_head_failure_falls_back_to_get_when_applicable(self):
         """When HEAD returns 405 Method Not Allowed, GET should be attempted."""
@@ -45,13 +45,14 @@ class TestResearchAndSources(unittest.TestCase):
                     # GET returns valid HTML
                     resp = MagicMock()
                     resp.status = 200
+                    resp.url = "https://example.com/test"
                     resp.__enter__.return_value = resp
-                    resp.read.return_value = b"<html><head><title>Official Documentation Page</title></head><body><p>This is substantive factual documentation.</p></body></html>"
+                    resp.read.return_value = b"<html><head><title>Official Documentation Page</title></head><body><p>This is substantive factual documentation that is long enough to pass extraction checks.</p></body></html>"
                     return resp
 
             mock_urlopen.side_effect = side_effect
 
-            ok, status, title, excerpt, err = self.collector.verify_and_fetch_source("https://example.com/test")
+            ok, status, title, excerpt, final_url, err = self.collector.verify_and_fetch_source("https://example.com/test")
             self.assertTrue(ok)
             self.assertEqual(status, 200)
             self.assertEqual(title, "Official Documentation Page")
@@ -96,6 +97,7 @@ class TestResearchAndSources(unittest.TestCase):
                 200,
                 "Delicious Chocolate Cake Recipes",
                 "How to bake double chocolate brownies from scratch in 30 minutes.",
+                "https://example.com/blog",
                 None,
             )
             self.collector.last_fetched_content = "Preheat oven to 350 degrees. Mix cocoa powder and butter."
@@ -118,7 +120,7 @@ class TestResearchAndSources(unittest.TestCase):
             self.assertFalse(source.verified)
             self.assertEqual(len(source.verified_claims), 0)
             self.assertIn("Database organization, workspace templates, and permission management", source.unverified_claims)
-            self.assertIn("does not support the required claims", source.failure_reason)
+            self.assertIn("does not support required claims", source.failure_reason)
 
     def test_http_200_with_supporting_content_marks_claims_verified(self):
         """A website returning HTTP 200 that substantively mentions claim keywords is marked verified."""
@@ -128,6 +130,7 @@ class TestResearchAndSources(unittest.TestCase):
                 200,
                 "Notion Help: Databases and Workspace Templates",
                 "Learn how to set up relational databases and custom workspace templates with permissions.",
+                "https://notion.so/help",
                 None,
             )
             self.collector.last_fetched_content = (
@@ -157,14 +160,15 @@ class TestResearchAndSources(unittest.TestCase):
         with patch("urllib.request.urlopen") as mock_urlopen:
             resp = MagicMock()
             resp.status = 200
+            resp.url = "https://example.com/deadlink"
             resp.__enter__.return_value = resp
             resp.read.return_value = b"<html><head><title>404 Page Not Found</title></head><body><p>The page requested is missing.</p></body></html>"
             mock_urlopen.return_value = resp
 
-            ok, status, title, excerpt, err = self.collector.verify_and_fetch_source("https://example.com/deadlink")
+            ok, status, title, excerpt, final_url, err = self.collector.verify_and_fetch_source("https://example.com/deadlink")
             self.assertFalse(ok)
             self.assertEqual(status, 200)
-            self.assertIn("missing page, error, or access barrier", err)
+            self.assertIn("missing page, error", err)
 
     def test_scattered_keyword_overlap_without_contextual_support_is_rejected(self):
         """Keywords scattered across disjoint headers and footers must not count as claim verification."""
@@ -191,6 +195,7 @@ class TestResearchAndSources(unittest.TestCase):
                 200,
                 "Generic Overview Page",
                 "A generic overview with no specific pricing or contract details.",
+                "https://example.com/fees",
                 None,
             )
             self.collector.last_fetched_content = "This page discusses general digital marketing trends in 2026."
@@ -212,7 +217,51 @@ class TestResearchAndSources(unittest.TestCase):
             self.assertFalse(source.verified)
             self.assertIn("Freelancer service fee structure on Upwork contracts", source.unverified_claims)
             self.assertEqual(len(source.verified_claims), 0)
-            self.assertIn("needs manual review", source.failure_reason.lower())
+            self.assertIn("does not support required claims", source.failure_reason.lower())
+
+    def test_javascript_spa_page_fails_extraction(self):
+        """A JavaScript-only SPA page returning HTTP 200 with an empty skeleton must fail content extraction."""
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.status = 200
+            resp.url = "https://example.com/spa"
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b"<html><head><title>App</title></head><body><div id='root'></div></body></html>"
+            mock_urlopen.return_value = resp
+
+            ok, status, title, excerpt, final_url, err = self.collector.verify_and_fetch_source("https://example.com/spa")
+            self.assertFalse(ok)
+            self.assertEqual(status, 200)
+            self.assertIn("JavaScript-rendered SPA page", err)
+
+    def test_redirect_and_canonical_url(self):
+        """Redirects must be followed and final canonical URL captured via resp.url."""
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.status = 200
+            resp.url = "https://canonical.example.com/page"
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b"<html><head><title>Canonical Page</title></head><body><p>This is a long substantive paragraph with enough text to pass extraction check successfully.</p></body></html>"
+            mock_urlopen.return_value = resp
+
+            ok, status, title, excerpt, final_url, err = self.collector.verify_and_fetch_source("https://example.com/old")
+            self.assertTrue(ok)
+            self.assertEqual(status, 200)
+            self.assertEqual(final_url, "https://canonical.example.com/page")
+
+    def test_antibot_response_detected(self):
+        """Anti-bot challenges (e.g. Cloudflare Ray ID) disguised as HTTP 200 must fail extraction."""
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.status = 200
+            resp.url = "https://example.com/protected"
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b"<html><head><title>Access Denied</title></head><body><p>Cloudflare Ray ID: 12345 - Please enable JavaScript and verify you are human.</p></body></html>"
+            mock_urlopen.return_value = resp
+
+            ok, status, title, excerpt, final_url, err = self.collector.verify_and_fetch_source("https://example.com/protected")
+            self.assertFalse(ok)
+            self.assertIn("anti-bot challenge", err)
 
 
 if __name__ == "__main__":
