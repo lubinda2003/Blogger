@@ -246,7 +246,8 @@ In your GitHub repository, navigate to **Settings > Secrets and variables > Acti
 
 | Secret Name | Required For | Example / Description |
 | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | Article writer & structured generation | `AIzaSy...` |
+| `GEMINI_API_KEY` | Gemini API article generation | `AIzaSy...` |
+| `GROQ_API_KEY` | *(Alternative)* Groq Llama 3.3 70B generation | `gsk_...` |
 | `TAVILY_API_KEY` | Tavily Search API web research discovery | `tvly-...` |
 | `BLOGGER_BLOG_ID` | Blogger blog identification | `8391048123910391029` |
 | `BLOGGER_CLIENT_ID` | OAuth2 token exchange | `*.apps.googleusercontent.com` |

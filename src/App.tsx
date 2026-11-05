@@ -251,6 +251,7 @@ export default function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             {[
               { name: 'GEMINI_API_KEY', desc: 'Google AI Studio Gemini API key for draft generation and claim synthesis.' },
+              { name: 'GROQ_API_KEY', desc: '(Alternative/Fallback) Groq API key for ultra-fast Llama 3.3 70B draft generation.' },
               { name: 'TAVILY_API_KEY', desc: 'Tavily Search API key for topic web research discovery and content extraction.' },
               { name: 'BLOGGER_BLOG_ID', desc: 'Blogger Blog ID for digitaltoolkitguide.blogspot.com (numeric string).' },
               { name: 'BLOGGER_CLIENT_ID', desc: 'Google Cloud OAuth 2.0 Web Client ID (*.apps.googleusercontent.com).' },

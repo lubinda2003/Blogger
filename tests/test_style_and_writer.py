@@ -101,6 +101,34 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertIn("models/gemini-3.8-flash:generateContent", req.full_url)
 
+    def test_groq_rest_call_success(self):
+        """ArticleWriter must support Groq API REST calls with llama-3.3-70b-versatile."""
+        writer = ArticleWriter(groq_api_key="gsk-mock-key", provider="groq")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"choices": [{"message": {"content": "{\\"title\\": \\"Groq Article\\", \\"meta_description\\": \\"Desc\\", \\"labels\\": [\\"Tag\\"], \\"html_content\\": \\"<p>Substantive text from Groq model.</p>\\", \\"sources_used\\": []}"}}]}'
+            mock_urlopen.return_value = resp
+
+            result = writer._call_groq_rest("Test prompt")
+            self.assertIn("Groq Article", result)
+
+            args, kwargs = mock_urlopen.call_args
+            req = args[0]
+            self.assertEqual(req.full_url, "https://api.groq.com/openai/v1/chat/completions")
+            self.assertEqual(req.headers.get("Authorization"), "Bearer gsk-mock-key")
+
+    def test_gemini_fails_over_to_groq_when_groq_key_available(self):
+        """When Gemini API call fails and GROQ_API_KEY is available, ArticleWriter automatically fails over to Groq."""
+        writer = ArticleWriter(api_key="gemini-bad-key", groq_api_key="gsk-valid-key", provider="auto")
+        with patch.object(writer, "_call_gemini_rest", side_effect=RuntimeError("Gemini 404 Model Not Found")), \
+             patch.object(writer, "_call_groq_rest") as mock_groq:
+
+            mock_groq.return_value = '{"title": "Failover Article"}'
+            res = writer._call_llm_provider("Test prompt")
+            self.assertEqual(res, '{"title": "Failover Article"}')
+            mock_groq.assert_called_once_with("Test prompt")
+
     def test_dry_run_fixture_contains_no_ai_cliches(self):
         """Dry run text fixtures must comply with plain-English rules and contain no generic AI cliches."""
         fixture = self.writer._generate_dry_run_fixture(self.topic, self.brief)

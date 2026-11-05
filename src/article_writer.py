@@ -76,12 +76,18 @@ class ArticleWriter:
         temperature: float = 0.3,
         max_tokens: int = 4096,
         prompt_template_path: str = "templates/article_prompt.md",
+        provider: str = "auto",
+        groq_api_key: Optional[str] = None,
+        groq_model: str = "llama-3.3-70b-versatile",
     ):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.model_name = model_name or os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.prompt_template_path = Path(prompt_template_path)
+        self.provider = (provider or os.getenv("LLM_PROVIDER", "auto")).strip().lower()
+        self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY")
+        self.groq_model = groq_model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
     def _load_prompt_template(self) -> str:
         """Load markdown prompt template."""
@@ -169,6 +175,74 @@ class ArticleWriter:
                     raise RuntimeError(f"Gemini connection error: {e}") from e
 
         raise RuntimeError(f"Gemini failed after {max_retries} attempts: {last_error}")
+
+    def _call_groq_rest(self, prompt: str) -> str:
+        """Call Groq REST API directly with Llama 3.3 70B or configured Groq model."""
+        if not self.groq_api_key:
+            raise ValueError("GROQ_API_KEY is not configured in environment or GitHub Secrets.")
+
+        url = "https://api.groq.com/openai/v1/chat/completions"
+        payload = {
+            "model": self.groq_model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are an expert technical editor and content writer. Return ONLY valid JSON adhering strictly to the requested schema.",
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "response_format": {"type": "json_object"},
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+        }
+
+        data_bytes = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data_bytes,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.groq_api_key}",
+            },
+            method="POST",
+        )
+
+        max_retries = 3
+        backoff = 2.0
+        last_error = None
+
+        for attempt in range(1, max_retries + 1):
+            try:
+                logger.info(f"Calling Groq API ({self.groq_model}), attempt {attempt}/{max_retries}...")
+                with urllib.request.urlopen(req, timeout=90) as response:
+                    res_body = response.read().decode("utf-8")
+                    parsed = json.loads(res_body)
+                    choices = parsed.get("choices", [])
+                    if not choices:
+                        raise ValueError("Groq API returned empty choices list.")
+                    raw_text = choices[0]["message"]["content"]
+                    return raw_text
+            except urllib.error.HTTPError as e:
+                last_error = e
+                status = e.code
+                err_text = e.read().decode("utf-8", errors="ignore")
+                safe_err = err_text[:200]
+                logger.warning(f"Groq API HTTP {status}: {safe_err}")
+
+                if status in (429, 500, 503, 504) and attempt < max_retries:
+                    sleep_time = backoff * (2 ** (attempt - 1))
+                    logger.info(f"Retrying Groq call in {sleep_time:.1f}s...")
+                    time.sleep(sleep_time)
+                else:
+                    raise RuntimeError(f"Groq API request failed with status {status}: {safe_err}") from e
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries:
+                    time.sleep(backoff * attempt)
+                else:
+                    raise RuntimeError(f"Groq connection error: {e}") from e
+
+        raise RuntimeError(f"Groq failed after {max_retries} attempts: {last_error}")
 
     def _validate_schema(self, data: Dict[str, Any]) -> List[str]:
         """Validate Gemini output against required fields and structure."""
@@ -370,6 +444,27 @@ against primary documentation."</code>
             "last_checked_date": current_month,
         }
 
+    def _call_llm_provider(self, prompt: str) -> str:
+        """Route prompt to configured LLM provider (Gemini or Groq) with intelligent failover."""
+        prov = self.provider
+        if prov == "groq" or (prov == "auto" and not self.api_key and self.groq_api_key):
+            logger.info(f"Generating article via Groq LLM provider ({self.groq_model})...")
+            return self._call_groq_rest(prompt)
+        elif prov == "gemini" or (prov == "auto" and self.api_key):
+            logger.info(f"Generating article via Gemini LLM provider ({self.model_name})...")
+            try:
+                return self._call_gemini_rest(prompt)
+            except Exception as e:
+                if self.groq_api_key:
+                    logger.warning(f"Gemini API call failed ({e}). Falling back to Groq provider ({self.groq_model})...")
+                    return self._call_groq_rest(prompt)
+                raise
+        elif self.groq_api_key:
+            logger.info(f"Generating article via Groq LLM provider ({self.groq_model})...")
+            return self._call_groq_rest(prompt)
+        else:
+            raise ValueError("Neither GEMINI_API_KEY nor GROQ_API_KEY is configured in environment or GitHub Secrets.")
+
     def write_article(self, topic: TopicItem, brief: ResearchBrief, dry_run: bool = False) -> ArticleDraft:
         """Generate structured article draft using Gemini or deterministic dry-run fixture.
 
@@ -380,12 +475,9 @@ against primary documentation."</code>
             parsed = self._generate_dry_run_fixture(topic, brief)
             is_fixture = True
         else:
-            # LIVE MODE: Must call Gemini API and parse structured JSON
-            if not self.api_key:
-                raise ValueError("GEMINI_API_KEY is missing. Live generation cannot proceed.")
-
+            # LIVE MODE: Call configured LLM API provider and parse structured JSON
             prompt = self._render_prompt(topic, brief)
-            raw_json_str = self._call_gemini_rest(prompt)
+            raw_json_str = self._call_llm_provider(prompt)
 
             # Clean possible markdown wrapping like ```json ... ```
             clean_text = raw_json_str.strip()
@@ -397,9 +489,9 @@ against primary documentation."</code>
                 parsed = json.loads(clean_text)
             except Exception as e:
                 # In live mode, retry with repair prompt once
-                logger.warning(f"Gemini returned invalid JSON ({e}). Retrying with repair prompt...")
+                logger.warning(f"LLM returned invalid JSON ({e}). Retrying with repair prompt...")
                 repair_prompt = f"The following text was supposed to be valid JSON matching the schema, but failed to parse: {clean_text[:400]}. Return ONLY valid JSON adhering to the schema."
-                repaired_raw = self._call_gemini_rest(repair_prompt)
+                repaired_raw = self._call_llm_provider(repair_prompt)
                 clean_repaired = repaired_raw.strip()
                 if clean_repaired.startswith("```"):
                     clean_repaired = re.sub(r"^```(?:json)?\n", "", clean_repaired)

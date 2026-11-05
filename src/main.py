@@ -218,6 +218,9 @@ def run_pipeline(
         temperature=config.gemini_temperature,
         max_tokens=config.gemini_max_tokens,
         prompt_template_path=config.template_prompt_path,
+        provider=config.llm_provider,
+        groq_api_key=config.groq_api_key,
+        groq_model=config.groq_model,
     )
 
     try:

@@ -25,15 +25,19 @@ class AppConfig:
     template_prompt_path: str = "templates/article_prompt.md"
 
     # API credentials (never logged or committed)
+    # API credentials (never logged or committed)
     gemini_api_key: Optional[str] = field(default=None, repr=False)
+    groq_api_key: Optional[str] = field(default=None, repr=False)
     tavily_api_key: Optional[str] = field(default=None, repr=False)
     blogger_blog_id: Optional[str] = None
     blogger_client_id: Optional[str] = field(default=None, repr=False)
     blogger_client_secret: Optional[str] = field(default=None, repr=False)
     blogger_refresh_token: Optional[str] = field(default=None, repr=False)
 
-    # Gemini model parameters
+    # LLM provider parameters
+    llm_provider: str = "auto"  # "auto", "gemini", or "groq"
     gemini_model: str = "gemini-3.8-flash"
+    groq_model: str = "llama-3.3-70b-versatile"
     gemini_temperature: float = 0.3
     gemini_max_tokens: int = 4096
 
@@ -61,12 +65,14 @@ class AppConfig:
         if self.publish_mode not in ("draft", "publish"):
             errors.append(f"Invalid PUBLISH_MODE: '{self.publish_mode}'. Must be 'draft' or 'publish'.")
 
-        # In non-dry-run mode when writing with Gemini
+        # In non-dry-run mode when writing with LLM
         if not self.dry_run and stage in ("all", "write"):
-            if not self.gemini_api_key or self.gemini_api_key.strip() == "":
+            has_gemini = bool(self.gemini_api_key and self.gemini_api_key.strip())
+            has_groq = bool(self.groq_api_key and self.groq_api_key.strip())
+            if not has_gemini and not has_groq:
                 errors.append(
-                    "GEMINI_API_KEY is required for live generation. "
-                    "Configure GEMINI_API_KEY in environment variables or GitHub Secrets."
+                    "At least one valid LLM API key (GEMINI_API_KEY or GROQ_API_KEY) is required for live generation. "
+                    "Configure GEMINI_API_KEY or GROQ_API_KEY in environment variables or GitHub Secrets."
                 )
 
         # In non-dry-run mode when publishing or creating draft on Blogger
@@ -101,10 +107,13 @@ class AppConfig:
         return {
             "dry_run": self.dry_run,
             "publish_mode": self.publish_mode,
+            "llm_provider": self.llm_provider,
             "local_only": self.local_only,
             "max_articles_per_run": self.max_articles_per_run,
             "gemini_model": self.gemini_model,
+            "groq_model": self.groq_model,
             "gemini_api_key": mask(self.gemini_api_key),
+            "groq_api_key": mask(self.groq_api_key),
             "tavily_api_key": mask(self.tavily_api_key),
             "blogger_blog_id": self.blogger_blog_id or "Not Configured",
             "blogger_client_id": mask(self.blogger_client_id),
@@ -166,8 +175,6 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
     else:
         zambia_enabled = bool(pipeline_cfg.get("zambia_context_enabled", False))
 
-
-
     config = AppConfig(
         dry_run=dry_run,
         publish_mode=publish_mode,
@@ -176,13 +183,16 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         topics_csv_path=os.getenv("TOPICS_CSV_PATH", "data/topics.csv"),
         processed_json_path=os.getenv("PROCESSED_JSON_PATH", "data/processed_topics.json"),
         output_dir=os.getenv("OUTPUT_DIR", "output"),
+        llm_provider=os.getenv("LLM_PROVIDER", "auto").strip().lower(),
         gemini_api_key=os.getenv("GEMINI_API_KEY"),
+        groq_api_key=os.getenv("GROQ_API_KEY"),
         tavily_api_key=os.getenv("TAVILY_API_KEY"),
         blogger_blog_id=os.getenv("BLOGGER_BLOG_ID") or blogger_cfg.get("blog_id") or None,
         blogger_client_id=os.getenv("BLOGGER_CLIENT_ID"),
         blogger_client_secret=os.getenv("BLOGGER_CLIENT_SECRET"),
         blogger_refresh_token=os.getenv("BLOGGER_REFRESH_TOKEN"),
         gemini_model=os.getenv("GEMINI_MODEL") or gemini_cfg.get("model", "gemini-3.8-flash"),
+        groq_model=os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile",
         zambia_context_enabled=zambia_enabled,
         min_word_count=min_words,
         max_word_count=max_words,
