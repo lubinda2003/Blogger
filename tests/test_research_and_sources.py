@@ -263,6 +263,88 @@ class TestResearchAndSources(unittest.TestCase):
             self.assertFalse(ok)
             self.assertIn("anti-bot challenge", err)
 
+    def test_tavily_search_success_returns_results(self):
+        """Tavily search HTTP POST returning 200 must return result dictionaries."""
+        collector = ResearchCollector(tavily_api_key="tvly-mock-key")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.status = 200
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"results": [{"title": "Notion Docs", "url": "https://notion.so/help", "content": "Official Notion guide."}]}'
+            mock_urlopen.return_value = resp
+
+            results = collector._search_tavily("Notion documentation", max_results=3)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]["title"], "Notion Docs")
+            self.assertEqual(results[0]["url"], "https://notion.so/help")
+
+    def test_tavily_search_401_unauthorized_falls_back_gracefully(self):
+        """An invalid Tavily API key returning 401 must log a warning and return [] without raising."""
+        collector = ResearchCollector(tavily_api_key="invalid-key")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError(
+                url="https://api.tavily.com/search",
+                code=401,
+                msg="Unauthorized",
+                hdrs={},
+                fp=MagicMock(read=lambda: b"Unauthorized"),
+            )
+
+            results = collector._search_tavily("test query")
+            self.assertEqual(results, [])
+
+    def test_tavily_search_429_rate_limit_falls_back_gracefully(self):
+        """A Tavily 429 rate limit error must log a warning and return [] gracefully."""
+        collector = ResearchCollector(tavily_api_key="tvly-mock-key")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            mock_urlopen.side_effect = urllib.error.HTTPError(
+                url="https://api.tavily.com/search",
+                code=429,
+                msg="Rate limit exceeded",
+                hdrs={},
+                fp=MagicMock(read=lambda: b"Rate limit"),
+            )
+
+            results = collector._search_tavily("test query")
+            self.assertEqual(results, [])
+
+    def test_tavily_fallback_corpus_verifies_claim_when_direct_fetch_blocked(self):
+        """When direct HTTP fetch is blocked by anti-bot, Tavily extracted snippet serves as fallback corpus."""
+        collector = ResearchCollector(tavily_api_key="tvly-mock-key")
+        with patch.object(collector, "_search_tavily") as mock_search, \
+             patch.object(collector, "verify_and_fetch_source") as mock_fetch:
+
+            mock_search.return_value = [{
+                "title": "Shopify Documentation",
+                "url": "https://help.shopify.com",
+                "content": "Official Shopify documentation on store creation, payment gateways, and checkout management.",
+                "raw_content": "Official Shopify documentation on store creation, payment gateways, and checkout management.",
+            }]
+
+            # Direct fetch fails with Cloudflare challenge
+            mock_fetch.return_value = (
+                False,
+                403,
+                "Access Denied",
+                "",
+                "https://help.shopify.com",
+                "anti-bot challenge",
+            )
+
+            brief = collector.conduct_research(
+                topic_id="shopify-setup",
+                topic_title="How to Set Up a Shopify Store",
+                category="Digital Business Tools",
+                target_url="https://help.shopify.com",
+                dry_run=False,
+            )
+
+            # Verification should succeed via Tavily extracted content!
+            verified_sources = brief.verified_sources()
+            self.assertTrue(len(verified_sources) >= 1)
+            self.assertTrue(verified_sources[0].verified)
+            self.assertTrue(verified_sources[0].content_extraction_success)
+
 
 if __name__ == "__main__":
     unittest.main()

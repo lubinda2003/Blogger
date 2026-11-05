@@ -39,5 +39,11 @@
     "min_credible_sources": 2,
     "require_faq": true,
     "featured_image_brief": true
+  },
+  "research": {
+    "provider": "tavily",
+    "search_depth": "basic",
+    "max_results_per_topic": 5,
+    "min_verified_sources_required": 2
   }
 }

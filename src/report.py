@@ -41,6 +41,7 @@ class PipelineReporter:
         self.qa_failures: List[str] = []
         self.qa_warnings: List[str] = []
         self.source_count: int = 0
+        self.research_sources: List[Dict[str, Any]] = []
         self.screenshot_captured: bool = False
         self.overall_status: str = "IN_PROGRESS"
         self.next_action: str = ""
@@ -90,6 +91,7 @@ class PipelineReporter:
                 "source_count": self.source_count,
                 "screenshot_captured": self.screenshot_captured,
             },
+            "research_sources": self.research_sources,
             "blogger": {
                 "post_id": self.post_id,
                 "post_url": self.post_url,
@@ -157,6 +159,24 @@ class PipelineReporter:
                 f"- **Draft URL:** [{report['blogger']['post_url']}]({report['blogger']['post_url']})",
                 "",
             ])
+
+        if report.get("research_sources"):
+            lines.extend([
+                "### 🔍 Research Sources & Evidence Verification",
+                "| Source Title | URL | Extraction | HTTP | Verification | Details / Failure Reason |",
+                "| :--- | :--- | :--- | :--- | :--- | :--- |",
+            ])
+            for src in report["research_sources"]:
+                s_title = src.get("title", "Untitled Source")
+                s_url = src.get("url", "#")
+                s_ext = "Success" if src.get("content_extraction_success") else "Failed"
+                s_status = str(src.get("http_status") or "N/A")
+                s_ver = "✅ Verified" if src.get("verified") else "❌ Unverified"
+                s_reason = src.get("failure_reason") or (
+                    f"Supports {len(src.get('verified_claims', []))} claim(s)" if src.get("verified") else "Unverified"
+                )
+                lines.append(f"| {s_title} | [{s_url}]({s_url}) | {s_ext} | {s_status} | {s_ver} | {s_reason} |")
+            lines.append("")
 
         lines.extend([
             "### 🚦 Pipeline Stages",

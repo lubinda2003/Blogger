@@ -172,7 +172,7 @@ def run_pipeline(
     # Stage 3: Live Research & Fact Verification
     # -------------------------------------------------------------
     t0 = time.time()
-    researcher = ResearchCollector()
+    researcher = ResearchCollector(tavily_api_key=config.tavily_api_key)
     brief = researcher.conduct_research(
         topic_id=topic.id,
         topic_title=topic.topic,
@@ -182,6 +182,7 @@ def run_pipeline(
         dry_run=config.dry_run,
     )
 
+    reporter.research_sources = [s.to_dict() for s in brief.sources]
     reporter.source_count = len(brief.verified_sources())
     if brief.insufficient_evidence:
         details_msg = brief.notes or "Fewer than 2 verified sources found. Factual evidence insufficient."

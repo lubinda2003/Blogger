@@ -26,6 +26,7 @@ class AppConfig:
 
     # API credentials (never logged or committed)
     gemini_api_key: Optional[str] = field(default=None, repr=False)
+    tavily_api_key: Optional[str] = field(default=None, repr=False)
     blogger_blog_id: Optional[str] = None
     blogger_client_id: Optional[str] = field(default=None, repr=False)
     blogger_client_secret: Optional[str] = field(default=None, repr=False)
@@ -104,6 +105,7 @@ class AppConfig:
             "max_articles_per_run": self.max_articles_per_run,
             "gemini_model": self.gemini_model,
             "gemini_api_key": mask(self.gemini_api_key),
+            "tavily_api_key": mask(self.tavily_api_key),
             "blogger_blog_id": self.blogger_blog_id or "Not Configured",
             "blogger_client_id": mask(self.blogger_client_id),
             "blogger_client_secret": mask(self.blogger_client_secret),
@@ -175,6 +177,7 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         processed_json_path=os.getenv("PROCESSED_JSON_PATH", "data/processed_topics.json"),
         output_dir=os.getenv("OUTPUT_DIR", "output"),
         gemini_api_key=os.getenv("GEMINI_API_KEY"),
+        tavily_api_key=os.getenv("TAVILY_API_KEY"),
         blogger_blog_id=os.getenv("BLOGGER_BLOG_ID") or blogger_cfg.get("blog_id") or None,
         blogger_client_id=os.getenv("BLOGGER_CLIENT_ID"),
         blogger_client_secret=os.getenv("BLOGGER_CLIENT_SECRET"),
