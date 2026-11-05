@@ -15,7 +15,7 @@ class AppConfig:
     dry_run: bool = True
     publish_mode: str = "draft"  # "draft" or "publish"
     max_articles_per_run: int = 1
-    local_only: bool = False  # Bypasses Cloudflare D1 deduplication requirement for local-only runs
+
 
     # File paths
     topics_csv_path: str = "data/topics.csv"
@@ -164,11 +164,7 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
     else:
         zambia_enabled = bool(pipeline_cfg.get("zambia_context_enabled", False))
 
-    local_only_env = os.getenv("LOCAL_ONLY") or os.getenv("ALLOW_LOCAL_FALLBACK")
-    if local_only_env is not None:
-        local_only = _str_to_bool(local_only_env, default=False)
-    else:
-        local_only = bool(pipeline_cfg.get("local_only", False))
+
 
     config = AppConfig(
         dry_run=dry_run,
