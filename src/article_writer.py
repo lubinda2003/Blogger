@@ -150,15 +150,34 @@ class ArticleWriter:
                     parsed = json.loads(res_body)
                     candidates = parsed.get("candidates", [])
                     if not candidates:
-                        raise ValueError("Gemini returned empty candidate list.")
-                    raw_text = candidates[0]["content"]["parts"][0]["text"]
+                        prompt_feedback = parsed.get("promptFeedback", {})
+                        raise ValueError(f"Gemini returned empty candidate list. PromptFeedback: {prompt_feedback}")
+
+                    candidate_content = candidates[0].get("content", {})
+                    parts = candidate_content.get("parts", [])
+                    if not parts:
+                        finish_reason = candidates[0].get("finishReason", "UNKNOWN")
+                        raise ValueError(f"Gemini candidate has no parts (finishReason: {finish_reason}).")
+
+                    # In Gemini 2.0 / 3.x models, thinking parts have "thought": true
+                    # The actual answer is in non-thought parts:
+                    non_thought_parts = [
+                        p.get("text", "")
+                        for p in parts
+                        if not p.get("thought", False) and "text" in p
+                    ]
+                    if non_thought_parts:
+                        raw_text = "\n".join(non_thought_parts)
+                    else:
+                        raw_text = "\n".join(p.get("text", "") for p in parts if "text" in p)
+
                     return raw_text
             except urllib.error.HTTPError as e:
                 last_error = e
                 status = e.code
                 err_text = e.read().decode("utf-8", errors="ignore")
                 # Redact API key if it inadvertently appears in error text
-                safe_err = re.sub(r"key=[A-Za-z0-9_-]+", "key=[REDACTED]", err_text[:200])
+                safe_err = re.sub(r"key=[A-Za-z0-9_-]+", "key=[REDACTED]", err_text[:1000])
                 logger.warning(f"Gemini API HTTP {status}: {safe_err}")
 
                 if status in (429, 500, 503, 504) and attempt < max_retries:
@@ -226,7 +245,7 @@ class ArticleWriter:
                 last_error = e
                 status = e.code
                 err_text = e.read().decode("utf-8", errors="ignore")
-                safe_err = err_text[:200]
+                safe_err = err_text[:1000]
                 logger.warning(f"Groq API HTTP {status}: {safe_err}")
 
                 if status in (429, 500, 503, 504) and attempt < max_retries:
@@ -465,6 +484,40 @@ against primary documentation."</code>
         else:
             raise ValueError("Neither GEMINI_API_KEY nor GROQ_API_KEY is configured in environment or GitHub Secrets.")
 
+    def _extract_json_from_response(self, raw_text: str) -> Dict[str, Any]:
+        """Extract and parse JSON object from LLM response reliably.
+
+        Handles direct JSON, markdown code fence blocks (```json ... ```), and embedded JSON objects.
+        """
+        text = (raw_text or "").strip()
+        if not text:
+            raise ValueError("Empty response received from LLM.")
+
+        # 1. Direct JSON parse
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+
+        # 2. Extract from markdown code fences
+        fence_match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text, re.IGNORECASE)
+        if fence_match:
+            try:
+                return json.loads(fence_match.group(1).strip())
+            except Exception:
+                pass
+
+        # 3. Extract outermost JSON object {...}
+        obj_match = re.search(r"(\{[\s\S]*\})", text)
+        if obj_match:
+            try:
+                return json.loads(obj_match.group(1).strip())
+            except Exception:
+                pass
+
+        # Final attempt to give descriptive standard JSON error
+        return json.loads(text)
+
     def write_article(self, topic: TopicItem, brief: ResearchBrief, dry_run: bool = False) -> ArticleDraft:
         """Generate structured article draft using Gemini or deterministic dry-run fixture.
 
@@ -479,32 +532,22 @@ against primary documentation."</code>
             prompt = self._render_prompt(topic, brief)
             raw_json_str = self._call_llm_provider(prompt)
 
-            # Clean possible markdown wrapping like ```json ... ```
-            clean_text = raw_json_str.strip()
-            if clean_text.startswith("```"):
-                clean_text = re.sub(r"^```(?:json)?\n", "", clean_text)
-                clean_text = re.sub(r"\n```$", "", clean_text)
-
             try:
-                parsed = json.loads(clean_text)
+                parsed = self._extract_json_from_response(raw_json_str)
             except Exception as e:
                 # In live mode, retry with repair prompt once
                 logger.warning(f"LLM returned invalid JSON ({e}). Retrying with repair prompt...")
-                repair_prompt = f"The following text was supposed to be valid JSON matching the schema, but failed to parse: {clean_text[:400]}. Return ONLY valid JSON adhering to the schema."
+                repair_prompt = f"The following text was supposed to be valid JSON matching the schema, but failed to parse: {raw_json_str[:400]}. Return ONLY valid JSON adhering to the schema."
                 repaired_raw = self._call_llm_provider(repair_prompt)
-                clean_repaired = repaired_raw.strip()
-                if clean_repaired.startswith("```"):
-                    clean_repaired = re.sub(r"^```(?:json)?\n", "", clean_repaired)
-                    clean_repaired = re.sub(r"\n```$", "", clean_repaired)
                 try:
-                    parsed = json.loads(clean_repaired)
+                    parsed = self._extract_json_from_response(repaired_raw)
                 except Exception as e2:
-                    raise RuntimeError(f"Gemini response could not be parsed as JSON: {e2}") from e2
+                    raise RuntimeError(f"LLM response could not be parsed as JSON: {e2}") from e2
 
             # Schema validation
             schema_errors = self._validate_schema(parsed)
             if schema_errors:
-                raise RuntimeError(f"Gemini output failed schema validation: {'; '.join(schema_errors)}")
+                raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}")
 
             is_fixture = False
 
