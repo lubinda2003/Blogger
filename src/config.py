@@ -33,7 +33,7 @@ class AppConfig:
     blogger_refresh_token: Optional[str] = field(default=None, repr=False)
 
     # Gemini model parameters
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
     gemini_temperature: float = 0.3
     gemini_max_tokens: int = 4096
 
@@ -182,7 +182,7 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         blogger_client_id=os.getenv("BLOGGER_CLIENT_ID"),
         blogger_client_secret=os.getenv("BLOGGER_CLIENT_SECRET"),
         blogger_refresh_token=os.getenv("BLOGGER_REFRESH_TOKEN"),
-        gemini_model=os.getenv("GEMINI_MODEL") or gemini_cfg.get("model", "gemini-2.5-flash"),
+        gemini_model=os.getenv("GEMINI_MODEL") or gemini_cfg.get("model", "gemini-3.8-flash"),
         zambia_context_enabled=zambia_enabled,
         min_word_count=min_words,
         max_word_count=max_words,

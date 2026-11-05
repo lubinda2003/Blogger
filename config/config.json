@@ -29,7 +29,7 @@
     "auto_reconcile": true
   },
   "gemini": {
-    "model": "gemini-2.5-flash",
+    "model": "gemini-3.8-flash",
     "temperature": 0.3,
     "max_output_tokens": 4096
   },

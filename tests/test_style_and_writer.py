@@ -55,7 +55,7 @@ class TestStyleAndWriter(unittest.TestCase):
         """HTTP error from Gemini must redact API key from exception message."""
         with patch("urllib.request.urlopen") as mock_urlopen:
             mock_urlopen.side_effect = urllib.error.HTTPError(
-                url="https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSySecretKey123",
+                url="https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=AIzaSySecretKey123",
                 code=400,
                 msg="Bad Request",
                 hdrs={},
@@ -68,6 +68,38 @@ class TestStyleAndWriter(unittest.TestCase):
             err_str = str(cm.exception)
             self.assertNotIn("AIzaSySecretKey123", err_str)
             self.assertIn("[REDACTED]", err_str)
+
+    def test_default_gemini_model_is_gemini_3_8_flash(self):
+        """Default Gemini model across AppConfig and ArticleWriter must be gemini-3.8-flash."""
+        from src.config import AppConfig, load_config
+        config = load_config()
+        self.assertEqual(config.gemini_model, "gemini-3.8-flash")
+        writer = ArticleWriter(api_key="test-key")
+        self.assertEqual(writer.model_name, "gemini-3.8-flash")
+
+    def test_gemini_model_env_var_override(self):
+        """Setting GEMINI_MODEL env var must override default model in load_config and ArticleWriter."""
+        from src.config import load_config
+        with patch.dict("os.environ", {"GEMINI_MODEL": "gemini-custom-override"}):
+            config = load_config()
+            self.assertEqual(config.gemini_model, "gemini-custom-override")
+            writer = ArticleWriter(api_key="test-key")
+            self.assertEqual(writer.model_name, "gemini-custom-override")
+
+    def test_article_writer_uses_configured_model_in_rest_call(self):
+        """ArticleWriter must construct REST endpoint URL with the exact configured model name."""
+        writer = ArticleWriter(api_key="test-key", model_name="gemini-3.8-flash")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"candidates": [{"content": {"parts": [{"text": "{\\"title\\": \\"Test\\", \\"meta_description\\": \\"Desc\\", \\"labels\\": [\\"Tag\\"], \\"html_content\\": \\"<p>Substantive article text long enough for schema validation check.</p>\\", \\"sources_used\\": []}"}]}}]}'
+            mock_urlopen.return_value = resp
+
+            writer._call_gemini_rest("Test prompt")
+
+            args, kwargs = mock_urlopen.call_args
+            req = args[0]
+            self.assertIn("models/gemini-3.8-flash:generateContent", req.full_url)
 
     def test_dry_run_fixture_contains_no_ai_cliches(self):
         """Dry run text fixtures must comply with plain-English rules and contain no generic AI cliches."""

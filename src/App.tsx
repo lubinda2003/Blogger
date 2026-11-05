@@ -95,7 +95,7 @@ export default function App() {
               Automated Content Production for The Digital Toolkit
             </h2>
             <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-              A simplified, fully self-contained content engine operating entirely through GitHub Actions with Python 3.11, Google Gemini 2.5 Flash, repository-native state persistence via <code className="text-sky-300">data/processed_topics.json</code>, and Blogger Drafts. No external database or Cloudflare Worker dependencies required.
+              A simplified, fully self-contained content engine operating entirely through GitHub Actions with Python 3.11, Google Gemini 3.8 Flash, repository-native state persistence via <code className="text-sky-300">data/processed_topics.json</code>, and Blogger Drafts. No external database or Cloudflare Worker dependencies required.
             </p>
           </div>
 
@@ -119,7 +119,7 @@ export default function App() {
               </div>
               <h3 className="text-sm font-semibold text-slate-200">Python 3.11 Engine</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Topic selection, real source fact-checking, Gemini 2.5 Flash drafting, Playwright capture, and 10 hard QA gates.
+                Topic selection, real source fact-checking, Gemini 3.8 Flash drafting, Playwright capture, and 10 hard QA gates.
               </p>
             </div>
 

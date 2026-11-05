@@ -72,13 +72,13 @@ class ArticleWriter:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        model_name: Optional[str] = None,
         temperature: float = 0.3,
         max_tokens: int = 4096,
         prompt_template_path: str = "templates/article_prompt.md",
     ):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self.model_name = model_name
+        self.model_name = model_name or os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.prompt_template_path = Path(prompt_template_path)
