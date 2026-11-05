@@ -79,7 +79,3 @@ blogger:
     - "Productivity"
   auto_reconcile: true
 
-cloudflare_worker:
-  # Optional Cloudflare Worker backend for persistent D1 telemetry and shared services
-  worker_url: "" # Configured via CLOUDFLARE_WORKER_URL secret
-  auth_token: "" # Configured via CLOUDFLARE_WORKER_SECRET

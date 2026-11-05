@@ -51,7 +51,7 @@ export default function App() {
                   The Digital Toolkit — Content Automation Engine
                 </h1>
                 <span className="text-[10px] font-mono uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded">
-                  Passed 50/50 Tests
+                  Passed 45/45 Tests
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
@@ -95,7 +95,7 @@ export default function App() {
               Automated Content Production for The Digital Toolkit
             </h2>
             <p className="text-sm text-slate-300 mt-2 leading-relaxed">
-              A streamlined, resilient content engine operating through GitHub Actions with Python 3.11, Google Gemini 2.5 Flash, Cloudflare Worker supporting backend with D1 SQL storage, and Blogger Drafts. Built for high editorial quality, zero AI clichés, and complete transparency.
+              A simplified, fully self-contained content engine operating entirely through GitHub Actions with Python 3.11, Google Gemini 2.5 Flash, repository-native state persistence via <code className="text-sky-300">data/processed_topics.json</code>, and Blogger Drafts. No external database or Cloudflare Worker dependencies required.
             </p>
           </div>
 
@@ -108,7 +108,7 @@ export default function App() {
               </div>
               <h3 className="text-sm font-semibold text-slate-200">GitHub Actions</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Scheduled daily at 06:00 UTC with manual <code className="text-slate-300">workflow_dispatch</code> trigger support.
+                Scheduled daily with manual <code className="text-slate-300">workflow_dispatch</code>. Concurrency serialized to prevent overlap.
               </p>
             </div>
 
@@ -128,9 +128,9 @@ export default function App() {
                 <Database className="h-4 w-4" />
                 <span>3. State & Telemetry</span>
               </div>
-              <h3 className="text-sm font-semibold text-slate-200">Cloudflare Worker & D1</h3>
+              <h3 className="text-sm font-semibold text-slate-200">Repository State</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                <code className="text-slate-300">digital-toolkit-worker</code> with <code className="text-slate-300">digital-toolkit-db</code> for persistent topic history and run telemetry.
+                <code className="text-slate-300">data/processed_topics.json</code> with SHA-256 fingerprint deduplication, fail-closed verification, and workflow artifacts.
               </p>
             </div>
 
@@ -141,28 +141,28 @@ export default function App() {
               </div>
               <h3 className="text-sm font-semibold text-slate-200">Blogger Drafts</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Direct OAuth2 insertion via Blogger API v3. Enforces <code className="text-slate-300">isDraft=true</code> for human review.
+                Direct OAuth2 insertion via Blogger API v3. Enforces <code className="text-slate-300">isDraft=true</code> for human editorial review.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Cloudflare D1 Manual Configuration Guide */}
+        {/* Repository State Persistence Guide */}
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-sky-400" />
                 <h2 className="text-base font-semibold text-slate-100">
-                  Cloudflare D1 Database & Worker Configuration
+                  Repository-Native State Persistence Architecture
                 </h2>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Follow these exact steps to connect the existing <code className="text-slate-300">digital-toolkit-db</code> database to <code className="text-slate-300">digital-toolkit-worker</code>.
+                The content engine persists state directly within your repository using <code className="text-slate-300">data/processed_topics.json</code>. No Cloudflare Worker or external SQL database required.
               </p>
             </div>
-            <span className="text-xs font-mono bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2.5 py-1 rounded-md">
-              Target: digital-toolkit-db
+            <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md">
+              Zero External DB
             </span>
           </div>
 
@@ -171,136 +171,91 @@ export default function App() {
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-200">
-                  Step 1: Get the Existing D1 Database UUID
+                  Step 1: Enable GitHub Actions Workflow Write Permissions
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">Terminal / Cloudflare CLI</span>
+                <span className="text-[11px] text-amber-400 font-mono">Critical Setting</span>
               </div>
               <p className="text-slate-400">
-                Run this command to inspect your existing Cloudflare D1 database and copy its UUID:
+                To allow GitHub Actions to commit updated topic history back to your repository:
               </p>
-              <div className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg border border-slate-800 font-mono text-slate-200">
-                <code>npx wrangler d1 info digital-toolkit-db</code>
-                <button
-                  onClick={() => copyToClipboard('npx wrangler d1 info digital-toolkit-db', 'cmd1')}
-                  className="text-slate-400 hover:text-slate-200 text-xs flex items-center gap-1 transition"
-                >
-                  {copiedKey === 'cmd1' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedKey === 'cmd1' ? 'Copied' : 'Copy'}</span>
-                </button>
+              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
+                <div>1. In GitHub, go to <span className="text-sky-400">Settings</span> → <span className="text-sky-400">Actions</span> → <span className="text-sky-400">General</span>.</div>
+                <div>2. Under <span className="text-sky-400">Workflow permissions</span>, select <span className="text-emerald-400 font-semibold">Read and write permissions</span>.</div>
+                <div>3. Check <span className="text-emerald-400">Allow GitHub Actions to create and approve pull requests</span> (optional, but keep checked).</div>
+                <div>4. Click <span className="text-sky-400">Save</span>.</div>
               </div>
-              <p className="text-[11px] text-slate-500">
-                Alternatively, open the Cloudflare Dashboard: <strong>Workers & Pages</strong> → <strong>D1 SQL Database</strong> → click <strong>digital-toolkit-db</strong> and copy the <em>Database ID</em>.
-              </p>
             </div>
 
             {/* Step 2 */}
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-200">
-                  Step 2: Insert UUID into worker/wrangler.toml
+                  Step 2: Concurrency Serialization (Overlapping Protection)
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">worker/wrangler.toml</span>
+                <span className="text-[11px] text-sky-400 font-mono">.github/workflows/content-pipeline.yml</span>
               </div>
               <p className="text-slate-400">
-                In <code className="text-sky-300">worker/wrangler.toml</code>, replace the placeholder with your copied UUID:
+                The workflow includes concurrency group serialization (<code className="text-sky-300">group: blogger-content-pipeline</code>, <code className="text-sky-300">cancel-in-progress: false</code>). If multiple runs are triggered simultaneously, subsequent runs are placed in a queue and execute sequentially to guarantee git history integrity and prevent duplicate posts.
               </p>
-              <pre className="bg-slate-900 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-300 leading-relaxed overflow-x-auto">
-{`[[d1_databases]]
-binding = "DB"
-database_name = "digital-toolkit-db"
-database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here`}
-              </pre>
             </div>
 
             {/* Step 3 */}
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-200">
-                  Step 3: Execute Schema on Cloudflare D1
+                  Step 3: Atomic State Commit and Push
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">One-time database setup</span>
+                <span className="text-[11px] text-emerald-400 font-mono">Automated on Success</span>
               </div>
               <p className="text-slate-400">
-                Apply the tables (<code className="text-slate-300">processed_topics</code> and <code className="text-slate-300">pipeline_runs</code>) to your remote D1 database:
+                When a live article run succeeds (<code className="text-slate-300">dry_run=false</code>), GitHub Actions automatically stages <code className="text-sky-300">data/processed_topics.json</code>, executes a git rebase against the branch to absorb any concurrent commits, and pushes cleanly with the <code className="text-slate-300">github-actions[bot]</code> author identity.
               </p>
-              <div className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg border border-slate-800 font-mono text-slate-200">
-                <code>npx wrangler d1 execute digital-toolkit-db --file=worker/schema.sql</code>
-                <button
-                  onClick={() => copyToClipboard('npx wrangler d1 execute digital-toolkit-db --file=worker/schema.sql', 'cmd2')}
-                  className="text-slate-400 hover:text-slate-200 text-xs flex items-center gap-1 transition"
-                >
-                  {copiedKey === 'cmd2' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedKey === 'cmd2' ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
             </div>
 
             {/* Step 4 */}
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-slate-200">
-                  Step 4: Set Worker API Secret
+                  Step 4: Run Telemetry & Execution Artifacts
                 </span>
-                <span className="text-[11px] text-slate-400 font-mono">Authentication Guard</span>
+                <span className="text-[11px] text-violet-400 font-mono">Actions Artifacts</span>
               </div>
               <p className="text-slate-400">
-                Configure the shared secret used by the Python engine to communicate with the Cloudflare Worker:
+                Instead of storing logs in external SQL tables, full pipeline telemetry is preserved natively in GitHub:
               </p>
-              <div className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg border border-slate-800 font-mono text-slate-200">
-                <code>cd worker && npx wrangler secret put WORKER_API_SECRET</code>
-                <button
-                  onClick={() => copyToClipboard('cd worker && npx wrangler secret put WORKER_API_SECRET', 'cmd3')}
-                  className="text-slate-400 hover:text-slate-200 text-xs flex items-center gap-1 transition"
-                >
-                  {copiedKey === 'cmd3' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-                  <span>{copiedKey === 'cmd3' ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Step 5 */}
-            <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-200">
-                  Step 5: Cloudflare Workers Builds (Git Settings)
-                </span>
-                <span className="text-[11px] text-sky-400 font-mono">Workers & Pages Dashboard</span>
-              </div>
-              <p className="text-slate-400">
-                When connecting your repository in Cloudflare Dashboard under <strong>Workers & Pages &gt; Connect to Git</strong>, configure:
-              </p>
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 font-mono text-[11px] text-slate-300 space-y-1">
-                <div><span className="text-sky-400">Worker name:</span> digital-toolkit-worker</div>
-                <div><span className="text-sky-400">Root directory:</span> worker <span className="text-emerald-400">(← Prevents Cloudflare from running pip or touching Python)</span></div>
-                <div><span className="text-sky-400">Build command:</span> npx wrangler deploy --dry-run <span className="text-slate-500">(or leave empty)</span></div>
-                <div><span className="text-sky-400">Deploy command:</span> npx wrangler deploy</div>
-              </div>
+              <ul className="list-disc list-inside text-slate-400 space-y-1">
+                <li><strong className="text-slate-300">GitHub Step Summary:</strong> View stage-by-stage results directly on the workflow run page.</li>
+                <li><strong className="text-slate-300">Artifact (content-pipeline-report):</strong> Downloadable <code className="text-slate-300">report.json</code> containing verified sources, word count, quality scores, and Blogger draft URL.</li>
+              </ul>
             </div>
           </div>
         </section>
 
         {/* GitHub Secrets Reference Card */}
         <section className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-4">
-          <div className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-emerald-400" />
-            <h2 className="text-base font-semibold text-slate-100">
-              GitHub Actions Secrets Configuration
-            </h2>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-emerald-400" />
+              <h2 className="text-base font-semibold text-slate-100">
+                Required GitHub Actions Secrets (Reduced to 5)
+              </h2>
+            </div>
+            <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md">
+              Only 5 Secrets Needed
+            </span>
           </div>
           <p className="text-xs text-slate-400">
-            Set these repository secrets in GitHub: <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong>:
+            Configure these 5 secrets in your repository: <strong>Settings</strong> → <strong>Secrets and variables</strong> → <strong>Actions</strong>:
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
             {[
-              { name: 'GEMINI_API_KEY', desc: 'Google AI Studio Gemini API key for draft generation.' },
-              { name: 'BLOGGER_BLOG_ID', desc: 'Blogger Blog ID for digitaltoolkitguide.blogspot.com.' },
-              { name: 'BLOGGER_CLIENT_ID', desc: 'Google Cloud OAuth 2.0 Web Client ID.' },
+              { name: 'GEMINI_API_KEY', desc: 'Google AI Studio Gemini API key for draft generation and claim synthesis.' },
+              { name: 'BLOGGER_BLOG_ID', desc: 'Blogger Blog ID for digitaltoolkitguide.blogspot.com (numeric string).' },
+              { name: 'BLOGGER_CLIENT_ID', desc: 'Google Cloud OAuth 2.0 Web Client ID (*.apps.googleusercontent.com).' },
               { name: 'BLOGGER_CLIENT_SECRET', desc: 'Google Cloud OAuth 2.0 Client Secret.' },
-              { name: 'BLOGGER_REFRESH_TOKEN', desc: 'OAuth 2.0 Refresh Token with blogger scope.' },
-              { name: 'CLOUDFLARE_WORKER_URL', desc: 'URL of deployed digital-toolkit-worker (e.g. https://digital-toolkit-worker.workers.dev).' },
-              { name: 'CLOUDFLARE_WORKER_SECRET', desc: 'Bearer token matching WORKER_API_SECRET on Cloudflare (WORKER_API_SECRET is also accepted as alias).' },
-              { name: 'CLOUDFLARE_API_TOKEN', desc: 'Worker deployment token (for deploy-worker.yml).' }
+              { name: 'BLOGGER_REFRESH_TOKEN', desc: 'Permanent OAuth 2.0 Refresh Token with blogger scope.' },
+              { name: 'SCREENSHOT_HOST_URL', desc: '(Optional) HTTPS endpoint to receive and host PNG screenshots.' }
             ].map((secret) => (
               <div key={secret.name} className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 flex items-start justify-between gap-3">
                 <div>
@@ -355,10 +310,10 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here
             <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
               <div className="font-semibold text-slate-200 flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                <span>Visible Cloudflare D1 Reliability</span>
+                <span>Fail-Closed State Verification</span>
               </div>
               <p className="text-slate-400">
-                Explicitly distinguishes local JSON fallback from successful Cloudflare D1 sync. If D1 is unavailable or misconfigured, it reports an explicit warning rather than silently claiming success.
+                The engine checks write access to <code className="text-slate-300">data/processed_topics.json</code> at startup. If the file cannot be read or written, the pipeline stops immediately before generating any article.
               </p>
             </div>
 
@@ -380,7 +335,7 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here
             <div className="flex items-center gap-2">
               <FileCheck2 className="h-5 w-5 text-emerald-400" />
               <h2 className="text-base font-semibold text-slate-100">
-                Verified Test Suite (50/50 Tests Passing)
+                Verified Test Suite (45/45 Tests Passing)
               </h2>
             </div>
             <span className="text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md">
@@ -396,9 +351,9 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here
             </div>
 
             <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
-              <div className="font-semibold text-slate-200">test_cloudflare_worker.py</div>
-              <div className="text-slate-400 text-[11px] mt-1">D1 error visibility, last_error recording, and StateStore status tracking.</div>
-              <div className="text-emerald-400 font-mono text-[11px] mt-2">✓ 10/10 passing</div>
+              <div className="font-semibold text-slate-200">test_state_persistence.py</div>
+              <div className="text-slate-400 text-[11px] mt-1">Repository persistence, fail-closed permission defense, atomic swap, and deduplication.</div>
+              <div className="text-emerald-400 font-mono text-[11px] mt-2">✓ 6/6 passing</div>
             </div>
 
             <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
@@ -422,7 +377,7 @@ database_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"  # <-- Paste your UUID here
             <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800">
               <div className="font-semibold text-slate-200">test_style_and_writer.py & security</div>
               <div className="text-slate-400 text-[11px] mt-1">Fail-closed Gemini JSON handling, input validation, and regex defense.</div>
-              <div className="text-emerald-400 font-mono text-[11px] mt-2">✓ 10/10 passing</div>
+              <div className="text-emerald-400 font-mono text-[11px] mt-2">✓ 9/9 passing</div>
             </div>
           </div>
         </section>

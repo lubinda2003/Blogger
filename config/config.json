@@ -28,12 +28,6 @@
     ],
     "auto_reconcile": true
   },
-  "cloudflare_worker": {
-    "worker_name": "digital-toolkit-worker",
-    "d1_database": "digital-toolkit-db",
-    "worker_url": "",
-    "auth_token": ""
-  },
   "gemini": {
     "model": "gemini-2.5-flash",
     "temperature": 0.3,

@@ -39,17 +39,10 @@ def normalize_fingerprint(text: str) -> str:
 
 
 class StateStore:
-    """Manages processed topic persistence, deduplication checks, and run history."""
+    """Manages processed topic persistence, deduplication checks, and run history via repository state."""
 
-    def __init__(
-        self,
-        state_file_path: str = "data/processed_topics.json",
-        cloudflare_client: Optional[Any] = None,
-    ):
+    def __init__(self, state_file_path: str = "data/processed_topics.json"):
         self.state_file_path = Path(state_file_path)
-        self.cloudflare_client = cloudflare_client
-        self.remote_sync_status: str = "NOT_CONFIGURED"
-        self.remote_sync_error: Optional[str] = None
         self._ensure_file_exists()
 
     def _ensure_file_exists(self) -> None:
@@ -64,27 +57,50 @@ class StateStore:
             }
             self._write_raw(initial_data)
 
+    def verify_persistence(self) -> None:
+        """Verify that state storage file is readable and writable.
+
+        Fails loudly if the filesystem/repository state cannot be persisted,
+        preventing silent fallback to ephemeral in-memory state.
+        """
+        try:
+            data = self._read_raw()
+            if not isinstance(data, dict):
+                raise ValueError(f"State file {self.state_file_path} does not contain a valid JSON object.")
+            # Test write capability atomically
+            self._write_raw(data)
+        except Exception as e:
+            logger.error(f"State persistence verification failed for {self.state_file_path}: {e}")
+            raise RuntimeError(
+                f"State persistence verification failed for {self.state_file_path}: {e}. "
+                "Pipeline will not proceed without reliable state persistence."
+            ) from e
+
     def _read_raw(self) -> Dict[str, Any]:
         """Read state json safely."""
         try:
             with open(self.state_file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if not isinstance(data, dict):
-                    return {"processed": [], "last_updated": None}
+                    raise ValueError(f"State file {self.state_file_path} root is not a dictionary")
                 return data
         except Exception as e:
-            logger.warning(f"Could not read state file {self.state_file_path} ({e}); starting fresh.")
-            return {"processed": [], "last_updated": None}
+            logger.error(f"Failed to read state file {self.state_file_path}: {e}")
+            raise RuntimeError(f"State store read failure for {self.state_file_path}: {e}") from e
 
     def _write_raw(self, data: Dict[str, Any]) -> None:
         """Write state json atomically using temporary file swap."""
-        temp_path = self.state_file_path.with_suffix(".tmp")
-        with open(temp_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
-        temp_path.replace(self.state_file_path)
+        try:
+            temp_path = self.state_file_path.with_suffix(".tmp")
+            with open(temp_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            temp_path.replace(self.state_file_path)
+        except Exception as e:
+            logger.error(f"Failed to write state file {self.state_file_path}: {e}")
+            raise RuntimeError(f"State store write failure for {self.state_file_path}: {e}") from e
 
     def get_processed_fingerprints(self) -> Set[str]:
-        """Get the set of all processed fingerprints and topic IDs from local cache and Cloudflare D1."""
+        """Get the set of all processed fingerprints and topic IDs from repository state."""
         data = self._read_raw()
         fingerprints = set()
         for item in data.get("processed", []):
@@ -92,30 +108,6 @@ class StateStore:
                 fingerprints.add(item["fingerprint"])
             if "topic_id" in item and item["topic_id"]:
                 fingerprints.add(f"id:{item['topic_id']}")
-
-        # Merge remote state from Cloudflare D1 if configured
-        if self.cloudflare_client and getattr(self.cloudflare_client, "is_configured", False):
-            try:
-                remote_topics = self.cloudflare_client.get_processed_topics(raise_on_error=True)
-                self.remote_sync_status = "SUCCESS"
-                self.remote_sync_error = None
-                if remote_topics:
-                    for rt in remote_topics:
-                        if rt.get("fingerprint"):
-                            fingerprints.add(rt["fingerprint"])
-                        if rt.get("topic_id"):
-                            fingerprints.add(f"id:{rt['topic_id']}")
-            except Exception as e:
-                self.remote_sync_status = "FAILED"
-                self.remote_sync_error = str(e)
-                logger.error(
-                    f"[D1 SYNC FAILED] Could not fetch remote topics from Cloudflare Worker: {e}. "
-                    "Falling back to local state only."
-                )
-        else:
-            self.remote_sync_status = "NOT_CONFIGURED"
-            self.remote_sync_error = None
-
         return fingerprints
 
     def is_duplicate(self, topic_id: str, topic_title: str) -> bool:
@@ -138,7 +130,10 @@ class StateStore:
         mode: str = "draft",
         meta: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Record a completed publication run in persistent state."""
+        """Record a completed publication run in persistent state.
+
+        Writes atomically to repository state file. Raises RuntimeError on failure to prevent silent fallback.
+        """
         data = self._read_raw()
         fp = normalize_fingerprint(topic_title)
 

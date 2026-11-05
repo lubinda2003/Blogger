@@ -10,7 +10,6 @@ from typing import Optional
 
 from src.article_writer import ArticleWriter
 from src.blogger_client import BloggerClient
-from src.cloudflare_client import CloudflareWorkerClient
 from src.config import AppConfig, load_config
 from src.quality_checks import QualityGate
 from src.report import PipelineReporter
@@ -76,45 +75,25 @@ def run_pipeline(
     # Stage 2: Topic Selection & State Store Consultation
     # -------------------------------------------------------------
     t0 = time.time()
-    cf_client = CloudflareWorkerClient(
-        worker_url=config.cloudflare_worker_url,
-        auth_token=config.cloudflare_worker_secret,
-        cf_access_client_id=config.cf_access_client_id,
-        cf_access_client_secret=config.cf_access_client_secret,
-    )
+    state_store = StateStore(config.processed_json_path)
 
-    if config.local_only:
-        logger.info("[LOCAL-ONLY MODE] Operating with local JSON state store only. Cloudflare D1 deduplication bypassed by explicit request.")
-        state_store = StateStore(config.processed_json_path, cloudflare_client=None)
-    else:
-        state_store = StateStore(config.processed_json_path, cloudflare_client=cf_client)
-
-    # Protect topic deduplication when Cloudflare D1 is configured as primary store
-    if not config.local_only and cf_client.is_configured:
-        try:
-            cf_client.get_processed_topics(raise_on_error=True)
-            state_store.remote_sync_status = "SUCCESS"
-            state_store.remote_sync_error = None
-        except Exception as e:
-            state_store.remote_sync_status = "FAILED"
-            state_store.remote_sync_error = str(e)
-            fail_msg = (
-                f"[D1 DEDUPLICATION HALT] Primary topic-history store (Cloudflare D1) could not be reached: {e}. "
-                "Halting pipeline to prevent potential duplicate article generation. "
-                "To force local-only state execution, re-run with --local-only (or set LOCAL_ONLY=true)."
-            )
-            logger.error(fail_msg)
-            reporter.add_stage(
-                stage_name="Topic Selection",
-                status="FAILED",
-                duration_seconds=time.time() - t0,
-                details=fail_msg,
-            )
-            reporter.finalize(
-                success=False,
-                next_action="Restore Cloudflare Worker/D1 connectivity, or run with --local-only to explicitly operate on local JSON state.",
-            )
-            return 1
+    # Fail closed if repository state store cannot be persisted or verified
+    try:
+        state_store.verify_persistence()
+    except Exception as e:
+        fail_msg = f"[STATE PERSISTENCE HALT] Repository state file ({config.processed_json_path}) is not accessible or writable: {e}"
+        logger.error(fail_msg)
+        reporter.add_stage(
+            stage_name="Topic Selection",
+            status="FAILED",
+            duration_seconds=time.time() - t0,
+            details=fail_msg,
+        )
+        reporter.finalize(
+            success=False,
+            next_action="Verify repository write permissions and data/processed_topics.json file integrity.",
+        )
+        return 1
 
     discovery = TopicDiscovery(csv_path=config.topics_csv_path, state_store=state_store)
     topic = discovery.select_next_topic(requested_id=target_topic_id)
@@ -133,13 +112,7 @@ def run_pipeline(
     reporter.selected_topic_id = topic.id
     reporter.selected_topic = topic.topic
 
-    topic_details = f"Selected topic '{topic.topic}' (Priority {topic.priority})"
-    if config.local_only:
-        topic_details += " [Local-only deduplication active]"
-    elif state_store.remote_sync_status == "SUCCESS":
-        topic_details += " [D1 synchronized]"
-    else:
-        topic_details += " [Local state store]"
+    topic_details = f"Selected topic '{topic.topic}' (Priority {topic.priority}) [Repository state active]"
 
     reporter.add_stage(
         stage_name="Topic Selection",
@@ -428,60 +401,34 @@ def run_pipeline(
     # Stage 8: State Persistence & State Update
     # -------------------------------------------------------------
     t0 = time.time()
-    cf_sync_status = "NOT_CONFIGURED"
-    cf_error_detail = None
 
-    if not config.dry_run:
-        state_store.record_success(
-            topic_id=topic.id,
-            topic_title=draft.title,
-            post_id=post_res.post_id,
-            post_url=post_res.post_url,
-            mode=config.publish_mode,
-            meta={"labels": normalized_labels, "word_count": draft.word_count},
-        )
-        if config.local_only:
-            cf_sync_status = "LOCAL_ONLY"
-            state_details = "State file updated locally (local-only mode explicitly selected; Cloudflare D1 bypassed)."
-        elif cf_client.is_configured:
-            try:
-                cf_ok = cf_client.record_run({
-                    "run_id": reporter.run_id,
-                    "overall_status": "SUCCESS",
-                    "selected_topic_id": topic.id,
-                    "selected_topic": draft.title,
-                    "category": topic.category,
-                    "post_id": post_res.post_id,
-                    "post_url": post_res.post_url,
-                    "publish_mode": config.publish_mode,
-                    "dry_run": config.dry_run,
-                    "total_duration_seconds": round(time.time() - reporter.start_time.timestamp(), 2),
-                    "blogger": {
-                        "post_id": post_res.post_id,
-                        "post_url": post_res.post_url,
-                    },
-                }, raise_on_error=True)
-                if cf_ok:
-                    cf_sync_status = "SUCCESS"
-                else:
-                    cf_sync_status = "FAILED"
-                    cf_error_detail = cf_client.last_error or "Worker returned unsuccessful status"
-            except Exception as e:
-                cf_sync_status = "FAILED"
-                cf_error_detail = str(e)
-                logger.error(f"[STATE PERSISTENCE WARNING] Cloudflare D1 synchronization failed: {e}")
-
-    # Explicitly distinguish local JSON fallback from successful Cloudflare D1 synchronization
     if config.dry_run:
         state_details = "Dry-run mode: state mutations skipped."
-    elif config.local_only:
-        state_details = "State file updated locally (local-only mode explicitly selected; Cloudflare D1 bypassed)."
-    elif cf_sync_status == "SUCCESS":
-        state_details = "State updated locally and synced to Cloudflare D1."
-    elif cf_sync_status == "FAILED":
-        state_details = f"State updated locally. Remote Cloudflare D1 sync FAILED: {cf_error_detail}"
     else:
-        state_details = "State file updated locally (Cloudflare Worker not configured)."
+        try:
+            state_store.record_success(
+                topic_id=topic.id,
+                topic_title=draft.title,
+                post_id=post_res.post_id if post_res else None,
+                post_url=post_res.post_url if post_res else None,
+                mode=config.publish_mode,
+                meta={"labels": normalized_labels, "word_count": draft.word_count},
+            )
+            state_details = f"Topic '{topic.id}' recorded in {config.processed_json_path} for repository persistence."
+        except Exception as e:
+            fail_msg = f"Failed to persist topic '{topic.id}' in repository state file: {e}"
+            logger.error(fail_msg)
+            reporter.add_stage(
+                stage_name="State Persistence",
+                status="FAILED",
+                duration_seconds=time.time() - t0,
+                details=fail_msg,
+            )
+            reporter.finalize(
+                success=False,
+                next_action="Check repository file write permissions for data/processed_topics.json.",
+            )
+            return 1
 
     reporter.add_stage(
         stage_name="State Persistence",
@@ -520,7 +467,7 @@ def main() -> None:
     parser.add_argument(
         "--local-only",
         action="store_true",
-        help="Execute pipeline using local state only without requiring remote Cloudflare D1 deduplication",
+        help="Execute pipeline using repository state (retained for backward compatibility)",
     )
     parser.add_argument(
         "--publish-mode",

@@ -27,9 +27,9 @@ on:
   #   - cron: "0 8 * * *" # Daily at 08:00 UTC
 
 permissions:
-  contents: read
+  contents: write
 
-# Concurrency group ensures only one pipeline runs at a time, preventing state collisions
+# Concurrency group ensures only one pipeline runs at a time, preventing state collisions or duplicates
 concurrency:
   group: blogger-content-pipeline
   cancel-in-progress: false
@@ -43,6 +43,9 @@ jobs:
       # actions/checkout@v4 pinned to reviewed commit SHA
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # actions/setup-python@v5 pinned to reviewed commit SHA
       - name: Set up Python 3.11
@@ -50,16 +53,6 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-
-      # Persistent state restoration: restore processed_topics.json across runs
-      - name: Restore Processed Topics State Cache
-        uses: actions/cache@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
-        id: state-cache
-        with:
-          path: data/processed_topics.json
-          key: blogger-pipeline-state-${{ github.run_id }}
-          restore-keys: |
-            blogger-pipeline-state-
 
       - name: Install dependencies
         run: |
@@ -77,11 +70,6 @@ jobs:
           BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
-          CLOUDFLARE_WORKER_URL: ${{ secrets.CLOUDFLARE_WORKER_URL || secrets.WORKER_URL }}
-          CLOUDFLARE_WORKER_SECRET: ${{ secrets.CLOUDFLARE_WORKER_SECRET || secrets.WORKER_API_SECRET || secrets.WORKER_API_KEY }}
-          WORKER_API_SECRET: ${{ secrets.WORKER_API_SECRET || secrets.CLOUDFLARE_WORKER_SECRET || secrets.WORKER_API_KEY }}
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID || secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET || secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
           PUBLISH_MODE: ${{ inputs.publish_mode || 'draft' }}
           DRY_RUN: ${{ inputs.dry_run != false }}
           TOPIC_ID: ${{ inputs.topic_id }}
@@ -98,13 +86,30 @@ jobs:
           fi
           python -m src.main $ARGS
 
-      # Save updated state to cache
-      - name: Save Processed Topics State Cache
-        uses: actions/cache/save@d4323d4df104b026a6aa633fdb11d772146be0bf # v4.2.2
-        if: always()
-        with:
-          path: data/processed_topics.json
-          key: blogger-pipeline-state-${{ github.run_id }}
+      # Commit and push updated processed_topics.json back to repository on successful live runs
+      - name: Commit and Push Processed Topics State
+        if: success() && inputs.dry_run == false
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet data/processed_topics.json; then
+            echo "No state changes to commit (dry-run or unchanged queue)."
+          else
+            echo "Committing updated processed_topics.json to repository..."
+            git add data/processed_topics.json
+            git commit -m "chore(state): update processed topics [skip ci]"
+            git fetch origin ${{ github.ref_name }}
+            if ! git rebase origin/${{ github.ref_name }}; then
+              echo "Error: Rebase conflict detected while integrating remote state. Aborting rebase and failing safe."
+              git rebase --abort
+              exit 1
+            fi
+            if ! git push origin ${{ github.ref_name }}; then
+              echo "Error: Failed to push updated processed topics state to remote repository."
+              exit 1
+            fi
+            echo "Successfully persisted state to repository."
+          fi
 
       # actions/upload-artifact@v4 pinned to reviewed commit SHA
       - name: Upload Run Artifacts and Execution Reports

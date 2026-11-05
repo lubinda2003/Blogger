@@ -42,11 +42,8 @@ class AppConfig:
     min_credible_sources: int = 2
     zambia_context_enabled: bool = False  # International audience default
 
-    # Cloudflare Worker backend
-    cloudflare_worker_url: Optional[str] = None
-    cloudflare_worker_secret: Optional[str] = field(default=None, repr=False)
-    cf_access_client_id: Optional[str] = field(default=None, repr=False)
-    cf_access_client_secret: Optional[str] = field(default=None, repr=False)
+    # Local-first repository state
+    local_only: bool = True  # Native mode: persistent state stored in data/processed_topics.json in Git repository
 
     # Playwright browser parameters
     screenshot_viewport_width: int = 1280
@@ -139,7 +136,6 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
 
     pipeline_cfg = json_cfg.get("pipeline", {})
     blogger_cfg = json_cfg.get("blogger", {})
-    worker_cfg = json_cfg.get("cloudflare_worker", {})
     gemini_cfg = json_cfg.get("gemini", {})
     editorial_cfg = json_cfg.get("editorial", {})
 
@@ -174,44 +170,11 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
     else:
         local_only = bool(pipeline_cfg.get("local_only", False))
 
-    raw_worker_url = (
-        os.getenv("CLOUDFLARE_WORKER_URL")
-        or os.getenv("WORKER_URL")
-        or worker_cfg.get("worker_url")
-        or None
-    )
-    cf_url = raw_worker_url.strip().strip('"').strip("'").rstrip("/") if raw_worker_url else None
-
-    raw_worker_secret = (
-        os.getenv("CLOUDFLARE_WORKER_SECRET")
-        or os.getenv("WORKER_API_SECRET")
-        or os.getenv("WORKER_API_KEY")
-        or worker_cfg.get("auth_token")
-        or None
-    )
-    cf_secret = raw_worker_secret.strip().strip('"').strip("'") if raw_worker_secret else None
-
-    raw_access_id = (
-        os.getenv("CF_ACCESS_CLIENT_ID")
-        or os.getenv("CLOUDFLARE_ACCESS_CLIENT_ID")
-        or worker_cfg.get("cf_access_client_id")
-        or None
-    )
-    cf_access_id = raw_access_id.strip().strip('"').strip("'") if raw_access_id else None
-
-    raw_access_secret = (
-        os.getenv("CF_ACCESS_CLIENT_SECRET")
-        or os.getenv("CLOUDFLARE_ACCESS_CLIENT_SECRET")
-        or worker_cfg.get("cf_access_client_secret")
-        or None
-    )
-    cf_access_sec = raw_access_secret.strip().strip('"').strip("'") if raw_access_secret else None
-
     config = AppConfig(
         dry_run=dry_run,
         publish_mode=publish_mode,
         max_articles_per_run=max_articles,
-        local_only=local_only,
+        local_only=True,
         topics_csv_path=os.getenv("TOPICS_CSV_PATH", "data/topics.csv"),
         processed_json_path=os.getenv("PROCESSED_JSON_PATH", "data/processed_topics.json"),
         output_dir=os.getenv("OUTPUT_DIR", "output"),
@@ -222,10 +185,6 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         blogger_refresh_token=os.getenv("BLOGGER_REFRESH_TOKEN"),
         gemini_model=os.getenv("GEMINI_MODEL") or gemini_cfg.get("model", "gemini-2.5-flash"),
         zambia_context_enabled=zambia_enabled,
-        cloudflare_worker_url=cf_url,
-        cloudflare_worker_secret=cf_secret,
-        cf_access_client_id=cf_access_id,
-        cf_access_client_secret=cf_access_sec,
         min_word_count=min_words,
         max_word_count=max_words,
         min_credible_sources=min_sources,
