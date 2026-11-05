@@ -109,15 +109,19 @@ class ArticleWriter:
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY is not configured in environment or GitHub Secrets.")
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
+        clean_model = self.model_name.replace("models/", "").strip()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={self.api_key}"
+
+        gen_config: Dict[str, Any] = {
+            "maxOutputTokens": self.max_tokens,
+            "responseMimeType": "application/json",
+        }
+        if self.temperature is not None and not (clean_model.startswith("gemini-3") or clean_model.startswith("gemini-4")):
+            gen_config["temperature"] = self.temperature
 
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {
-                "temperature": self.temperature,
-                "maxOutputTokens": self.max_tokens,
-                "responseMimeType": "application/json",
-            },
+            "generationConfig": gen_config,
         }
 
         data_bytes = json.dumps(payload).encode("utf-8")
