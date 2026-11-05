@@ -386,6 +386,19 @@ def run_pipeline(
         reporter.finalize(success=False, next_action="Review Blogger API credentials and OAuth permissions.")
         return 1
 
+    if not config.dry_run:
+        if not post_res.post_id or str(post_res.post_id).startswith("dryrun-") or not post_res.post_url or "example.blogger.com" in post_res.post_url:
+            err_details = f"Live Blogger API response returned simulated or invalid post ID/URL (ID: {post_res.post_id}, URL: {post_res.post_url})"
+            logger.error(err_details)
+            reporter.add_stage(
+                stage_name="Blogger Publication",
+                status="FAILED",
+                duration_seconds=time.time() - t0,
+                details=err_details,
+            )
+            reporter.finalize(success=False, next_action="Verify Blogger API credentials and live network connectivity.")
+            return 1
+
     reporter.post_id = post_res.post_id
     reporter.post_url = post_res.post_url
 
@@ -455,15 +468,17 @@ def main() -> None:
     )
     parser.add_argument(
         "--dry-run",
+        dest="dry_run",
         action="store_true",
-        default=None,
         help="Execute pipeline in dry-run mode without modifying Blogger state",
     )
     parser.add_argument(
         "--live",
-        action="store_true",
+        dest="dry_run",
+        action="store_false",
         help="Execute pipeline in live mode (requires valid API credentials)",
     )
+    parser.set_defaults(dry_run=None)
     parser.add_argument(
         "--local-only",
         action="store_true",
@@ -492,9 +507,7 @@ def main() -> None:
 
     overrides = {}
     if args.dry_run is not None:
-        overrides["dry_run"] = True
-    elif args.live:
-        overrides["dry_run"] = False
+        overrides["dry_run"] = args.dry_run
 
     if args.local_only:
         overrides["local_only"] = True
