@@ -119,9 +119,8 @@ class BloggerClient:
             marker = f"<!-- topic_id: {topic_id} -->"
             if marker not in final_html:
                 final_html = final_html.rstrip() + f"\n\n{marker}"
-            label_tag = f"TopicID:{topic_id}"
-            if label_tag not in final_labels:
-                final_labels.append(label_tag)
+            # NOTE: no public "TopicID:" label. Blogger shows labels to readers once published;
+            # the hidden HTML comment above is the reconciliation marker.
 
         return {
             "kind": "blogger#post",
@@ -179,7 +178,7 @@ class BloggerClient:
         # 2. List recent posts and check topic_id marker or label
         if topic_id:
             try:
-                list_url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts?fetchBodies=true&maxResults=50"
+                list_url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts?fetchBodies=true&maxResults=50&status=draft&status=live&status=scheduled"
                 req = urllib.request.Request(
                     list_url,
                     headers={
@@ -191,7 +190,7 @@ class BloggerClient:
                 with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                     data = json.loads(resp.read().decode("utf-8"))
                     items = data.get("items", [])
-                    marker = f"topic_id: {topic_id}"
+                    marker = f"topic_id: {topic_id} -->"  # exact: "foo" must not match "foo-bar"
                     label_tag = f"TopicID:{topic_id}"
                     for item in items:
                         content = item.get("content", "")
