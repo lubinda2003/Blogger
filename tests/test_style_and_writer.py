@@ -171,7 +171,7 @@ class TestStyleAndWriter(unittest.TestCase):
         writer = ArticleWriter(
             api_key="gemini-key",
             model_name="gemini-3.8-flash",
-            fallback_model="gemini-1.5-flash",
+            fallback_model="gemini-3.5-flash",
             groq_api_key="groq-key",
             provider="auto",
         )
@@ -188,10 +188,10 @@ class TestStyleAndWriter(unittest.TestCase):
 
             res = writer._call_llm_provider("Write prompt")
             self.assertEqual(res, '{"title": "From Fallback Flash"}')
-            self.assertEqual(call_log, ["gemini-3.8-flash", "gemini-1.5-flash"])
+            self.assertEqual(call_log, ["gemini-3.8-flash", "gemini-3.5-flash"])
             mock_groq.assert_not_called()
             self.assertEqual(writer.actual_provider, "gemini")
-            self.assertEqual(writer.actual_model, "gemini-1.5-flash")
+            self.assertEqual(writer.actual_model, "gemini-3.5-flash")
 
     def test_gemini_503_retried_up_to_5_times(self):
         """Gemini 503 errors must be retried up to 5 times with exponential backoff and jitter."""
@@ -276,7 +276,7 @@ class TestStyleAndWriter(unittest.TestCase):
         cfg = load_config()
         self.assertEqual(cfg.gemini_max_tokens, 8192)
         self.assertEqual(cfg.gemini_temperature, 0.3)
-        self.assertEqual(cfg.gemini_fallback_model, "gemini-1.5-flash")
+        self.assertEqual(cfg.gemini_fallback_model, "gemini-3.5-flash")
 
         with patch.dict("os.environ", {
             "GEMINI_TEMPERATURE": "0.7",

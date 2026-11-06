@@ -45,6 +45,8 @@ class SEOMetadata:
                         processed_words.append("Gumroad")
                     elif w.lower() == "payoneer":
                         processed_words.append("Payoneer")
+                    elif any(c.isupper() for c in w[1:]):
+                        processed_words.append(w)  # already mixed-case (NotebookLM, iPhone): keep as written
                     else:
                         processed_words.append(w.capitalize())
                 norm_formatted = " ".join(processed_words)

@@ -140,7 +140,7 @@ class ArticleWriter:
     ):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.model_name = model_name or os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
-        self.fallback_model = fallback_model or os.getenv("GEMINI_FALLBACK_MODEL") or "gemini-1.5-flash"
+        self.fallback_model = fallback_model or os.getenv("GEMINI_FALLBACK_MODEL") or "gemini-3.5-flash"
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.prompt_template_path = Path(prompt_template_path)
@@ -619,7 +619,7 @@ against primary documentation."</code>
                 logger.warning(f"Primary Gemini model ({primary_model}) failed: {e_primary}")
 
             # 2. Fallback Gemini model (tried before Groq)
-            fallback_model = (self.fallback_model or "gemini-1.5-flash").strip()
+            fallback_model = (self.fallback_model or "gemini-3.5-flash").strip()
             if fallback_model != primary_model:
                 logger.info(f"Attempting fallback Gemini model in chain ({fallback_model})...")
                 try:
