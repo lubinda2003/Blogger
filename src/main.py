@@ -172,7 +172,11 @@ def run_pipeline(
     # Stage 3: Live Research & Fact Verification
     # -------------------------------------------------------------
     t0 = time.time()
-    researcher = ResearchCollector(tavily_api_key=config.tavily_api_key)
+    researcher = ResearchCollector(
+        tavily_api_key=config.tavily_api_key,
+        domain_allowlist=config.research_domain_allowlist,
+        domain_blocklist=config.research_domain_blocklist,
+    )
     brief = researcher.conduct_research(
         topic_id=topic.id,
         topic_title=topic.topic,
@@ -215,6 +219,7 @@ def run_pipeline(
     writer = ArticleWriter(
         api_key=config.gemini_api_key,
         model_name=config.gemini_model,
+        fallback_model=config.gemini_fallback_model,
         temperature=config.gemini_temperature,
         max_tokens=config.gemini_max_tokens,
         prompt_template_path=config.template_prompt_path,
@@ -231,12 +236,16 @@ def run_pipeline(
             stage_name="Article Generation",
             status="FAILED",
             duration_seconds=time.time() - t0,
-            details=f"Gemini generation failure: {e}",
+            details=f"LLM generation failure: {e}",
         )
         reporter.finalize(success=False, next_action="Check Gemini API key quota, model availability, and network.")
         return 1
 
-    gen_mode = "Dry-run text fixture" if draft.is_dry_run_fixture else "Live Gemini model output"
+    gen_mode = (
+        "Dry-run text fixture"
+        if draft.is_dry_run_fixture
+        else f"Live {draft.actual_provider} ({draft.actual_model})"
+    )
     reporter.add_stage(
         stage_name="Article Generation",
         status="SUCCESS",
@@ -247,6 +256,16 @@ def run_pipeline(
     if stage_limit == "write":
         reporter.finalize(success=True, next_action="Stage limit reached: write.")
         return 0
+
+    # Save draft.json and draft.html to output/ on every run, including rejected drafts
+    try:
+        os.makedirs(config.output_dir, exist_ok=True)
+        with open(os.path.join(config.output_dir, "draft.json"), "w", encoding="utf-8") as f:
+            json.dump(draft.to_dict(), f, indent=2, ensure_ascii=False)
+        with open(os.path.join(config.output_dir, "draft.html"), "w", encoding="utf-8") as f:
+            f.write(draft.html_content)
+    except Exception as e:
+        logger.warning(f"Failed to save draft backup files to output/: {e}")
 
     # -------------------------------------------------------------
     # Stage 5: Screenshot Capture (Playwright)
@@ -261,24 +280,29 @@ def run_pipeline(
             timeout_ms=config.screenshot_timeout_ms,
         )
         screenshot_res = capturer.capture(
-            url=draft.screenshot_url or topic.target_url,
+            url=topic.target_url,
             slug=topic.id,
             alt_text=draft.screenshot_alt_text or draft.title,
             caption=draft.screenshot_caption or f"Screenshot for {topic.topic}",
             mock_mode=config.dry_run,
         )
 
-        reporter.screenshot_captured = screenshot_res.success
+        reporter.screenshot_captured = bool(screenshot_res and screenshot_res.success)
         if not screenshot_res.success:
-            logger.error(f"Screenshot capture failed closed: {screenshot_res.error_message}")
-            reporter.add_stage(
-                stage_name="Screenshot Capture",
-                status="FAILED",
-                duration_seconds=time.time() - t0,
-                details=screenshot_res.error_message,
-            )
-            reporter.finalize(success=False, next_action="Verify target URL is accessible without auth walls.")
-            return 1
+            if topic.requires_screenshot:
+                logger.error(f"Required screenshot capture failed closed: {screenshot_res.error_message}")
+                state_store.record_failure(topic.id, topic.topic, screenshot_res.error_message)
+                reporter.add_stage(
+                    stage_name="Screenshot Capture",
+                    status="FAILED",
+                    duration_seconds=time.time() - t0,
+                    details=screenshot_res.error_message,
+                )
+                reporter.finalize(success=False, next_action="Verify target URL is accessible without auth walls.")
+                return 1
+            else:
+                logger.warning(f"Optional screenshot capture failed: {screenshot_res.error_message}. Continuing without image.")
+                screenshot_res = None
 
         img_hosted_msg = (
             f"Hosted: {screenshot_res.public_url}"
@@ -329,6 +353,7 @@ def run_pipeline(
 
     if not qa_report.passed:
         logger.error(f"Quality gate rejected article: {qa_report.failures}")
+        state_store.record_failure(topic.id, topic.topic, qa_report.failures[0])
         reporter.add_stage(
             stage_name="Quality Gate",
             status="FAILED",
@@ -377,10 +402,12 @@ def run_pipeline(
         labels=normalized_labels,
         is_draft=is_draft,
         dry_run=config.dry_run,
+        topic_id=topic.id,
     )
 
     if not post_res.success:
         logger.error(f"Blogger post creation failed: {post_res.error_message}")
+        state_store.record_failure(topic.id, topic.topic, post_res.error_message)
         reporter.add_stage(
             stage_name="Blogger Publication",
             status="FAILED",

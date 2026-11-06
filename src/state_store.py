@@ -52,6 +52,7 @@ class StateStore:
             initial_data = {
                 "version": "1.0",
                 "processed": [],
+                "failed_attempts": {},
                 "last_updated": None,
                 "total_runs": 0,
             }
@@ -163,3 +164,25 @@ class StateStore:
         """Return the list of all processed records."""
         data = self._read_raw()
         return data.get("processed", [])
+
+    def get_failed_attempts(self, topic_id: str) -> int:
+        """Get the number of failed processing attempts for a topic."""
+        data = self._read_raw()
+        return data.get("failed_attempts", {}).get(topic_id, 0)
+
+    def is_max_failed(self, topic_id: str, max_failures: int = 3) -> bool:
+        """Check if topic has reached or exceeded max allowed failures (head-of-line blocking protection)."""
+        return self.get_failed_attempts(topic_id) >= max_failures
+
+    def record_failure(self, topic_id: str, topic_title: str, error_msg: str) -> int:
+        """Record a processing failure for a topic and increment failure count."""
+        data = self._read_raw()
+        if "failed_attempts" not in data:
+            data["failed_attempts"] = {}
+        current = data["failed_attempts"].get(topic_id, 0) + 1
+        data["failed_attempts"][topic_id] = current
+        data["last_updated"] = datetime.now(timezone.utc).isoformat()
+        self._write_raw(data)
+        logger.warning(f"Recorded failure for topic '{topic_id}' (Attempt {current}/3): {error_msg}")
+        return current
+

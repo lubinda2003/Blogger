@@ -34,10 +34,11 @@ topic_queue:
 
 gemini:
   model: "gemini-3.8-flash"
+  fallback_model: "gemini-1.5-flash"
   temperature: 0.3
-  max_output_tokens: 4096
+  max_output_tokens: 8192
   request_timeout_seconds: 60
-  max_retries: 3
+  max_retries: 5
   backoff_factor: 2.0
 
 editorial:
@@ -60,6 +61,14 @@ editorial:
     - "passive income secret"
     - "100% risk free money"
     - "overnight success"
+
+research:
+  provider: "tavily"
+  search_depth: "basic"
+  max_results_per_topic: 5
+  min_verified_sources_required: 2
+  domain_allowlist: []
+  domain_blocklist: []
 
 playwright:
   headless: true

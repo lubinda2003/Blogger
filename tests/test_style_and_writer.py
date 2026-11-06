@@ -1,5 +1,6 @@
 """Unit tests for Gemini response handling, fail-closed schema validation, and plain-English style."""
 
+import json
 import unittest
 from unittest.mock import patch, MagicMock
 import urllib.error
@@ -127,7 +128,197 @@ class TestStyleAndWriter(unittest.TestCase):
             mock_groq.return_value = '{"title": "Failover Article"}'
             res = writer._call_llm_provider("Test prompt")
             self.assertEqual(res, '{"title": "Failover Article"}')
-            mock_groq.assert_called_once_with("Test prompt")
+            mock_groq.assert_called_once_with("Test prompt", max_tokens=None)
+            self.assertEqual(writer.actual_provider, "groq")
+            self.assertEqual(writer.actual_model, "llama-3.3-70b-versatile")
+
+    def test_gemini_header_auth_and_user_agent(self):
+        """Gemini REST call must send x-goog-api-key header, custom User-Agent, and NO api key in URL."""
+        writer = ArticleWriter(api_key="secret-api-key", model_name="gemini-3.8-flash")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"candidates": [{"content": {"parts": [{"text": "{\\"title\\": \\"Test\\"}"}]}}]}'
+            mock_urlopen.return_value = resp
+
+            writer._call_gemini_rest("Test prompt")
+
+            args, kwargs = mock_urlopen.call_args
+            req = args[0]
+            self.assertNotIn("?key=", req.full_url)
+            self.assertEqual(req.headers.get("X-goog-api-key"), "secret-api-key")
+            self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
+
+    def test_groq_user_agent_and_max_tokens(self):
+        """Groq REST call must send custom User-Agent and max_tokens (default 8192)."""
+        writer = ArticleWriter(groq_api_key="gsk-test", provider="groq")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"choices": [{"message": {"content": "{\\"title\\": \\"Groq Article\\"}"}}]}'
+            mock_urlopen.return_value = resp
+
+            writer._call_groq_rest("Test prompt")
+
+            args, kwargs = mock_urlopen.call_args
+            req = args[0]
+            self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
+            payload = json.loads(req.data.decode("utf-8"))
+            self.assertEqual(payload.get("max_tokens"), 8192)
+
+    def test_fallback_model_chain_tried_before_groq(self):
+        """When primary Gemini model fails, fallback Gemini model is tried before Groq."""
+        writer = ArticleWriter(
+            api_key="gemini-key",
+            model_name="gemini-3.8-flash",
+            fallback_model="gemini-1.5-flash",
+            groq_api_key="groq-key",
+            provider="auto",
+        )
+        call_log = []
+
+        def mock_gemini(prompt, model_name=None, max_tokens=None, is_token_retry=False):
+            call_log.append(model_name)
+            if model_name == "gemini-3.8-flash":
+                raise RuntimeError("503 Service Unavailable")
+            return '{"title": "From Fallback Flash"}'
+
+        with patch.object(writer, "_call_gemini_rest", side_effect=mock_gemini), \
+             patch.object(writer, "_call_groq_rest") as mock_groq:
+
+            res = writer._call_llm_provider("Write prompt")
+            self.assertEqual(res, '{"title": "From Fallback Flash"}')
+            self.assertEqual(call_log, ["gemini-3.8-flash", "gemini-1.5-flash"])
+            mock_groq.assert_not_called()
+            self.assertEqual(writer.actual_provider, "gemini")
+            self.assertEqual(writer.actual_model, "gemini-1.5-flash")
+
+    def test_gemini_503_retried_up_to_5_times(self):
+        """Gemini 503 errors must be retried up to 5 times with exponential backoff and jitter."""
+        writer = ArticleWriter(api_key="gemini-key")
+        attempt_count = 0
+
+        def mock_urlopen(req, timeout=90):
+            nonlocal attempt_count
+            attempt_count += 1
+            if attempt_count < 3:
+                raise urllib.error.HTTPError(
+                    url=req.full_url,
+                    code=503,
+                    msg="Service Unavailable",
+                    hdrs={},
+                    fp=MagicMock(read=lambda: b'{"error": "Backend overloaded"}'),
+                )
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"candidates": [{"content": {"parts": [{"text": "{\\"title\\": \\"OK\\"}"}]}}]}'
+            return resp
+
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen), \
+             patch("time.sleep") as mock_sleep:
+            res = writer._call_gemini_rest("Test prompt")
+            self.assertEqual(attempt_count, 3)
+            self.assertEqual(mock_sleep.call_count, 2)
+            self.assertIn("OK", res)
+
+    def test_finish_reason_max_tokens_retries_with_higher_limit(self):
+        """If Gemini candidate has finishReason == 'MAX_TOKENS', it retries once with higher limit."""
+        writer = ArticleWriter(api_key="gemini-key", max_tokens=4096)
+        call_tokens = []
+
+        def mock_urlopen(req, timeout=90):
+            payload = json.loads(req.data.decode("utf-8"))
+            toks = payload.get("generationConfig", {}).get("maxOutputTokens")
+            call_tokens.append(toks)
+
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            if len(call_tokens) == 1:
+                resp.read.return_value = b'{"candidates": [{"finishReason": "MAX_TOKENS", "content": {"parts": [{"text": "truncated json"}]}}]}'
+            else:
+                resp.read.return_value = b'{"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": "complete json"}]}}]}'
+            return resp
+
+        with patch("urllib.request.urlopen", side_effect=mock_urlopen):
+            res = writer._call_gemini_rest("Test prompt")
+            self.assertEqual(res, "complete json")
+            self.assertEqual(call_tokens, [4096, 8192])
+
+    def test_json_repair_prompt_contains_full_output(self):
+        """JSON repair prompt must pass the full previous output without truncation."""
+        writer = ArticleWriter(api_key="gemini-key")
+        long_bad_output = '{"broken": "' + ("A" * 800)
+        valid_repaired = json.dumps({
+            "title": "Fixed Article",
+            "meta_description": "A clear, practical guide with detailed steps and real instructions.",
+            "labels": ["AI Tools", "Tutorial"],
+            "html_content": "<p>" + ("Valid substantive article body text exceeding 200 characters. " * 5) + "</p>",
+            "sources_used": [{"title": "Official Docs", "url": "https://example.com"}],
+        })
+
+        with patch.object(writer, "_call_llm_provider") as mock_llm:
+            mock_llm.side_effect = [
+                long_bad_output,  # Initial attempt (truncated)
+                long_bad_output,  # Higher token retry (still fails)
+                valid_repaired,   # Repaired via repair prompt
+            ]
+
+            draft = writer.write_article(self.topic, self.brief, dry_run=False)
+            self.assertEqual(draft.title, "Fixed Article")
+
+            repair_call_prompt = mock_llm.call_args_list[2][0][0]
+            self.assertIn("A" * 800, repair_call_prompt)
+            self.assertNotIn("[:400]", repair_call_prompt)
+
+    def test_config_loads_gemini_temperature_and_max_tokens(self):
+        """load_config must load temperature and max_output_tokens (default 8192) from config.json and env."""
+        from src.config import load_config
+        cfg = load_config()
+        self.assertEqual(cfg.gemini_max_tokens, 8192)
+        self.assertEqual(cfg.gemini_temperature, 0.3)
+        self.assertEqual(cfg.gemini_fallback_model, "gemini-1.5-flash")
+
+        with patch.dict("os.environ", {
+            "GEMINI_TEMPERATURE": "0.7",
+            "GEMINI_MAX_TOKENS": "12000",
+            "GEMINI_FALLBACK_MODEL": "gemini-custom-flash",
+        }):
+            cfg2 = load_config()
+            self.assertEqual(cfg2.gemini_temperature, 0.7)
+            self.assertEqual(cfg2.gemini_max_tokens, 12000)
+            self.assertEqual(cfg2.gemini_fallback_model, "gemini-custom-flash")
+
+    def test_outbound_user_agent_on_all_clients(self):
+        """BloggerClient and ResearchCollector must include DigitalToolkitContentEngine/1.0 User-Agent."""
+        from src.blogger_client import BloggerClient
+        from src.research import ResearchCollector
+        from src.screenshot_capture import ScreenshotCapture
+
+        blogger = BloggerClient(blog_id="test-blog", client_id="cid", client_secret="csec", refresh_token="tok")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.read.return_value = b'{"access_token": "mock-token"}'
+            mock_urlopen.return_value = resp
+
+            blogger.refresh_access_token()
+            args, _ = mock_urlopen.call_args
+            self.assertEqual(args[0].headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
+
+        researcher = ResearchCollector(tavily_api_key="tvly-mock")
+        with patch("urllib.request.urlopen") as mock_urlopen:
+            resp = MagicMock()
+            resp.__enter__.return_value = resp
+            resp.status = 200
+            resp.read.return_value = b'{"results": []}'
+            mock_urlopen.return_value = resp
+
+            researcher._search_tavily("test query")
+            args, _ = mock_urlopen.call_args
+            self.assertEqual(args[0].headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
+
+        capturer = ScreenshotCapture()
+        self.assertEqual(capturer.image_host_url, None)
 
     def test_dry_run_fixture_contains_no_ai_cliches(self):
         """Dry run text fixtures must comply with plain-English rules and contain no generic AI cliches."""
@@ -157,7 +348,10 @@ class TestStyleAndWriter(unittest.TestCase):
         draft_dict = draft.to_dict()
         self.assertIn("suggested_slug", draft_dict)
         self.assertIn("featured_image_brief", draft_dict)
+        self.assertIn("actual_provider", draft_dict)
+        self.assertIn("actual_model", draft_dict)
 
 
 if __name__ == "__main__":
     unittest.main()
+

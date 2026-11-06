@@ -1,18 +1,8 @@
 # The Digital Toolkit - Python 3.11+ Dependencies (GitHub Actions Automation Runner)
 # Note: Python dependencies are exclusively for GitHub Actions content pipeline and test workflows.
-# Cloudflare Workers Builds deploys only the TypeScript Worker from worker/ and does not use this file.
 
-# Official Google GenAI SDK for Gemini API
-google-genai>=0.1.0
-google-generativeai==0.8.3
-
-# HTTP Client with connection pooling and retries
-requests==2.31.0
+# HTTP Transport via stdlib urllib & urllib3
 urllib3==2.2.1
-
-# Data validation & Configuration
-pydantic==2.6.4
-pyyaml==6.0.1
 
 # Headless browser automation for genuine screenshot capture
 playwright==1.42.0

@@ -9,11 +9,13 @@ from typing import Any, Dict, List, Optional
 class SEOMetadata:
     """Manages SEO tags, meta descriptions, labels, and structured schema."""
 
+    KNOWN_ACRONYMS = {"ai", "api", "ui", "ux", "seo", "pdf", "nrc", "zmw", "usd", "kyc", "html", "css", "js", "sql", "pwa", "llm", "id", "faq", "url"}
+
     @staticmethod
     def normalize_labels(labels: List[str]) -> List[str]:
         """Clean and normalize Blogger labels (tags).
 
-        Enforces title-cased labels, strips invalid characters, deduplicates, and limits to 6 tags.
+        Preserves known acronyms and formats title-cased labels.
         """
         cleaned = []
         seen = set()
@@ -22,10 +24,33 @@ class SEOMetadata:
                 continue
             norm = re.sub(r"[#@!$%^&*()+=<>]", "", label).strip()
             if len(norm) >= 2:
-                norm_title = norm.title()
-                if norm_title.lower() not in seen:
-                    seen.add(norm_title.lower())
-                    cleaned.append(norm_title)
+                words = norm.split()
+                processed_words = []
+                for w in words:
+                    if w.lower() in SEOMetadata.KNOWN_ACRONYMS:
+                        processed_words.append(w.upper())
+                    elif w.lower() == "chatgpt":
+                        processed_words.append("ChatGPT")
+                    elif w.lower() == "upwork":
+                        processed_words.append("Upwork")
+                    elif w.lower() == "shopify":
+                        processed_words.append("Shopify")
+                    elif w.lower() == "notion":
+                        processed_words.append("Notion")
+                    elif w.lower() == "obsidian":
+                        processed_words.append("Obsidian")
+                    elif w.lower() == "canva":
+                        processed_words.append("Canva")
+                    elif w.lower() == "gumroad":
+                        processed_words.append("Gumroad")
+                    elif w.lower() == "payoneer":
+                        processed_words.append("Payoneer")
+                    else:
+                        processed_words.append(w.capitalize())
+                norm_formatted = " ".join(processed_words)
+                if norm_formatted.lower() not in seen:
+                    seen.add(norm_formatted.lower())
+                    cleaned.append(norm_formatted)
         return cleaned[:6]
 
     @staticmethod
@@ -48,7 +73,7 @@ class SEOMetadata:
             },
             "publisher": {
                 "@type": "Organization",
-                "name": "Blogger Content Automation Engine",
+                "name": "The Digital Toolkit",
             },
             "inLanguage": "en-US",
         }

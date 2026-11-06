@@ -14,6 +14,7 @@ class AppConfig:
     # Execution controls
     dry_run: bool = True
     publish_mode: str = "draft"  # "draft" or "publish"
+    confirm_live_publish: bool = False
     max_articles_per_run: int = 1
 
 
@@ -37,9 +38,10 @@ class AppConfig:
     # LLM provider parameters
     llm_provider: str = "auto"  # "auto", "gemini", or "groq"
     gemini_model: str = "gemini-3.8-flash"
+    gemini_fallback_model: str = "gemini-1.5-flash"
     groq_model: str = "llama-3.3-70b-versatile"
     gemini_temperature: float = 0.3
-    gemini_max_tokens: int = 4096
+    gemini_max_tokens: int = 8192
 
     # Quality Gate thresholds
     min_word_count: int = 800
@@ -49,6 +51,10 @@ class AppConfig:
 
     # Local-first repository state
     local_only: bool = True  # Native mode: persistent state stored in data/processed_topics.json in Git repository
+
+    # Research domain filtering
+    research_domain_allowlist: List[str] = field(default_factory=list)
+    research_domain_blocklist: List[str] = field(default_factory=list)
 
     # Playwright browser parameters
     screenshot_viewport_width: int = 1280
@@ -87,7 +93,8 @@ class AppConfig:
                 errors.append("BLOGGER_REFRESH_TOKEN is required for Blogger OAuth operations.")
 
         # Safety check: Prevent accidental public posting without explicit affirmation
-        if self.publish_mode == "publish" and os.getenv("CONFIRM_LIVE_PUBLISH") != "true":
+        is_confirmed = self.confirm_live_publish or _str_to_bool(os.getenv("CONFIRM_LIVE_PUBLISH"), default=False)
+        if self.publish_mode == "publish" and not is_confirmed:
             errors.append(
                 "Safety guard: PUBLISH_MODE='publish' requires CONFIRM_LIVE_PUBLISH='true'. "
                 "Defaulting to 'draft' is enforced to avoid accidental unreviewed posts."
@@ -111,6 +118,9 @@ class AppConfig:
             "local_only": self.local_only,
             "max_articles_per_run": self.max_articles_per_run,
             "gemini_model": self.gemini_model,
+            "gemini_fallback_model": self.gemini_fallback_model,
+            "gemini_temperature": self.gemini_temperature,
+            "gemini_max_tokens": self.gemini_max_tokens,
             "groq_model": self.groq_model,
             "gemini_api_key": mask(self.gemini_api_key),
             "groq_api_key": mask(self.groq_api_key),
@@ -122,6 +132,8 @@ class AppConfig:
             "topics_csv_path": self.topics_csv_path,
             "min_word_count": self.min_word_count,
             "min_credible_sources": self.min_credible_sources,
+            "research_domain_allowlist": self.research_domain_allowlist,
+            "research_domain_blocklist": self.research_domain_blocklist,
         }
 
 
@@ -129,6 +141,20 @@ def _str_to_bool(value: Optional[str], default: bool = False) -> bool:
     if value is None:
         return default
     return value.strip().lower() in ("true", "1", "yes", "on")
+
+
+def _parse_domain_list(env_val: Optional[str], fallback: List[str]) -> List[str]:
+    if not env_val:
+        return fallback or []
+    val = env_val.strip()
+    if val.startswith("[") and val.endswith("]"):
+        try:
+            parsed = json.loads(val)
+            if isinstance(parsed, list):
+                return [str(d).strip().lower() for d in parsed if str(d).strip()]
+        except Exception:
+            pass
+    return [d.strip().lower() for d in val.split(",") if d.strip()]
 
 
 def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
@@ -149,6 +175,7 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
     blogger_cfg = json_cfg.get("blogger", {})
     gemini_cfg = json_cfg.get("gemini", {})
     editorial_cfg = json_cfg.get("editorial", {})
+    research_cfg = json_cfg.get("research", {})
 
     dry_run_env = os.getenv("DRY_RUN")
     if dry_run_env is not None:
@@ -175,9 +202,39 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
     else:
         zambia_enabled = bool(pipeline_cfg.get("zambia_context_enabled", False))
 
+    gemini_temp_env = os.getenv("GEMINI_TEMPERATURE")
+    if gemini_temp_env is not None:
+        try:
+            gemini_temp = float(gemini_temp_env)
+        except ValueError:
+            gemini_temp = float(gemini_cfg.get("temperature", 0.3))
+    else:
+        gemini_temp = float(gemini_cfg.get("temperature", 0.3))
+
+    gemini_tokens_env = os.getenv("GEMINI_MAX_TOKENS")
+    if gemini_tokens_env is not None:
+        try:
+            gemini_tokens = int(gemini_tokens_env)
+        except ValueError:
+            gemini_tokens = int(gemini_cfg.get("max_output_tokens", 8192))
+    else:
+        gemini_tokens = int(gemini_cfg.get("max_output_tokens", 8192))
+
+    domain_allowlist = _parse_domain_list(
+        os.getenv("RESEARCH_DOMAIN_ALLOWLIST"),
+        research_cfg.get("domain_allowlist", []),
+    )
+    domain_blocklist = _parse_domain_list(
+        os.getenv("RESEARCH_DOMAIN_BLOCKLIST"),
+        research_cfg.get("domain_blocklist", []),
+    )
+
+    confirm_live_publish = _str_to_bool(os.getenv("CONFIRM_LIVE_PUBLISH"), default=False)
+
     config = AppConfig(
         dry_run=dry_run,
         publish_mode=publish_mode,
+        confirm_live_publish=confirm_live_publish,
         max_articles_per_run=max_articles,
         local_only=True,
         topics_csv_path=os.getenv("TOPICS_CSV_PATH", "data/topics.csv"),
@@ -192,11 +249,16 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         blogger_client_secret=os.getenv("BLOGGER_CLIENT_SECRET"),
         blogger_refresh_token=os.getenv("BLOGGER_REFRESH_TOKEN"),
         gemini_model=os.getenv("GEMINI_MODEL") or gemini_cfg.get("model", "gemini-3.8-flash"),
+        gemini_fallback_model=os.getenv("GEMINI_FALLBACK_MODEL") or gemini_cfg.get("fallback_model", "gemini-1.5-flash"),
         groq_model=os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile",
+        gemini_temperature=gemini_temp,
+        gemini_max_tokens=gemini_tokens,
         zambia_context_enabled=zambia_enabled,
         min_word_count=min_words,
         max_word_count=max_words,
         min_credible_sources=min_sources,
+        research_domain_allowlist=domain_allowlist,
+        research_domain_blocklist=domain_blocklist,
     )
 
     if overrides:

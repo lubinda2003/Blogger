@@ -27,6 +27,19 @@ class QAReport:
         }
 
 
+def normalize_url(url: str) -> str:
+    """Normalize a URL by stripping http(s)://, leading www., and trailing slashes for comparison."""
+    if not url:
+        return ""
+    u = url.strip()
+    u = re.sub(r"^https?://", "", u, flags=re.IGNORECASE)
+    u = re.sub(r"^www\.", "", u, flags=re.IGNORECASE)
+    parts = u.split("/", 1)
+    domain = parts[0].lower()
+    path = "/" + parts[1] if len(parts) > 1 else ""
+    return f"{domain}{path}".rstrip("/")
+
+
 class QualityGate:
     """Enforces strict pre-publication gates. Fails closed on any hard check violation."""
 
@@ -174,15 +187,29 @@ class QualityGate:
                 f"failing the requirement of at least {self.min_sources} verified credible sources."
             )
         else:
+            normalized_verified = (
+                {normalize_url(u) for u in verified_source_urls}
+                if verified_source_urls is not None
+                else None
+            )
+            found_hrefs = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_str, re.IGNORECASE)
+            normalized_body_links = {normalize_url(l) for l in found_hrefs}
+
             for s in draft.sources_used:
                 url = s.get("url", "")
                 if not url.startswith("http://") and not url.startswith("https://"):
                     failures.append(f"Sources check failed: Source URL '{url}' is malformed.")
-                elif verified_source_urls is not None and url not in verified_source_urls:
-                    # In live mode or when verified URLs list is supplied
-                    failures.append(
-                        f"Sources check failed: Cited source '{url}' was not verified during the research phase."
-                    )
+                else:
+                    norm_url = normalize_url(url)
+                    if normalized_verified is not None and norm_url not in normalized_verified:
+                        # In live mode or when verified URLs list is supplied
+                        failures.append(
+                            f"Sources check failed: Cited source '{url}' was not verified during the research phase."
+                        )
+                    if norm_url not in normalized_body_links:
+                        failures.append(
+                            f"Sources check failed: Cited source '{url}' is not linked in the article body."
+                        )
 
         # 8. Affiliate Disclosure
         found_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_str, re.IGNORECASE)

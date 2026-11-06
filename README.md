@@ -4,7 +4,7 @@
 [![Blogger Content Pipeline](https://img.shields.io/badge/Workflow-GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](.github/workflows/content-pipeline.yml)
 [![State Persistence](https://img.shields.io/badge/State_Persistence-Repository_JSON-0284c7?logo=git&logoColor=white)](data/processed_topics.json)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![Tests: 45 Passing](https://img.shields.io/badge/Tests-45_Passing-emerald)](tests/)
+[![Tests: 74 Passing](https://img.shields.io/badge/Tests-74_Passing-emerald)](tests/)
 [![Safety: Draft First](https://img.shields.io/badge/Safety-Draft_Default-success)](config/editorial_policy.md)
 [![Style: Plain English](https://img.shields.io/badge/Style-Plain_English-emerald)](config/editorial_policy.md)
 

@@ -345,6 +345,119 @@ class TestResearchAndSources(unittest.TestCase):
             self.assertTrue(verified_sources[0].verified)
             self.assertTrue(verified_sources[0].content_extraction_success)
 
+    def test_substring_routing_removed_unrelated_topics_not_assigned_notion_or_shopify(self):
+        """Unrelated topics containing substrings like 'email' or 'daily' must not be routed to Notion/Shopify."""
+        collector = ResearchCollector(request_timeout=5)
+        with patch.object(collector, "_search_tavily") as mock_search, \
+             patch.object(collector, "verify_and_fetch_source") as mock_fetch:
+
+            mock_search.return_value = []
+            mock_fetch.return_value = (True, 200, "Example Docs", "Example content", "https://example.com/daily", None)
+
+            # Topic contains 'ai' inside 'email' and 'daily'
+            brief = collector.conduct_research(
+                topic_id="daily-email",
+                topic_title="Setting Up Daily Email Newsletters",
+                category="Digital Marketing",
+                target_url="https://example.com/daily",
+                dry_run=False,
+            )
+
+            # Sources must NOT include notion.so or shopify.com or ai.google.dev
+            urls = [s.url for s in brief.sources]
+            self.assertFalse(any("notion.so" in u for u in urls))
+            self.assertFalse(any("shopify.com" in u for u in urls))
+            self.assertFalse(any("ai.google.dev" in u for u in urls))
+
+    def test_domain_allowlist_and_blocklist_filtering(self):
+        """Allowed and blocked domain lists must filter candidate URLs."""
+        # 1. Allowlist restricts to permitted domains only
+        collector_allow = ResearchCollector(domain_allowlist=["trusted.org", "docs.google.com"])
+        self.assertTrue(collector_allow._is_domain_allowed("https://trusted.org/help"))
+        self.assertTrue(collector_allow._is_domain_allowed("https://sub.trusted.org/help"))
+        self.assertFalse(collector_allow._is_domain_allowed("https://untrusted.com/page"))
+
+        # 2. Blocklist rejects blacklisted domains
+        collector_block = ResearchCollector(domain_blocklist=["spam.com", "sketchy-affiliate.net"])
+        self.assertFalse(collector_block._is_domain_allowed("https://spam.com/promo"))
+        self.assertFalse(collector_block._is_domain_allowed("https://blog.sketchy-affiliate.net/link"))
+        self.assertTrue(collector_block._is_domain_allowed("https://trusted.org/help"))
+
+    def test_tavily_fallback_does_not_verify_unsupported_snippet_over_200_chars(self):
+        """A Tavily fallback snippet > 200 characters with completely unsupported claims must NOT be verified."""
+        collector = ResearchCollector(tavily_api_key="tvly-mock-key")
+        with patch.object(collector, "_search_tavily") as mock_search, \
+             patch.object(collector, "verify_and_fetch_source") as mock_fetch:
+
+            # Long snippet (> 200 chars), but completely unrelated content
+            long_unrelated_snippet = (
+                "Baking sourdough bread requires flour, filtered water, ambient yeast culture, and exact fermentation times. "
+                "Ensure your Dutch oven is preheated to 450 degrees Fahrenheit. Score the dough with a sharp baker's lame before placing it in the oven."
+            )
+            mock_search.return_value = [{
+                "title": "Baking Sourdough Guide",
+                "url": "https://example.com/sourdough",
+                "content": long_unrelated_snippet,
+                "raw_content": long_unrelated_snippet,
+            }]
+
+            # Direct fetch fails (e.g. 403 bot check)
+            mock_fetch.return_value = (False, 403, "Access Denied", "", "https://example.com/sourdough", "Forbidden")
+
+            brief = collector.conduct_research(
+                topic_id="notion-db",
+                topic_title="How to Build Relational Databases in Notion",
+                category="Productivity",
+                target_url="https://example.com/sourdough",
+                configured_sources=[{
+                    "title": "Baking Sourdough Guide",
+                    "url": "https://example.com/sourdough",
+                    "claims": ["Relational databases in Notion workspaces", "Rollup formulas and relation properties"],
+                }],
+                dry_run=False,
+            )
+
+            source = brief.sources[0]
+            # Must NOT be marked verified despite snippet length > 200 chars!
+            self.assertFalse(source.verified)
+            self.assertEqual(len(source.verified_claims), 0)
+
+    def test_hardcoded_upwork_fact_removed_from_brief(self):
+        """Brief key_facts must never contain hardcoded unretrieved facts like Upwork fee October 2026."""
+        collector = ResearchCollector()
+        brief = collector.conduct_research(
+            topic_id="upwork-test",
+            topic_title="How to Get Started on Upwork",
+            category="Freelancing",
+            target_url="https://support.upwork.com",
+            dry_run=True,
+        )
+
+        for fact in brief.key_facts:
+            self.assertNotIn("verified October 2026 via official Upwork Help Center", fact)
+            self.assertNotIn("flat 10% freelancer fee", fact)
+
+    def test_cleaned_text_and_untrusted_delimiters_in_prompt(self):
+        """Research brief format_for_prompt must delimit external text as untrusted data."""
+        brief = ResearchBrief(topic_id="test", topic_title="Test Topic", target_url="https://example.com")
+        brief.sources = [
+            SourceCitation(
+                title="Example Official Docs",
+                url="https://example.com/docs",
+                retrieval_date="November 2026",
+                verified=True,
+                verified_claims=["Automated webhook delivery"],
+                cleaned_text="Webhooks send real-time JSON payloads to configured HTTP endpoints upon status changes.",
+            )
+        ]
+
+        prompt_text = brief.format_for_prompt()
+        self.assertIn("<<<START UNTRUSTED SOURCE TEXT>>>", prompt_text)
+        self.assertIn("<<<END UNTRUSTED SOURCE TEXT>>>", prompt_text)
+        self.assertIn("UNTRUSTED external data", prompt_text)
+        self.assertIn("Do NOT fabricate or extrapolate exact pricing", prompt_text)
+        self.assertIn("Webhooks send real-time JSON payloads", prompt_text)
+
 
 if __name__ == "__main__":
     unittest.main()

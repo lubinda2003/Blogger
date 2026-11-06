@@ -1,8 +1,10 @@
 """Article writer that invokes Gemini with structured output, retries, and Blogger-compatible HTML."""
 
+import html
 import json
 import logging
 import os
+import random
 import re
 import time
 import urllib.error
@@ -16,6 +18,57 @@ from src.research import ResearchBrief
 from src.topic_discovery import TopicItem
 
 logger = logging.getLogger(__name__)
+
+USER_AGENT = "DigitalToolkitContentEngine/1.0"
+DEFAULT_MAX_TOKENS = 8192
+
+# Structured output JSON schema for Gemini v1beta responseSchema
+ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
+    "type": "OBJECT",
+    "properties": {
+        "title": {"type": "STRING"},
+        "meta_description": {"type": "STRING"},
+        "labels": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
+        },
+        "html_content": {"type": "STRING"},
+        "summary": {"type": "STRING"},
+        "sources_used": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "title": {"type": "STRING"},
+                    "url": {"type": "STRING"},
+                },
+                "required": ["title", "url"],
+            },
+        },
+        "primary_intent": {"type": "STRING"},
+        "last_checked_date": {"type": "STRING"},
+        "affiliate_disclosure_required": {"type": "BOOLEAN"},
+        "suggested_slug": {"type": "STRING"},
+        "screenshot_spec": {
+            "type": "OBJECT",
+            "properties": {
+                "needed": {"type": "BOOLEAN"},
+                "target_url": {"type": "STRING"},
+                "caption": {"type": "STRING"},
+                "alt_text": {"type": "STRING"},
+            },
+        },
+        "featured_image_brief": {
+            "type": "OBJECT",
+            "properties": {
+                "description": {"type": "STRING"},
+                "alt_text": {"type": "STRING"},
+                "aspect_ratio": {"type": "STRING"},
+            },
+        },
+    },
+    "required": ["title", "meta_description", "labels", "html_content", "sources_used"],
+}
 
 
 @dataclass
@@ -39,6 +92,8 @@ class ArticleDraft:
     screenshot_alt_text: Optional[str] = None
     suggested_slug: Optional[str] = None
     featured_image_brief: Optional[Dict[str, str]] = None
+    actual_provider: str = ""
+    actual_model: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -60,6 +115,8 @@ class ArticleDraft:
             "screenshot_alt_text": self.screenshot_alt_text,
             "suggested_slug": self.suggested_slug,
             "featured_image_brief": self.featured_image_brief,
+            "actual_provider": self.actual_provider,
+            "actual_model": self.actual_model,
         }
 
 
@@ -73,8 +130,9 @@ class ArticleWriter:
         self,
         api_key: Optional[str] = None,
         model_name: Optional[str] = None,
+        fallback_model: Optional[str] = None,
         temperature: float = 0.3,
-        max_tokens: int = 4096,
+        max_tokens: int = DEFAULT_MAX_TOKENS,
         prompt_template_path: str = "templates/article_prompt.md",
         provider: str = "auto",
         groq_api_key: Optional[str] = None,
@@ -82,12 +140,15 @@ class ArticleWriter:
     ):
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.model_name = model_name or os.getenv("GEMINI_MODEL") or "gemini-3.8-flash"
+        self.fallback_model = fallback_model or os.getenv("GEMINI_FALLBACK_MODEL") or "gemini-1.5-flash"
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.prompt_template_path = Path(prompt_template_path)
         self.provider = (provider or os.getenv("LLM_PROVIDER", "auto")).strip().lower()
         self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY")
         self.groq_model = groq_model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.actual_provider: str = ""
+        self.actual_model: str = ""
 
     def _load_prompt_template(self) -> str:
         """Load markdown prompt template."""
@@ -110,17 +171,26 @@ class ArticleWriter:
         prompt = prompt.replace("{{RESEARCH_BRIEF}}", brief.format_for_prompt())
         return prompt
 
-    def _call_gemini_rest(self, prompt: str) -> str:
-        """Call Gemini REST API directly with exponential backoff."""
+    def _call_gemini_rest(
+        self,
+        prompt: str,
+        model_name: Optional[str] = None,
+        max_tokens: Optional[int] = None,
+        is_token_retry: bool = False,
+    ) -> str:
+        """Call Gemini REST API directly with exponential backoff, jitter, header auth, and structured schema."""
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY is not configured in environment or GitHub Secrets.")
 
-        clean_model = self.model_name.replace("models/", "").strip()
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent?key={self.api_key}"
+        effective_model = (model_name or self.model_name).strip()
+        effective_tokens = max_tokens or self.max_tokens
+        clean_model = effective_model.replace("models/", "").strip()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:generateContent"
 
         gen_config: Dict[str, Any] = {
-            "maxOutputTokens": self.max_tokens,
+            "maxOutputTokens": effective_tokens,
             "responseMimeType": "application/json",
+            "responseSchema": ARTICLE_RESPONSE_SCHEMA,
         }
         if self.temperature is not None and not (clean_model.startswith("gemini-3") or clean_model.startswith("gemini-4")):
             gen_config["temperature"] = self.temperature
@@ -134,17 +204,21 @@ class ArticleWriter:
         req = urllib.request.Request(
             url,
             data=data_bytes,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": self.api_key,
+                "User-Agent": USER_AGENT,
+            },
             method="POST",
         )
 
-        max_retries = 3
+        max_retries = 5
         backoff = 2.0
         last_error = None
 
         for attempt in range(1, max_retries + 1):
             try:
-                logger.info(f"Calling Gemini ({self.model_name}), attempt {attempt}/{max_retries}...")
+                logger.info(f"Calling Gemini ({clean_model}), attempt {attempt}/{max_retries} (tokens={effective_tokens})...")
                 with urllib.request.urlopen(req, timeout=90) as response:
                     res_body = response.read().decode("utf-8")
                     parsed = json.loads(res_body)
@@ -153,10 +227,11 @@ class ArticleWriter:
                         prompt_feedback = parsed.get("promptFeedback", {})
                         raise ValueError(f"Gemini returned empty candidate list. PromptFeedback: {prompt_feedback}")
 
-                    candidate_content = candidates[0].get("content", {})
+                    candidate = candidates[0]
+                    finish_reason = candidate.get("finishReason", "UNKNOWN")
+                    candidate_content = candidate.get("content", {})
                     parts = candidate_content.get("parts", [])
                     if not parts:
-                        finish_reason = candidates[0].get("finishReason", "UNKNOWN")
                         raise ValueError(f"Gemini candidate has no parts (finishReason: {finish_reason}).")
 
                     # In Gemini 2.0 / 3.x models, thinking parts have "thought": true
@@ -171,6 +246,20 @@ class ArticleWriter:
                     else:
                         raw_text = "\n".join(p.get("text", "") for p in parts if "text" in p)
 
+                    # Check finishReason: if MAX_TOKENS or LENGTH, retry once with higher limit
+                    if finish_reason in ("MAX_TOKENS", "LENGTH") and not is_token_retry:
+                        higher_tokens = min(effective_tokens * 2, 16384)
+                        logger.warning(
+                            f"Gemini candidate reached token limit (finishReason: {finish_reason}). "
+                            f"Retrying once with higher token limit ({higher_tokens})..."
+                        )
+                        return self._call_gemini_rest(
+                            prompt=prompt,
+                            model_name=effective_model,
+                            max_tokens=higher_tokens,
+                            is_token_retry=True,
+                        )
+
                     return raw_text
             except urllib.error.HTTPError as e:
                 last_error = e
@@ -178,28 +267,31 @@ class ArticleWriter:
                 err_text = e.read().decode("utf-8", errors="ignore")
                 # Redact API key if it inadvertently appears in error text
                 safe_err = re.sub(r"key=[A-Za-z0-9_-]+", "key=[REDACTED]", err_text[:1000])
-                logger.warning(f"Gemini API HTTP {status}: {safe_err}")
+                logger.warning(f"Gemini API HTTP {status} ({clean_model}): {safe_err}")
 
                 if status in (429, 500, 503, 504) and attempt < max_retries:
-                    sleep_time = backoff * (2 ** (attempt - 1))
-                    logger.info(f"Retrying Gemini call in {sleep_time:.1f}s...")
+                    sleep_time = (backoff * (2 ** (attempt - 1))) + random.uniform(0.1, 1.0)
+                    logger.info(f"Retrying Gemini call ({clean_model}) in {sleep_time:.2f}s (status {status})...")
                     time.sleep(sleep_time)
                 else:
                     raise RuntimeError(f"Gemini API request failed with status {status}: {safe_err}") from e
             except Exception as e:
                 last_error = e
                 if attempt < max_retries:
-                    time.sleep(backoff * attempt)
+                    sleep_time = (backoff * (2 ** (attempt - 1))) + random.uniform(0.1, 1.0)
+                    logger.info(f"Retrying Gemini call ({clean_model}) in {sleep_time:.2f}s due to error: {e}...")
+                    time.sleep(sleep_time)
                 else:
-                    raise RuntimeError(f"Gemini connection error: {e}") from e
+                    raise RuntimeError(f"Gemini connection error on {clean_model}: {e}") from e
 
-        raise RuntimeError(f"Gemini failed after {max_retries} attempts: {last_error}")
+        raise RuntimeError(f"Gemini failed after {max_retries} attempts on {clean_model}: {last_error}")
 
-    def _call_groq_rest(self, prompt: str) -> str:
-        """Call Groq REST API directly with Llama 3.3 70B or configured Groq model."""
+    def _call_groq_rest(self, prompt: str, max_tokens: Optional[int] = None) -> str:
+        """Call Groq REST API directly with custom User-Agent, exponential backoff, and jitter."""
         if not self.groq_api_key:
             raise ValueError("GROQ_API_KEY is not configured in environment or GitHub Secrets.")
 
+        effective_tokens = max_tokens or self.max_tokens
         url = "https://api.groq.com/openai/v1/chat/completions"
         payload = {
             "model": self.groq_model,
@@ -212,7 +304,7 @@ class ArticleWriter:
             ],
             "response_format": {"type": "json_object"},
             "temperature": self.temperature,
-            "max_tokens": self.max_tokens,
+            "max_tokens": effective_tokens,
         }
 
         data_bytes = json.dumps(payload).encode("utf-8")
@@ -222,17 +314,18 @@ class ArticleWriter:
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.groq_api_key}",
+                "User-Agent": USER_AGENT,
             },
             method="POST",
         )
 
-        max_retries = 3
+        max_retries = 5
         backoff = 2.0
         last_error = None
 
         for attempt in range(1, max_retries + 1):
             try:
-                logger.info(f"Calling Groq API ({self.groq_model}), attempt {attempt}/{max_retries}...")
+                logger.info(f"Calling Groq API ({self.groq_model}), attempt {attempt}/{max_retries} (tokens={effective_tokens})...")
                 with urllib.request.urlopen(req, timeout=90) as response:
                     res_body = response.read().decode("utf-8")
                     parsed = json.loads(res_body)
@@ -249,15 +342,16 @@ class ArticleWriter:
                 logger.warning(f"Groq API HTTP {status}: {safe_err}")
 
                 if status in (429, 500, 503, 504) and attempt < max_retries:
-                    sleep_time = backoff * (2 ** (attempt - 1))
-                    logger.info(f"Retrying Groq call in {sleep_time:.1f}s...")
+                    sleep_time = (backoff * (2 ** (attempt - 1))) + random.uniform(0.1, 1.0)
+                    logger.info(f"Retrying Groq call in {sleep_time:.2f}s (status {status})...")
                     time.sleep(sleep_time)
                 else:
                     raise RuntimeError(f"Groq API request failed with status {status}: {safe_err}") from e
             except Exception as e:
                 last_error = e
                 if attempt < max_retries:
-                    time.sleep(backoff * attempt)
+                    sleep_time = (backoff * (2 ** (attempt - 1))) + random.uniform(0.1, 1.0)
+                    time.sleep(sleep_time)
                 else:
                     raise RuntimeError(f"Groq connection error: {e}") from e
 
@@ -274,6 +368,39 @@ class ArticleWriter:
             errors.append("Article HTML content is too short (under 200 characters).")
 
         return errors
+
+    @staticmethod
+    def append_sources_section(html_content: str, sources_used: List[Dict[str, str]]) -> str:
+        """Appends a visible Sources & References section with working links if not already present."""
+        if not sources_used:
+            return html_content
+        if "article-sources" in html_content:
+            return html_content
+
+        items = []
+        for s in sources_used:
+            title = html.escape(s.get("title") or "Source Reference")
+            url = html.escape(s.get("url") or "")
+            if url:
+                items.append(f'  <li><a href="{url}" target="_blank" rel="noopener noreferrer">{title}</a></li>')
+
+        if not items:
+            return html_content
+
+        sources_block = (
+            '\n\n<div class="article-sources" style="margin-top:32px; padding:16px 20px; '
+            'background:#f8fafc; border-top:2px solid #e2e8f0; border-radius:6px;">\n'
+            '  <h3 style="font-size:1.1rem; margin-top:0; margin-bottom:12px; color:#1e293b;">Sources &amp; References</h3>\n'
+            '  <ul style="margin-bottom:0; padding-left:20px;">\n'
+            + '\n'.join(items) + '\n'
+            '  </ul>\n'
+            '</div>'
+        )
+
+        if html_content.rstrip().endswith("</div>"):
+            idx = html_content.rfind("</div>")
+            return html_content[:idx].rstrip() + sources_block + "\n</div>"
+        return html_content.rstrip() + sources_block
 
     def _generate_dry_run_fixture(self, topic: TopicItem, brief: ResearchBrief) -> Dict[str, Any]:
         """Produce a plain-English, realistic article fixture strictly for dry-run testing.
@@ -437,16 +564,19 @@ against primary documentation."</code>
 <p><small><em>Information verified against official documentation as of {current_month}.</em></small></p>
 </div>"""
 
+        sources = [{"title": s.title, "url": s.url} for s in brief.verified_sources()] or [
+            {"title": "Official Platform Documentation", "url": topic.target_url or "https://support.google.com"}
+        ]
+        html_with_sources = self.append_sources_section(html_content, sources)
+
         return {
             "title": title,
             "meta_description": meta_desc,
             "labels": labels,
             "primary_intent": topic.primary_intent,
-            "html_content": html_content,
+            "html_content": html_with_sources,
             "summary": meta_desc,
-            "sources_used": [{"title": s.title, "url": s.url} for s in brief.verified_sources()] or [
-                {"title": "Official Platform Documentation", "url": topic.target_url or "https://support.google.com"}
-            ],
+            "sources_used": sources,
             "screenshot_spec": {
                 "needed": topic.requires_screenshot,
                 "target_url": topic.target_url,
@@ -463,24 +593,62 @@ against primary documentation."</code>
             "last_checked_date": current_month,
         }
 
-    def _call_llm_provider(self, prompt: str) -> str:
-        """Route prompt to configured LLM provider (Gemini or Groq) with intelligent failover."""
+    def _call_llm_provider(self, prompt: str, max_tokens: Optional[int] = None) -> str:
+        """Route prompt to configured LLM provider with fallback model chain and provider logging."""
         prov = self.provider
+
         if prov == "groq" or (prov == "auto" and not self.api_key and self.groq_api_key):
             logger.info(f"Generating article via Groq LLM provider ({self.groq_model})...")
-            return self._call_groq_rest(prompt)
-        elif prov == "gemini" or (prov == "auto" and self.api_key):
-            logger.info(f"Generating article via Gemini LLM provider ({self.model_name})...")
+            res = self._call_groq_rest(prompt, max_tokens=max_tokens)
+            self.actual_provider = "groq"
+            self.actual_model = self.groq_model
+            logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
+            return res
+
+        elif prov in ("gemini", "auto") and self.api_key:
+            # 1. Primary Gemini model
+            primary_model = self.model_name.strip()
+            logger.info(f"Attempting article generation via primary Gemini model ({primary_model})...")
             try:
-                return self._call_gemini_rest(prompt)
-            except Exception as e:
-                if self.groq_api_key:
-                    logger.warning(f"Gemini API call failed ({e}). Falling back to Groq provider ({self.groq_model})...")
-                    return self._call_groq_rest(prompt)
-                raise
+                res = self._call_gemini_rest(prompt, model_name=primary_model, max_tokens=max_tokens)
+                self.actual_provider = "gemini"
+                self.actual_model = primary_model
+                logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
+                return res
+            except Exception as e_primary:
+                logger.warning(f"Primary Gemini model ({primary_model}) failed: {e_primary}")
+
+            # 2. Fallback Gemini model (tried before Groq)
+            fallback_model = (self.fallback_model or "gemini-1.5-flash").strip()
+            if fallback_model != primary_model:
+                logger.info(f"Attempting fallback Gemini model in chain ({fallback_model})...")
+                try:
+                    res = self._call_gemini_rest(prompt, model_name=fallback_model, max_tokens=max_tokens)
+                    self.actual_provider = "gemini"
+                    self.actual_model = fallback_model
+                    logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
+                    return res
+                except Exception as e_fallback:
+                    logger.warning(f"Fallback Gemini model ({fallback_model}) also failed: {e_fallback}")
+
+            # 3. Groq fallback if Groq API key available
+            if self.groq_api_key:
+                logger.warning(f"Gemini model chain exhausted. Falling back to Groq provider ({self.groq_model})...")
+                res = self._call_groq_rest(prompt, max_tokens=max_tokens)
+                self.actual_provider = "groq"
+                self.actual_model = self.groq_model
+                logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
+                return res
+
+            raise RuntimeError(f"All Gemini models in chain failed and no fallback provider is available.")
+
         elif self.groq_api_key:
             logger.info(f"Generating article via Groq LLM provider ({self.groq_model})...")
-            return self._call_groq_rest(prompt)
+            res = self._call_groq_rest(prompt, max_tokens=max_tokens)
+            self.actual_provider = "groq"
+            self.actual_model = self.groq_model
+            logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
+            return res
         else:
             raise ValueError("Neither GEMINI_API_KEY nor GROQ_API_KEY is configured in environment or GitHub Secrets.")
 
@@ -527,22 +695,44 @@ against primary documentation."</code>
             logger.info("Using dry-run article generation fixture (clearly marked as test data).")
             parsed = self._generate_dry_run_fixture(topic, brief)
             is_fixture = True
+            provider_used = "fixture"
+            model_used = "dry_run"
         else:
             # LIVE MODE: Call configured LLM API provider and parse structured JSON
             prompt = self._render_prompt(topic, brief)
             raw_json_str = self._call_llm_provider(prompt)
 
+            parsed = None
             try:
                 parsed = self._extract_json_from_response(raw_json_str)
             except Exception as e:
-                # In live mode, retry with repair prompt once
-                logger.warning(f"LLM returned invalid JSON ({e}). Retrying with repair prompt...")
-                repair_prompt = f"The following text was supposed to be valid JSON matching the schema, but failed to parse: {raw_json_str[:400]}. Return ONLY valid JSON adhering to the schema."
-                repaired_raw = self._call_llm_provider(repair_prompt)
-                try:
-                    parsed = self._extract_json_from_response(repaired_raw)
-                except Exception as e2:
-                    raise RuntimeError(f"LLM response could not be parsed as JSON: {e2}") from e2
+                # If JSON parsing failed, check if output appears truncated
+                clean_raw = raw_json_str.strip()
+                looks_truncated = not (clean_raw.endswith("}") or clean_raw.endswith("```"))
+                if looks_truncated:
+                    higher_tokens = min(self.max_tokens * 2, 16384)
+                    logger.warning(
+                        f"LLM output appears truncated ({e}). Retrying once with higher token limit ({higher_tokens})..."
+                    )
+                    try:
+                        raw_json_str = self._call_llm_provider(prompt, max_tokens=higher_tokens)
+                        parsed = self._extract_json_from_response(raw_json_str)
+                    except Exception as retry_err:
+                        logger.warning(f"Higher token limit retry also failed to parse ({retry_err}). Falling back to JSON repair prompt...")
+
+                if parsed is None:
+                    # In live mode, retry with repair prompt containing FULL previous output
+                    logger.warning(f"LLM returned invalid JSON ({e}). Retrying with full-text repair prompt...")
+                    repair_prompt = (
+                        "The following text was supposed to be valid JSON matching the schema, but failed to parse:\n\n"
+                        f"{raw_json_str}\n\n"
+                        "Return ONLY valid JSON adhering strictly to the schema."
+                    )
+                    repaired_raw = self._call_llm_provider(repair_prompt)
+                    try:
+                        parsed = self._extract_json_from_response(repaired_raw)
+                    except Exception as e2:
+                        raise RuntimeError(f"LLM response could not be parsed as JSON: {e2}") from e2
 
             # Schema validation
             schema_errors = self._validate_schema(parsed)
@@ -550,8 +740,13 @@ against primary documentation."</code>
                 raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}")
 
             is_fixture = False
+            provider_used = self.actual_provider or "unknown"
+            model_used = self.actual_model or "unknown"
 
         html_body = parsed.get("html_content", "")
+        sources_used = parsed.get("sources_used", [])
+        html_body = self.append_sources_section(html_body, sources_used)
+
         # Compute word count
         words = re.findall(r"\b\w+\b", re.sub(r"<[^>]+>", " ", html_body))
         word_count = len(words)
@@ -580,7 +775,6 @@ against primary documentation."</code>
             "note": "Editorial design specification only; does not claim an image is automatically generated or hosted.",
         }
 
-
         return ArticleDraft(
             topic_id=topic.id,
             title=parsed.get("title", topic.topic),
@@ -600,4 +794,6 @@ against primary documentation."</code>
             screenshot_alt_text=screenshot_spec.get("alt_text", f"Official interface for {topic.topic}"),
             suggested_slug=slug,
             featured_image_brief=image_brief,
+            actual_provider=provider_used,
+            actual_model=model_used,
         )

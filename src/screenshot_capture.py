@@ -128,7 +128,7 @@ class ScreenshotCapture:
                 data=img_data,
                 headers={
                     "Content-Type": "image/png",
-                    "User-Agent": "BloggerContentEngine/1.0",
+                    "User-Agent": "DigitalToolkitContentEngine/1.0",
                 },
                 method="POST",
             )
@@ -223,7 +223,8 @@ class ScreenshotCapture:
                     page = context.new_page()
                     page.set_default_timeout(self.timeout_ms)
 
-                    response = page.goto(url, wait_until="networkidle", timeout=self.timeout_ms)
+                    response = page.goto(url, wait_until="domcontentloaded", timeout=self.timeout_ms)
+                    page.wait_for_timeout(2000)
 
                     if response and response.status >= 400:
                         browser.close()

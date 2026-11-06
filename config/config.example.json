@@ -30,8 +30,9 @@
   },
   "gemini": {
     "model": "gemini-3.8-flash",
+    "fallback_model": "gemini-1.5-flash",
     "temperature": 0.3,
-    "max_output_tokens": 4096
+    "max_output_tokens": 8192
   },
   "editorial": {
     "min_word_count": 800,
@@ -39,5 +40,13 @@
     "min_credible_sources": 2,
     "require_faq": true,
     "featured_image_brief": true
+  },
+  "research": {
+    "provider": "tavily",
+    "search_depth": "basic",
+    "max_results_per_topic": 5,
+    "min_verified_sources_required": 2,
+    "domain_allowlist": [],
+    "domain_blocklist": []
   }
 }

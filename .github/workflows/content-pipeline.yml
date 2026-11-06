@@ -28,6 +28,11 @@ on:
           - groq
           - gemini
         default: auto
+      confirm_live_publish:
+        description: "Confirm live publication (must be true for publish mode)"
+        type: boolean
+        required: false
+        default: false
 
   # Scheduled automation is commented out for initial testing and safety.
   # Uncomment the schedule below only after end-to-end testing in draft mode.
@@ -84,7 +89,8 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
           PUBLISH_MODE: ${{ inputs.publish_mode || 'draft' }}
-          DRY_RUN: ${{ inputs.dry_run != false }}
+          DRY_RUN: ${{ github.event_name == 'schedule' || inputs.dry_run != false }}
+          CONFIRM_LIVE_PUBLISH: ${{ inputs.confirm_live_publish == true }}
           TOPIC_ID: ${{ inputs.topic_id }}
         run: |
           ARGS=""

@@ -93,6 +93,9 @@ class TopicDiscovery:
             if self.state_store.is_duplicate(item.id, item.topic):
                 logger.debug(f"Skipping already processed topic: {item.id} ('{item.topic}')")
                 continue
+            if self.state_store.is_max_failed(item.id, max_failures=3):
+                logger.warning(f"Skipping topic '{item.id}' ('{item.topic}') due to max failure limit (>=3 attempts).")
+                continue
             logger.info(f"Selected next eligible topic: {item.id} ('{item.topic}') [Priority {item.priority}]")
             return item
 

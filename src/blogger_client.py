@@ -10,6 +10,8 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+USER_AGENT = "DigitalToolkitContentEngine/1.0"
+
 
 @dataclass
 class BloggerPostResult:
@@ -84,7 +86,10 @@ class BloggerClient:
         req = urllib.request.Request(
             self.TOKEN_URL,
             data=data,
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": USER_AGENT,
+            },
             method="POST",
         )
 
@@ -105,17 +110,28 @@ class BloggerClient:
             logger.error("OAuth token exchange network failure.")
             raise RuntimeError(f"OAuth token network failure: {e}") from e
 
-    def build_post_payload(self, title: str, html_content: str, labels: List[str]) -> Dict[str, Any]:
-        """Construct the official Blogger API v3 post resource."""
+    def build_post_payload(self, title: str, html_content: str, labels: List[str], topic_id: Optional[str] = None) -> Dict[str, Any]:
+        """Construct the official Blogger API v3 post resource with hidden topic_id marker and label."""
+        final_html = html_content
+        final_labels = list(labels or ["AI Tools", "Digital Skills"])
+
+        if topic_id:
+            marker = f"<!-- topic_id: {topic_id} -->"
+            if marker not in final_html:
+                final_html = final_html.rstrip() + f"\n\n{marker}"
+            label_tag = f"TopicID:{topic_id}"
+            if label_tag not in final_labels:
+                final_labels.append(label_tag)
+
         return {
             "kind": "blogger#post",
             "title": title,
-            "content": html_content,
-            "labels": labels or ["AI Tools", "Digital Skills"],
+            "content": final_html,
+            "labels": final_labels,
         }
 
-    def reconcile_existing_post(self, title: str) -> Optional[BloggerPostResult]:
-        """Query Blogger API for an existing post with the same title to prevent duplicate insertion.
+    def reconcile_existing_post(self, title: str, topic_id: Optional[str] = None) -> Optional[BloggerPostResult]:
+        """Query Blogger API for an existing post by title or hidden topic_id marker/label to prevent duplicate insertion.
 
         FAIL-CLOSED SAFETY: If the lookup fails due to network, auth, or API error, do NOT swallow
         the error! Raise it so the pipeline stops safely rather than risking duplicate insertion.
@@ -126,37 +142,72 @@ class BloggerClient:
         if not self._access_token:
             self.refresh_access_token()
 
-        encoded_query = urllib.parse.quote(title)
-        url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts/search?q={encoded_query}"
+        # 1. Search by title query
+        if title:
+            try:
+                encoded_query = urllib.parse.quote(title)
+                url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts/search?q={encoded_query}"
+                req = urllib.request.Request(
+                    url,
+                    headers={
+                        "Authorization": f"Bearer {self._access_token}",
+                        "User-Agent": USER_AGENT,
+                    },
+                    method="GET",
+                )
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    items = data.get("items", [])
+                    for item in items:
+                        if item.get("title", "").strip().lower() == title.strip().lower():
+                            logger.info(f"Reconciliation matched existing post ID {item.get('id')} by title: '{title}'")
+                            return BloggerPostResult(
+                                success=True,
+                                post_id=item.get("id"),
+                                post_url=item.get("url"),
+                                title=item.get("title"),
+                                is_draft=item.get("status") == "DRAFT",
+                                reconciled_existing=True,
+                            )
+            except urllib.error.HTTPError as e:
+                if e.code == 404:
+                    raise RuntimeError(f"Blogger blog ID '{self.blog_id}' not found (HTTP 404). Check BLOGGER_BLOG_ID.") from e
+                raise RuntimeError(f"Blogger search/reconciliation failed (HTTP {e.code}). Stopping safely to prevent duplicates.") from e
+            except Exception as e:
+                raise RuntimeError(f"Blogger reconciliation check failed ({e}). Stopping to prevent duplicates.") from e
 
-        req = urllib.request.Request(
-            url,
-            headers={"Authorization": f"Bearer {self._access_token}"},
-            method="GET",
-        )
-
-        try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-                items = data.get("items", [])
-                for item in items:
-                    if item.get("title", "").strip().lower() == title.strip().lower():
-                        logger.info(f"Reconciliation matched existing post ID {item.get('id')}: '{title}'")
-                        return BloggerPostResult(
-                            success=True,
-                            post_id=item.get("id"),
-                            post_url=item.get("url"),
-                            title=item.get("title"),
-                            is_draft=item.get("status") == "DRAFT",
-                            reconciled_existing=True,
-                        )
-        except urllib.error.HTTPError as e:
-            if e.code == 404:
-                # Blog or search endpoint not found
-                raise RuntimeError(f"Blogger blog ID '{self.blog_id}' not found (HTTP 404). Check BLOGGER_BLOG_ID.") from e
-            raise RuntimeError(f"Blogger search/reconciliation failed (HTTP {e.code}). Stopping safely to prevent duplicates.") from e
-        except Exception as e:
-            raise RuntimeError(f"Blogger reconciliation check failed ({e}). Stopping to prevent duplicates.") from e
+        # 2. List recent posts and check topic_id marker or label
+        if topic_id:
+            try:
+                list_url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts?fetchBodies=true&maxResults=50"
+                req = urllib.request.Request(
+                    list_url,
+                    headers={
+                        "Authorization": f"Bearer {self._access_token}",
+                        "User-Agent": USER_AGENT,
+                    },
+                    method="GET",
+                )
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                    items = data.get("items", [])
+                    marker = f"topic_id: {topic_id}"
+                    label_tag = f"TopicID:{topic_id}"
+                    for item in items:
+                        content = item.get("content", "")
+                        item_labels = item.get("labels", [])
+                        if marker in content or label_tag in item_labels:
+                            logger.info(f"Reconciliation matched existing post ID {item.get('id')} by topic_id marker/label '{topic_id}'")
+                            return BloggerPostResult(
+                                success=True,
+                                post_id=item.get("id"),
+                                post_url=item.get("url"),
+                                title=item.get("title"),
+                                is_draft=item.get("status") == "DRAFT",
+                                reconciled_existing=True,
+                            )
+            except Exception as e:
+                raise RuntimeError(f"Blogger post list reconciliation failed ({e}). Stopping to prevent duplicates.") from e
 
         return None
 
@@ -167,12 +218,13 @@ class BloggerClient:
         labels: List[str],
         is_draft: bool = True,
         dry_run: bool = False,
+        topic_id: Optional[str] = None,
     ) -> BloggerPostResult:
         """Create a post on the Blogger blog. Default isDraft=True."""
-        payload = self.build_post_payload(title=title, html_content=html_content, labels=labels)
+        payload = self.build_post_payload(title=title, html_content=html_content, labels=labels, topic_id=topic_id)
 
         if dry_run:
-            logger.info(f"[DRY RUN] Simulating Blogger draft insertion for: '{title}' (Labels: {labels})")
+            logger.info(f"[DRY RUN] Simulating Blogger draft insertion for: '{title}' (Labels: {payload['labels']})")
             dummy_id = "dryrun-" + str(abs(hash(title)))[:10]
             dummy_url = f"https://example.blogger.com/b/preview/{dummy_id}"
             return BloggerPostResult(
@@ -192,10 +244,9 @@ class BloggerClient:
             )
 
         # Check reconciliation first to prevent duplicates on workflow retry.
-        # If reconciliation fails with error, it will raise and fail closed.
-        existing = self.reconcile_existing_post(title)
+        existing = self.reconcile_existing_post(title, topic_id=topic_id)
         if existing:
-            logger.warning(f"Post with title '{title}' already exists on Blogger (ID: {existing.post_id}). Skipping insertion.")
+            logger.warning(f"Post with title '{title}' or topic_id '{topic_id}' already exists on Blogger (ID: {existing.post_id}). Skipping insertion.")
             return existing
 
         # Ensure active access token
@@ -212,6 +263,7 @@ class BloggerClient:
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self._access_token}",
+                "User-Agent": USER_AGENT,
             },
             method="POST",
         )

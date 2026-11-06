@@ -1,7 +1,7 @@
 """Unit tests for the hard quality gate checks, plain-English style, and safety rules."""
 
 import unittest
-from src.article_writer import ArticleDraft
+from src.article_writer import ArticleDraft, ArticleWriter
 from src.quality_checks import QualityGate
 from src.screenshot_capture import ScreenshotResult
 
@@ -25,17 +25,20 @@ class TestQualityChecks(unittest.TestCase):
 <p>Perform structured audits across all deliverables before final signoff.</p>
 </div>"""
 
+        sources = [
+            {"title": "Official Google Documentation", "url": "https://ai.google.dev/docs"},
+            {"title": "W3C Web Standards", "url": "https://www.w3.org/"},
+        ]
+        html_with_sources = ArticleWriter.append_sources_section(html, sources)
+
         return ArticleDraft(
             topic_id="test-topic-1",
             title="Practical Guide to Freelance Copy Editing",
             meta_description="A clear, step-by-step walkthrough detailing copy editing workflows for freelance editors.",
             labels=["AI Tools", "Freelancing", "Productivity"],
-            html_content=html,
+            html_content=html_with_sources,
             summary="A clear walkthrough detailing copy editing workflows.",
-            sources_used=[
-                {"title": "Official Google Documentation", "url": "https://ai.google.dev/docs"},
-                {"title": "W3C Web Standards", "url": "https://www.w3.org/"},
-            ],
+            sources_used=sources,
             primary_intent="Tutorial",
             word_count=850,
             last_checked_date="October 2026",
@@ -114,6 +117,61 @@ class TestQualityChecks(unittest.TestCase):
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertFalse(report.passed)
         self.assertTrue(any("Markdown headers" in f for f in report.failures))
+
+    def test_normalize_url_variations(self):
+        """URL normalization must handle protocol, www prefix, case, and trailing slashes."""
+        from src.quality_checks import normalize_url
+
+        self.assertEqual(normalize_url("https://www.notion.so/help/"), "notion.so/help")
+        self.assertEqual(normalize_url("http://notion.so/help"), "notion.so/help")
+        self.assertEqual(normalize_url("https://ai.google.dev/"), "ai.google.dev")
+        self.assertEqual(normalize_url("http://WWW.AI.GOOGLE.DEV"), "ai.google.dev")
+        self.assertEqual(
+            normalize_url("https://support.upwork.com/hc/en-us/articles/123/"),
+            "support.upwork.com/hc/en-us/articles/123",
+        )
+
+    def test_qa_fails_if_sources_used_are_not_linked_in_body(self):
+        """QA gate must fail if sources listed in sources_used are not linked with href in HTML body."""
+        draft = self._create_valid_draft()
+        # Remove the article-sources section so links are missing
+        draft.html_content = (
+            '<div class="article-body"><h2>Overview</h2>'
+            '<p>' + ' '.join(["word"] * 850) + '</p></div>'
+        )
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertFalse(report.passed)
+        self.assertTrue(any("is not linked in the article body" in f for f in report.failures))
+
+    def test_qa_normalizes_urls_when_matching_verified_sources(self):
+        """Quality gate must match verified sources even with http/https, www, or trailing slash differences."""
+        draft = self._create_valid_draft()
+        # Verified URL has https and trailing slash, draft cited source has http without trailing slash
+        verified_urls = {
+            "https://www.ai.google.dev/docs/",
+            "http://w3.org/",
+        }
+        report = self.live_gate.run_all_checks(
+            draft,
+            verified_source_urls=verified_urls,
+            check_duplicate=False,
+        )
+        self.assertTrue(report.passed, f"Expected pass with normalized URLs, got: {report.failures}")
+
+    def test_append_sources_section_creates_visible_html_links(self):
+        """ArticleWriter.append_sources_section must append visible HTML with valid links."""
+        raw_html = "<div><h2>Title</h2><p>Article body content.</p></div>"
+        sources = [
+            {"title": "Notion Help", "url": "https://notion.so/help"},
+            {"title": "Shopify Guide", "url": "https://help.shopify.com"},
+        ]
+        result = ArticleWriter.append_sources_section(raw_html, sources)
+        self.assertIn('<div class="article-sources"', result)
+        self.assertIn("Sources &amp; References", result)
+        self.assertIn('href="https://notion.so/help"', result)
+        self.assertIn('href="https://help.shopify.com"', result)
+        self.assertIn('target="_blank"', result)
+        self.assertIn('rel="noopener noreferrer"', result)
 
 
 if __name__ == "__main__":
