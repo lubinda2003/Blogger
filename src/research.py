@@ -233,8 +233,14 @@ class ResearchCollector:
         """Extract clean, coherent plaintext for factual research evidence injection."""
         if not content_corpus:
             return ""
-        # Strip script, style, svg, noscript, nav, and footer blocks
-        text = re.sub(r"<(script|style|svg|noscript|nav|footer)[^>]*>.*?</\1>", " ", content_corpus, flags=re.IGNORECASE | re.DOTALL)
+        # Prefer the main article body when the page has one, then drop page chrome
+        scoped = content_corpus
+        for tag in ("article", "main"):
+            m = re.search(rf"<{tag}[^>]*>(.*?)</{tag}>", scoped, flags=re.IGNORECASE | re.DOTALL)
+            if m and len(m.group(1)) > 400:
+                scoped = m.group(1)
+                break
+        text = re.sub(r"<(script|style|svg|noscript|nav|footer|header|aside|form|button)[^>]*>.*?</\1>", " ", scoped, flags=re.IGNORECASE | re.DOTALL)
         # Strip all HTML tags
         text = re.sub(r"<[^>]+>", " ", text)
         text = html.unescape(text)
@@ -348,8 +354,10 @@ class ResearchCollector:
 
                 title_lower = (page_title or "").lower()
                 excerpt_lower = (excerpt or "").lower()
-                chunk_lower = chunk.lower()
-                combined = f"{title_lower} {excerpt_lower} {chunk_lower[:2000]}"
+                visible_text = re.sub(r"<(script|style|svg|noscript)[^>]*>.*?</\1>", " ", chunk, flags=re.IGNORECASE | re.DOTALL)
+                visible_text = re.sub(r"<[^>]+>", " ", visible_text)
+                visible_text = re.sub(r"\s+", " ", html.unescape(visible_text)).strip().lower()
+                combined = f"{title_lower} {excerpt_lower} {visible_text[:2000]}"
 
                 error_signatures = [
                     r"\b404\s+not\s+found\b",
@@ -519,6 +527,10 @@ class ResearchCollector:
                 if ok:
                     corpus = f"{real_title} {excerpt} {self.last_fetched_content}".strip()
                     cleaned_corpus = self._clean_corpus_text(corpus, max_chars=3000)
+                    if tavily_snippet and len(tavily_snippet) >= 500:
+                        # Tavily already extracted the article body; far cleaner than the first 32KB of raw HTML.
+                        corpus = f"{real_title} {excerpt} {tavily_snippet}".strip()
+                        cleaned_corpus = self._clean_corpus_text(corpus, max_chars=3000)
                     verified_claims: List[str] = []
                     unverified_claims: List[str] = []
 
