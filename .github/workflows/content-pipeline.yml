@@ -51,6 +51,10 @@ jobs:
   run-pipeline:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
+    env:
+      # Manual runs follow the dry_run input. Scheduled runs are dry-run unless the repository
+      # variable SCHEDULED_LIVE is set to 'true' (Settings > Secrets and variables > Actions > Variables).
+      DRY_RUN: ${{ github.event_name == 'schedule' && vars.SCHEDULED_LIVE != 'true' || github.event_name != 'schedule' && inputs.dry_run != false }}
 
     steps:
       # actions/checkout@v4 pinned to reviewed commit SHA
@@ -89,7 +93,6 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
           PUBLISH_MODE: ${{ inputs.publish_mode || 'draft' }}
-          DRY_RUN: ${{ github.event_name == 'schedule' || inputs.dry_run != false }}
           CONFIRM_LIVE_PUBLISH: ${{ inputs.confirm_live_publish == true }}
           TOPIC_ID: ${{ inputs.topic_id }}
         run: |
@@ -107,7 +110,8 @@ jobs:
 
       # Commit and push updated processed_topics.json back to repository on successful live runs
       - name: Commit and Push Processed Topics State
-        if: success() && inputs.dry_run == false
+        # Also runs after a failed pipeline so failed-attempt counters persist and a bad topic can be skipped.
+        if: ${{ !cancelled() && env.DRY_RUN == 'false' }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
