@@ -1,6 +1,7 @@
 """Main CLI orchestrator for the Blogger Content Automation Engine."""
 
 import argparse
+import json
 import logging
 import os
 import sys
@@ -26,6 +27,16 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger("pipeline")
+
+
+def _record_failure(state_store: StateStore, config: AppConfig, topic, message: str) -> None:
+    """Count a permanent failure against a topic (never in dry-run, so test runs don't mutate state)."""
+    if config.dry_run:
+        return
+    try:
+        state_store.record_failure(topic.id, topic.topic, message)
+    except Exception as e:  # never mask the original failure
+        logger.warning(f"Could not record failure for topic '{topic.id}': {e}")
 
 
 def run_pipeline(
@@ -137,7 +148,7 @@ def run_pipeline(
 
     if not config.dry_run:
         try:
-            existing_post = blogger.reconcile_existing_post(topic.topic)
+            existing_post = blogger.reconcile_existing_post(topic.topic, topic_id=topic.id)
             if existing_post:
                 logger.warning(f"Blogger post already exists for '{topic.topic}' (ID: {existing_post.post_id}).")
                 state_store.record_success(
@@ -191,6 +202,7 @@ def run_pipeline(
     if brief.insufficient_evidence:
         details_msg = brief.notes or "Fewer than 2 verified sources found. Factual evidence insufficient."
         logger.error(f"Research stage failed closed: {details_msg}")
+        _record_failure(state_store, config, topic, details_msg)
         reporter.add_stage(
             stage_name="Research",
             status="FAILED",
@@ -291,7 +303,7 @@ def run_pipeline(
         if not screenshot_res.success:
             if topic.requires_screenshot:
                 logger.error(f"Required screenshot capture failed closed: {screenshot_res.error_message}")
-                state_store.record_failure(topic.id, topic.topic, screenshot_res.error_message)
+                _record_failure(state_store, config, topic, screenshot_res.error_message)
                 reporter.add_stage(
                     stage_name="Screenshot Capture",
                     status="FAILED",
@@ -301,20 +313,29 @@ def run_pipeline(
                 reporter.finalize(success=False, next_action="Verify target URL is accessible without auth walls.")
                 return 1
             else:
-                logger.warning(f"Optional screenshot capture failed: {screenshot_res.error_message}. Continuing without image.")
+                warn_msg = screenshot_res.error_message
+                logger.warning(f"Optional screenshot capture failed: {warn_msg}. Continuing without image.")
                 screenshot_res = None
+                draft.screenshot_needed = False  # nothing to validate; QA must not demand it
+                reporter.add_stage(
+                    stage_name="Screenshot Capture",
+                    status="SKIPPED",
+                    duration_seconds=time.time() - t0,
+                    details=f"Optional screenshot failed ({warn_msg}); published without image.",
+                )
 
-        img_hosted_msg = (
-            f"Hosted: {screenshot_res.public_url}"
-            if screenshot_res.public_url
-            else "Saved locally; omitted from HTML to prevent broken links"
-        )
-        reporter.add_stage(
-            stage_name="Screenshot Capture",
-            status="SUCCESS",
-            duration_seconds=time.time() - t0,
-            details=f"Captured image ({screenshot_res.file_size_bytes} bytes). {img_hosted_msg}",
-        )
+        if screenshot_res is not None:
+            img_hosted_msg = (
+                f"Hosted: {screenshot_res.public_url}"
+                if screenshot_res.public_url
+                else "Saved locally; omitted from HTML to prevent broken links"
+            )
+            reporter.add_stage(
+                stage_name="Screenshot Capture",
+                status="SUCCESS",
+                duration_seconds=time.time() - t0,
+                details=f"Captured image ({screenshot_res.file_size_bytes} bytes). {img_hosted_msg}",
+            )
     else:
         reporter.add_stage(
             stage_name="Screenshot Capture",
@@ -353,7 +374,7 @@ def run_pipeline(
 
     if not qa_report.passed:
         logger.error(f"Quality gate rejected article: {qa_report.failures}")
-        state_store.record_failure(topic.id, topic.topic, qa_report.failures[0])
+        _record_failure(state_store, config, topic, qa_report.failures[0])
         reporter.add_stage(
             stage_name="Quality Gate",
             status="FAILED",
@@ -407,7 +428,7 @@ def run_pipeline(
 
     if not post_res.success:
         logger.error(f"Blogger post creation failed: {post_res.error_message}")
-        state_store.record_failure(topic.id, topic.topic, post_res.error_message)
+        _record_failure(state_store, config, topic, post_res.error_message)
         reporter.add_stage(
             stage_name="Blogger Publication",
             status="FAILED",
