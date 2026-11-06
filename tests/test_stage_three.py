@@ -62,7 +62,8 @@ class TestStageThree(unittest.TestCase):
         )
 
         self.assertIn("<!-- topic_id: my-topic-123 -->", payload["content"])
-        self.assertIn("TopicID:my-topic-123", payload["labels"])
+        # The marker is a hidden HTML comment only; a "TopicID:" label would be shown to readers.
+        self.assertNotIn("TopicID:my-topic-123", payload["labels"])
 
     def test_normalize_labels_preserves_known_acronyms(self):
         """normalize_labels must preserve known acronyms like AI, API, ChatGPT, SQL without converting to Ai, Chatgpt."""
