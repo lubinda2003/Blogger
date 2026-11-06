@@ -30,7 +30,7 @@
   },
   "gemini": {
     "model": "gemini-3.8-flash",
-    "fallback_model": "gemini-1.5-flash",
+    "fallback_model": "gemini-3.5-flash",
     "temperature": 0.3,
     "max_output_tokens": 8192
   },
