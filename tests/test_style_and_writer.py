@@ -177,7 +177,7 @@ class TestStyleAndWriter(unittest.TestCase):
         )
         call_log = []
 
-        def mock_gemini(prompt, model_name=None, max_tokens=None, is_token_retry=False):
+        def mock_gemini(prompt, model_name=None, max_tokens=None, is_token_retry=False, max_attempts=None):
             call_log.append(model_name)
             if model_name == "gemini-3.8-flash":
                 raise RuntimeError("503 Service Unavailable")
