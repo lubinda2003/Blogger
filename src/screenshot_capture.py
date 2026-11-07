@@ -4,7 +4,10 @@ import hashlib
 import json
 import logging
 import os
+import re
+import shutil
 import struct
+import subprocess
 import time
 import urllib.error
 import urllib.parse
@@ -63,7 +66,9 @@ class ScreenshotCapture:
         timeout_ms: int = 30000,
         max_retries: int = 2,
         image_host_url: Optional[str] = None,
+        repo_assets_dir: Optional[str] = "assets/screenshots",
     ):
+        self.repo_assets_dir = repo_assets_dir
         self.output_dir = Path(output_dir)
         self.viewport_width = viewport_width
         self.viewport_height = viewport_height
@@ -111,7 +116,7 @@ class ScreenshotCapture:
         If no image host is configured, returns None so HTML never embeds a broken runner-local path.
         """
         if not self.image_host_url:
-            logger.info("No SCREENSHOT_HOST_URL configured; omitting image from published HTML.")
+            logger.info("No SCREENSHOT_HOST_URL configured; trying repository image hosting next.")
             return None
 
         # Verify host scheme
@@ -142,6 +147,47 @@ class ScreenshotCapture:
             logger.warning(f"Image host upload failed ({e}); falling back to omitting image.")
 
         return None
+
+    def publish_to_repo_assets(self, local_path: Path, slug: str, sha256: str) -> Optional[str]:
+        """Commit the image to this repository (GitHub Actions only) and return a public jsDelivr CDN URL.
+
+        Blogger's API cannot upload images, so the repository doubles as the image host. The URL is returned
+        ONLY after the push succeeds, so a failure means "no image" and never a broken link. Requires a public repo.
+        """
+        if not self.repo_assets_dir or os.getenv("GITHUB_ACTIONS") != "true":
+            return None
+        repo = os.getenv("GITHUB_REPOSITORY", "")
+        ref = os.getenv("GITHUB_REF_NAME", "")
+        if not repo or not ref:
+            return None
+        try:
+            safe_slug = re.sub(r"[^a-z0-9\-]+", "-", slug.lower()).strip("-") or "image"
+            dest_dir = Path(self.repo_assets_dir)
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            # Content hash in the filename: URLs are immutable, so the CDN can never serve a stale image.
+            dest = dest_dir / f"{safe_slug}-{sha256[:10]}{local_path.suffix.lower() or '.png'}"
+            shutil.copyfile(local_path, dest)
+            rel = dest.as_posix()
+
+            def git(*args: str) -> str:
+                return subprocess.run(
+                    ["git", "-c", "user.name=github-actions[bot]",
+                     "-c", "user.email=github-actions[bot]@users.noreply.github.com", *args],
+                    check=True, capture_output=True, text=True, timeout=90,
+                ).stdout
+
+            git("add", rel)
+            if git("status", "--porcelain", "--", rel).strip():  # nothing to commit if this exact image is already in the repo
+                git("commit", "-m", f"chore(assets): add screenshot {dest.name} [skip ci]")
+                git("pull", "--rebase", "origin", ref)
+                git("push", "origin", f"HEAD:refs/heads/{ref}")
+            url = f"https://cdn.jsdelivr.net/gh/{repo}@{ref}/{rel}"
+            logger.info(f"Screenshot committed to repository and served via CDN: {url}")
+            return url
+        except Exception as e:
+            detail = getattr(e, "stderr", "") or ""
+            logger.warning(f"Repository image hosting failed ({e} {detail.strip()[:200]}); omitting image from HTML.")
+            return None
 
     def capture(
         self,
@@ -267,7 +313,9 @@ class ScreenshotCapture:
                         )
 
                     file_hash = self._compute_file_hash(file_path)
-                    public_url = self.upload_to_public_host(file_path)
+                    public_url = self.upload_to_public_host(file_path) or self.publish_to_repo_assets(
+                        file_path, slug, file_hash
+                    )
 
                     return ScreenshotResult(
                         success=True,
