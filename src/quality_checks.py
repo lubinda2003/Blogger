@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
 from src.article_writer import ArticleDraft
+from src.readability import analyze as analyze_readability
 from src.screenshot_capture import ScreenshotResult
 from src.state_store import StateStore
 
@@ -65,6 +66,19 @@ class QualityGate:
         r"\bgroundbreaking\s+strategies\b",
         r"\blook\s+no\s+further\b",
         r"\bwhether\s+you'?re\s+a\s+beginner\s+or\s+an\s+expert\b",
+        r"\bsupercharge\b",
+        r"\bto\s+the\s+next\s+level\b",
+        r"\bultimate\s+guide\b",
+        r"\brevolutionary\b",
+        r"\bit(?:'s|\s+is)\s+important\s+to\s+note\b",
+    ]
+
+    # The pipeline cannot verify personal experience, so any first-hand claim is invented by definition.
+    FABRICATED_EXPERIENCE = [
+        r"\b(?:i|we)\s+(?:have\s+|'ve\s+|personally\s+)?(?:tested|tried|used|spent)\b",
+        r"\bin\s+my\s+(?:own\s+)?(?:experience|testing)\b",
+        r"\bour\s+(?:own\s+)?(?:testing|tests|hands[\s-]on)\b",
+        r"\bi\s+personally\b",
     ]
 
     ALLOWED_AFFILIATE_DOMAINS = {
@@ -80,7 +94,9 @@ class QualityGate:
         min_sources: int = 2,
         state_store: Optional[StateStore] = None,
         is_live_mode: bool = False,
+        max_reading_grade: float = 11.0,
     ):
+        self.max_reading_grade = max_reading_grade
         self.min_word_count = min_word_count
         self.min_sources = min_sources
         self.state_store = state_store or StateStore()
@@ -116,6 +132,16 @@ class QualityGate:
                     f"Writing Style failed: Generic AI cliché detected: '{match.group(0)}'. "
                     "Rewrite in plain, direct, natural English."
                 )
+
+        # 1b. Honesty: no invented first-hand experience (Google treats this as deceptive)
+        for pattern in self.FABRICATED_EXPERIENCE:
+            match = re.search(pattern, text_lower)
+            if match:
+                failures.append(
+                    f"Honesty check failed: article claims first-hand experience ('{match.group(0)}'). "
+                    "Personal testing cannot be verified; attribute facts to the sources instead."
+                )
+                break
 
         # 2. Banned Financial Promises & Fake Guarantees
         for pattern in self.BANNED_PROMISES:
@@ -160,6 +186,20 @@ class QualityGate:
                 f"Originality/Length check failed: Article contains {word_count} words, which is below the minimum "
                 f"threshold of {self.min_word_count} words for a substantive educational guide."
             )
+
+        # 5b. Plain English: measured, not assumed
+        if self.max_reading_grade:
+            read = analyze_readability(html_str)
+            if read.words >= 200:
+                if read.is_hard(self.max_reading_grade):
+                    failures.append(
+                        f"Readability check failed: reading grade {read.fk_grade} (limit {self.max_reading_grade}), "
+                        f"average sentence {read.avg_sentence_words} words. Rewrite in shorter sentences and plainer words."
+                    )
+                elif read.fk_grade > self.max_reading_grade - 1.5 or read.long_sentence_pct > 10:
+                    warnings.append(
+                        f"Readability warning: grade {read.fk_grade}, {read.long_sentence_pct}% of sentences over 25 words."
+                    )
 
         # 6. HTML Validity & Markdown Leaks (ignore code blocks where # is valid syntax)
         clean_for_md_check = re.sub(r"<pre[^>]*>.*?</pre>", "", html_str, flags=re.DOTALL | re.IGNORECASE)
