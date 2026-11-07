@@ -154,5 +154,81 @@ class TestLabelsAndModels(unittest.TestCase):
         self.assertNotIn("1.5", ArticleWriter(api_key="k").fallback_model)
 
 
+class TestLengthRequirementAndFailover(unittest.TestCase):
+    """A live run produced 538 words and failed the 800-word gate because the prompt never mentioned a minimum."""
+
+    def setUp(self):
+        from src.state_store import StateStore
+        from src.topic_discovery import TopicDiscovery
+
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.topic = TopicDiscovery("data/topics.csv", StateStore(os.path.join(self.tmp.name, "s.json"))).select_next_topic()
+        self.brief = ResearchCollector().conduct_research(
+            self.topic.id, self.topic.topic, self.topic.category, self.topic.target_url, zambia_context=False, dry_run=True
+        )
+        self.writer = ArticleWriter(api_key="k", min_word_count=800)
+        fixture = self.writer._generate_dry_run_fixture(self.topic, self.brief)
+        self.long = fixture
+        self.short = dict(fixture, html_content="<h2>Intro</h2><p>" + "word " * 100 + "</p>")
+
+    def _write(self, responses):
+        with patch.object(self.writer, "_call_llm_provider", side_effect=responses) as call:
+            draft = self.writer.write_article(self.topic, self.brief, dry_run=False)
+        return draft, call
+
+    def test_prompt_states_the_minimum_length(self):
+        prompt = self.writer._render_prompt(self.topic, self.brief)
+        self.assertIn("at least 800 words", prompt)
+        self.assertIn("about 1100", prompt)
+
+    def test_prompt_has_no_length_section_when_disabled(self):
+        w = ArticleWriter(api_key="k", min_word_count=0)
+        self.assertNotIn("Length Requirement", w._render_prompt(self.topic, self.brief))
+
+    def test_short_draft_is_expanded_once(self):
+        draft, call = self._write([json.dumps(self.short), json.dumps(self.long)])
+        self.assertEqual(call.call_count, 2)
+        self.assertGreaterEqual(draft.word_count, 800)
+        current = self.writer._count_words(self.short["html_content"])
+        self.assertIn(f"only {current} words", call.call_args_list[1].args[0])  # expansion prompt names the current length
+
+    def test_long_enough_draft_is_not_expanded(self):
+        draft, call = self._write([json.dumps(self.long)])
+        self.assertEqual(call.call_count, 1)
+
+    def test_failed_expansion_keeps_original_draft(self):
+        draft, call = self._write([json.dumps(self.short), RuntimeError("boom")])
+        self.assertEqual(call.call_count, 2)
+        self.assertLess(draft.word_count, 800)  # unchanged; the quality gate will reject it as before
+
+    def test_expansion_that_is_not_longer_keeps_original(self):
+        tiny = dict(self.short, html_content="<p>tiny</p>")
+        draft, call = self._write([json.dumps(self.short), json.dumps(tiny)])
+        self.assertLess(draft.word_count, 800)
+        self.assertIn("word", draft.html_content)
+
+    def test_primary_model_gets_three_attempts_fallback_gets_default(self):
+        seen = []
+
+        def fake(prompt, model_name=None, max_tokens=None, is_token_retry=False, max_attempts=None):
+            seen.append((model_name, max_attempts))
+            if model_name == self.writer.model_name:
+                raise RuntimeError("503")
+            return "{}"
+
+        with patch.object(self.writer, "_call_gemini_rest", side_effect=fake):
+            self.writer._call_llm_provider("p")
+        self.assertEqual(seen[0][1], 3)
+        self.assertIsNone(seen[1][1])
+
+    def test_main_passes_min_word_count_to_writer(self):
+        with tempfile.TemporaryDirectory() as tmp, patch("src.main.ArticleWriter", wraps=ArticleWriter) as aw:
+            cfg = _cfg(tmp)
+            cfg.min_word_count = 950
+            pipeline.run_pipeline(cfg, target_topic_id="free-ai-research-tools-students")
+        self.assertEqual(aw.call_args.kwargs["min_word_count"], 950)
+
+
 if __name__ == "__main__":
     unittest.main()

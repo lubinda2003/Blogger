@@ -238,6 +238,7 @@ def run_pipeline(
         provider=config.llm_provider,
         groq_api_key=config.groq_api_key,
         groq_model=config.groq_model,
+        min_word_count=config.min_word_count,
     )
 
     try:
