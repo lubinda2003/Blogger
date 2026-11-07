@@ -20,6 +20,9 @@
       }
     }
   ],
-  "last_updated": "2026-11-06T21:20:51.836994+00:00",
-  "total_runs": 1
+  "last_updated": "2026-11-07T02:49:40.056499+00:00",
+  "total_runs": 1,
+  "failed_attempts": {
+    "notion-project-management-setup": 1
+  }
 }
