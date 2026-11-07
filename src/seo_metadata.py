@@ -61,7 +61,7 @@ class SEOMetadata:
         description: str,
         url: Optional[str] = None,
         date_published: Optional[str] = None,
-        author_name: str = "Editorial Team",
+        author_name: Optional[str] = None,
     ) -> str:
         """Generate valid Schema.org Article JSON-LD for rich snippets."""
         schema_dict: Dict[str, Any] = {
@@ -69,10 +69,12 @@ class SEOMetadata:
             "@type": "TechArticle",
             "headline": title,
             "description": description,
-            "author": {
-                "@type": "Person",
-                "name": author_name,
-            },
+            # A real person only if one is configured; never an invented "team" persona.
+            "author": (
+                {"@type": "Person", "name": author_name}
+                if author_name
+                else {"@type": "Organization", "name": "The Digital Toolkit"}
+            ),
             "publisher": {
                 "@type": "Organization",
                 "name": "The Digital Toolkit",

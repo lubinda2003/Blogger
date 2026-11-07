@@ -15,7 +15,7 @@ class TestQualityChecks(unittest.TestCase):
 
     def _create_valid_draft(self) -> ArticleDraft:
         """Helper generating a compliant draft in plain English."""
-        words_block = " ".join(["practical workflow implementation detail"] * 240)  # ~960 words
+        words_block = " ".join(["Each step is short and easy to follow."] * 140)  # ~980 words of plain sentences
         html = f"""<div class="article-body">
 <h2>Setting Up Your Remote Work Schedule</h2>
 <p>This guide explains practical methods for independent contractors. {words_block}</p>
