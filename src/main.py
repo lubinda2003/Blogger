@@ -239,6 +239,7 @@ def run_pipeline(
         groq_api_key=config.groq_api_key,
         groq_model=config.groq_model,
         min_word_count=config.min_word_count,
+        max_reading_grade=config.max_reading_grade,
     )
 
     try:
@@ -356,6 +357,7 @@ def run_pipeline(
     gate = QualityGate(
         min_word_count=config.min_word_count,
         min_sources=config.min_credible_sources,
+        max_reading_grade=config.max_reading_grade,
         state_store=state_store,
         is_live_mode=not config.dry_run,
     )
