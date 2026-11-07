@@ -230,5 +230,77 @@ class TestLengthRequirementAndFailover(unittest.TestCase):
         self.assertEqual(aw.call_args.kwargs["min_word_count"], 950)
 
 
+class TestRepoImageHosting(unittest.TestCase):
+    """Blogger cannot upload images, so screenshots are committed to the repo and served through jsDelivr."""
+
+    def _png(self, tmp):
+        from pathlib import Path
+        p = Path(tmp) / "shot.png"
+        p.write_bytes(b"\x89PNG\r\n\x1a\n" + b"x" * 6000)
+        return p
+
+    def _capture(self, tmp):
+        from src.screenshot_capture import ScreenshotCapture
+        return ScreenshotCapture(output_dir=os.path.join(tmp, "out"), repo_assets_dir=os.path.join(tmp, "assets/screenshots"))
+
+    ENV = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": "lubinda2003/Blogger", "GITHUB_REF_NAME": "main"}
+
+    def test_returns_cdn_url_only_after_successful_push(self):
+        calls = []
+
+        def fake_run(cmd, **kw):
+            calls.append([c for c in cmd if not c.startswith(("user.", "-c"))])
+            out = MagicMock()
+            out.stdout = " A assets/x.png" if "status" in cmd else ""
+            return out
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run", fake_run):
+            url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "notion-project-management-setup", "a" * 64)
+        self.assertTrue(url.startswith("https://cdn.jsdelivr.net/gh/lubinda2003/Blogger@main/"))
+        self.assertIn("notion-project-management-setup-aaaaaaaaaa.png", url)
+        verbs = [c[1] for c in calls]
+        self.assertEqual(verbs, ["add", "status", "commit", "pull", "push"])
+
+    def test_push_failure_means_no_image_not_a_broken_link(self):
+        import subprocess as sp
+
+        def boom(cmd, **kw):
+            if "push" in cmd:
+                raise sp.CalledProcessError(1, cmd, stderr="rejected")
+            out = MagicMock()
+            out.stdout = " A x"
+            return out
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run", boom):
+            self.assertIsNone(self._capture(tmp).publish_to_repo_assets(self._png(tmp), "slug", "b" * 64))
+
+    def test_disabled_outside_github_actions(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {"GITHUB_ACTIONS": "", "GITHUB_REPOSITORY": "a/b"}), \
+             patch("subprocess.run") as run:
+            self.assertIsNone(self._capture(tmp).publish_to_repo_assets(self._png(tmp), "slug", "c" * 64))
+            run.assert_not_called()
+
+    def test_already_committed_image_skips_commit(self):
+        calls = []
+
+        def fake_run(cmd, **kw):
+            calls.append(cmd)
+            out = MagicMock()
+            out.stdout = ""  # git status clean: identical image already in repo
+            return out
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run", fake_run):
+            url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "slug", "d" * 64)
+        self.assertIsNotNone(url)
+        self.assertFalse(any("commit" in c or "push" in c for c in calls))
+
+    def test_slug_is_sanitised(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run") as run:
+            run.return_value.stdout = ""
+            url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "../../etc/Pass wd", "e" * 64)
+        self.assertNotIn("..", url)
+        self.assertIn("etc-pass-wd-eeeeeeeeee.png", url)
+
+
 if __name__ == "__main__":
     unittest.main()
