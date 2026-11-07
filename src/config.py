@@ -46,6 +46,7 @@ class AppConfig:
     # Quality Gate thresholds
     min_word_count: int = 800
     max_word_count: int = 2500
+    max_reading_grade: float = 11.0  # plain-English limit (US grade); the writer simplifies above grade - 1.5
     min_credible_sources: int = 2
     zambia_context_enabled: bool = False  # International audience default
 
