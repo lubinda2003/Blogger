@@ -106,7 +106,9 @@ jobs:
           if [ -n "$TOPIC_ID" ]; then
             ARGS="$ARGS --topic-id $TOPIC_ID"
           fi
-          python -m src.main $ARGS
+          mkdir -p output
+          set -o pipefail
+          python -m src.main $ARGS 2>&1 | tee output/pipeline.log
 
       # Commit and push updated processed_topics.json back to repository on successful live runs
       - name: Commit and Push Processed Topics State
@@ -145,3 +147,43 @@ jobs:
             data/processed_topics.json
           if-no-files-found: warn
           retention-days: 14
+
+      # Publishes the latest run's report (summary, log, draft, final post, header image) to the 'run-reports'
+      # branch with secrets scrubbed, so a run can be reviewed without downloading artifacts. Only the most
+      # recent run is kept: the branch is replaced each time.
+      - name: Publish run report for review
+        if: always()
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BLOGGER_CLIENT_ID: ${{ secrets.BLOGGER_CLIENT_ID }}
+          BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
+          BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
+          REPORT_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPORT_REPO: ${{ github.repository }}
+          REPORT_RUN_ID: ${{ github.run_id }}
+          REPORT_REF: ${{ github.ref_name }}
+        run: |
+          [ -d output ] || exit 0
+          rm -rf /tmp/report && mkdir -p /tmp/report/latest && cp -r output/. /tmp/report/latest/
+          python3 - <<'PY'
+          import os, pathlib
+          names = ("GEMINI_API_KEY", "GROQ_API_KEY", "TAVILY_API_KEY", "BLOGGER_BLOG_ID", "BLOGGER_CLIENT_ID",
+                   "BLOGGER_CLIENT_SECRET", "BLOGGER_REFRESH_TOKEN", "REPORT_TOKEN")
+          secrets = [v for v in (os.environ.get(n, "") for n in names) if len(v) >= 8]
+          for path in pathlib.Path("/tmp/report/latest").rglob("*"):
+              if path.is_file() and path.suffix.lower() in {".md", ".json", ".html", ".log", ".txt"}:
+                  text = path.read_text(encoding="utf-8", errors="ignore")
+                  for secret in secrets:
+                      text = text.replace(secret, "***")
+                  path.write_text(text, encoding="utf-8")
+          PY
+          printf 'Run %s on branch %s\n' "$REPORT_RUN_ID" "$REPORT_REF" > /tmp/report/latest/RUN.txt
+          cd /tmp/report
+          git init -q
+          git checkout -q -b run-reports
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" commit -q -m "Run report $REPORT_RUN_ID"
+          git push -q -f "https://x-access-token:${REPORT_TOKEN}@github.com/${REPORT_REPO}.git" run-reports
