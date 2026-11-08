@@ -12,6 +12,7 @@ from typing import Optional
 from src.article_writer import ArticleWriter
 from src.blogger_client import BloggerClient
 from src.config import AppConfig, load_config
+from src.featured_image import prepare_featured_image
 from src.quality_checks import QualityGate
 from src.report import PipelineReporter
 from src.research import ResearchCollector
@@ -401,6 +402,30 @@ def run_pipeline(
         reporter.finalize(success=True, next_action="Stage limit reached: qa.")
         return 0
 
+    # Header image: generated per article and hosted from the repo in live runs. Never fatal.
+    t_img = time.time()
+    featured = prepare_featured_image(
+        enabled=config.featured_image_enabled,
+        dry_run=config.dry_run,
+        title=draft.title,
+        kicker=topic.category,
+        slug=topic.id,
+        output_dir=config.output_dir,
+    )
+    if featured is not None:
+        if featured.public_url:
+            img_status, img_details = "SUCCESS", f"Generated and hosted: {featured.public_url}"
+        elif featured.success:
+            img_status, img_details = "SUCCESS", "Generated (saved under output/featured) but not embedded: dry-run or hosting unavailable."
+        else:
+            img_status, img_details = "SKIPPED", f"Not generated: {featured.error_message}"
+        reporter.add_stage(
+            stage_name="Featured Image",
+            status=img_status,
+            duration_seconds=time.time() - t_img,
+            details=img_details,
+        )
+
     # -------------------------------------------------------------
     # Stage 7: Blogger Draft Creation / Publishing
     # -------------------------------------------------------------
@@ -415,6 +440,8 @@ def run_pipeline(
         public_screenshot_url=public_img,
         screenshot_caption=screenshot_res.caption if public_img else None,
         screenshot_alt=screenshot_res.alt_text if public_img else None,
+        featured_image_url=featured.public_url if featured else None,
+        featured_image_alt=featured.alt_text if featured else None,
     )
 
     normalized_labels = SEOMetadata.normalize_labels(draft.labels)
