@@ -98,6 +98,8 @@ class SEOMetadata:
         screenshot_caption: Optional[str] = None,
         screenshot_alt: Optional[str] = None,
         include_schema: bool = True,
+        featured_image_url: Optional[str] = None,
+        featured_image_alt: Optional[str] = None,
     ) -> str:
         """Inject structured data and optional public screenshot image markup into article HTML.
 
@@ -109,6 +111,17 @@ class SEOMetadata:
         if include_schema:
             schema = SEOMetadata.generate_schema_jsonld(title=title, description=meta_description)
             blocks.append(schema)
+
+        # Cover image: same strict public-HTTPS rule as screenshots. Explicit width/height avoid layout shift.
+        if featured_image_url and featured_image_url.startswith("https://") and not any(
+            sub in featured_image_url for sub in ("localhost", "127.0.0.1", "output/")
+        ):
+            blocks.append(
+                f'<figure class="article-cover" style="margin:0 0 24px 0;">\n'
+                f'  <img src="{html.escape(featured_image_url)}" alt="{html.escape(featured_image_alt or title)}" '
+                f'width="1200" height="630" loading="eager" style="width:100%; max-width:100%; height:auto; border-radius:8px;" />\n'
+                f'</figure>'
+            )
 
         # STRICT CHECK: Only embed image if it is a valid public HTTPS URL
         if public_screenshot_url and public_screenshot_url.startswith("https://"):
