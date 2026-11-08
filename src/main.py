@@ -13,6 +13,7 @@ from src.article_writer import ArticleWriter
 from src.blogger_client import BloggerClient
 from src.config import AppConfig, load_config
 from src.featured_image import prepare_featured_image
+from src.layout import apply_layout
 from src.quality_checks import QualityGate
 from src.report import PipelineReporter
 from src.research import ResearchCollector
@@ -434,7 +435,7 @@ def run_pipeline(
     # Prepare final HTML - NEVER passes local paths
     public_img = screenshot_res.public_url if (screenshot_res and screenshot_res.success) else None
     final_html = SEOMetadata.inject_seo_and_assets(
-        html_body=draft.html_content,
+        html_body=apply_layout(draft.html_content),
         title=draft.title,
         meta_description=draft.meta_description,
         public_screenshot_url=public_img,
@@ -443,6 +444,13 @@ def run_pipeline(
         featured_image_url=featured.public_url if featured else None,
         featured_image_alt=featured.alt_text if featured else None,
     )
+
+    try:  # the finished post exactly as it will be published, for review in the run artifact
+        os.makedirs(config.output_dir, exist_ok=True)
+        with open(os.path.join(config.output_dir, "final.html"), "w", encoding="utf-8") as f:
+            f.write(final_html)
+    except Exception as e:
+        logger.warning(f"Failed to save final.html: {e}")
 
     normalized_labels = SEOMetadata.normalize_labels(draft.labels)
     is_draft = config.publish_mode != "publish"

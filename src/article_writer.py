@@ -141,8 +141,10 @@ class ArticleWriter:
         min_word_count: int = 800,
         max_reading_grade: float = 11.0,
         voice_guide_path: str = "templates/voice_guide.md",
+        layout_guide_path: str = "templates/layout_guide.md",
     ):
         self.max_reading_grade = max_reading_grade
+        self.layout_guide_path = Path(layout_guide_path)
         self.voice_guide_path = Path(voice_guide_path)
         self.min_word_count = max(0, int(min_word_count))
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
@@ -176,9 +178,9 @@ class ArticleWriter:
         prompt = prompt.replace("{{TARGET_URL}}", topic.target_url)
         prompt = prompt.replace("{{REQUIRES_SCREENSHOT}}", str(topic.requires_screenshot))
         prompt = prompt.replace("{{RESEARCH_BRIEF}}", brief.format_for_prompt())
-        voice = self._voice_guide()
-        if voice:
-            prompt += "\n\n---\n\n" + voice + "\n"
+        for guide in (self._voice_guide(), self._read_guide(self.layout_guide_path)):
+            if guide:
+                prompt += "\n\n---\n\n" + guide + "\n"
         if self.min_word_count:
             prompt += (
                 "\n\n## Length Requirement (hard)\n\n"
@@ -237,11 +239,15 @@ class ArticleWriter:
         return parsed
 
     def _voice_guide(self) -> str:
+        return self._read_guide(self.voice_guide_path)
+
+    @staticmethod
+    def _read_guide(path: Path) -> str:
         try:
-            if self.voice_guide_path.exists():
-                return self.voice_guide_path.read_text(encoding="utf-8").strip()
+            if path.exists():
+                return path.read_text(encoding="utf-8").strip()
         except OSError as e:
-            logger.warning(f"Could not read voice guide: {e}")
+            logger.warning(f"Could not read guide {path}: {e}")
         return ""
 
     def _simplify_if_hard(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
@@ -606,20 +612,13 @@ class ArticleWriter:
 <p>Using new digital tools should not feel confusing. Many online guides use complicated jargon and skip the practical setup steps that beginners actually need. This guide explains how {topic.topic} works, what you need before you start, and how to use it step by step in your daily work.</p>
 <p>Whether you are working as an independent editor, running a small business, or organizing content for a team, having a clear and repeatable process saves time and prevents embarrassing mistakes.</p>
 
-<div class="callout" style="background:#f8fafc; border-left:4px solid #0284c7; padding:16px; margin:20px 0;">
-<p><strong>What You Will Learn:</strong></p>
-<ul>
-<li>How to set up the tool correctly from the start.</li>
-<li>A step-by-step walkthrough you can follow at your own pace.</li>
-<li>A practical editing prompt template you can copy and adapt.</li>
-<li>Realistic advice about costs, limitations, and common mistakes.</li>
-<li>Where to find verified help and official documentation.</li>
-</ul>
-</div>
+<div class="quick-answer"><p>Set up the tool, run a small test on one paragraph, and check every fact yourself before you share the result. The free tier is usually enough to get started.</p></div>
 
 <h2>What This Tool Does and Who It Helps</h2>
 <p>Before spending time learning any new tool, it helps to understand what it is actually good for. {topic.topic} is designed for people who need to handle routine digital tasks faster without sacrificing accuracy.</p>
 <p>It helps freelancers, small business owners, and students organize their work, draft clear documents, and avoid repetitive manual steps. However, it does not do everything automatically. You still need to review the results, verify the facts, and make sure the tone fits your audience.</p>
+
+<table class="compare"><thead><tr><th>Plan</th><th>Best for</th><th>Check before you start</th></tr></thead><tbody><tr><td>Free tier</td><td>Learning and light use</td><td>Daily or monthly limits</td></tr><tr><td>Paid tier</td><td>Heavy or team use</td><td>Price and cancellation terms</td></tr><tr><td>Trial</td><td>Testing before you pay</td><td>When the trial ends</td></tr></tbody></table>
 
 <h2>Step 1: Check Your Prerequisites and Account Setup</h2>
 <p>Before following the steps below, make sure you have the basics ready:</p>
@@ -632,7 +631,7 @@ class ArticleWriter:
 
 <h2>Step 2: Follow the Step-by-Step Instructions</h2>
 <p>Follow these numbered instructions to complete your setup:</p>
-<ol>
+<ol class="steps">
 <li><strong>Open the main workspace:</strong> Sign in to your account and locate the input editor or prompt window. Keep your source material open in a neighboring window.</li>
 <li><strong>Set your project instructions:</strong> Specify exactly what kind of editing or processing you need. For example, instruct the tool to focus on sentence clarity and spelling rather than rewriting your original meaning.</li>
 <li><strong>Run a small test first:</strong> Process one paragraph before pasting an entire chapter or client document. Check that the output follows your instructions.</li>
@@ -661,6 +660,7 @@ the text below. For each item, note whether it needs independent confirmation
 against primary documentation."</code>
 </pre>
 <p>Notice how specifying exact boundaries helps you get concise, actionable feedback without unnecessary conversational filler.</p>
+<div class="tip"><p>Save your best prompts in a note so you can reuse them next time.</p></div>
 
 <h2>Common Mistakes and How to Avoid Them</h2>
 <p>When working with automated digital tools, people often run into three avoidable problems:</p>
@@ -669,6 +669,8 @@ against primary documentation."</code>
 <li><strong>Using overly complicated instructions:</strong> Start with clear, simple prompts. If you ask for ten different adjustments at once, the output is often messy and inconsistent.</li>
 <li><strong>Ignoring rate limits or quotas:</strong> Most online services cap how many requests you can make each hour or day. Check your account dashboard so you do not get cut off in the middle of a project.</li>
 </ul>
+
+<div class="warning"><p>Automated tools can sound sure and still be wrong. Never send unchecked output to a client.</p></div>
 
 <h2>Frequently Asked Questions</h2>
 <h3>Is this tool free to use?</h3>
