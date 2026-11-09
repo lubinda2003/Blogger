@@ -18,9 +18,27 @@
         ],
         "word_count": 901
       }
+    },
+    {
+      "topic_id": "notion-project-management-setup",
+      "topic_title": "How to Build a Clean Project Management Dashboard in Notion",
+      "fingerprint": "b8da737bebc5c279",
+      "post_id": "1029148152204903155",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-09T06:29:31.357763+00:00",
+      "metadata": {
+        "labels": [
+          "Software And Productivity",
+          "Notion",
+          "Tutorial"
+        ],
+        "word_count": 1325
+      }
     }
   ],
-  "last_updated": "2026-11-08T19:43:48.096704+00:00",
-  "total_runs": 1,
+  "last_updated": "2026-11-09T06:29:31.357778+00:00",
+  "total_runs": 2,
   "failed_attempts": {}
 }
