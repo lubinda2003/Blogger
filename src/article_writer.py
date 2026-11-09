@@ -238,6 +238,36 @@ class ArticleWriter:
             logger.warning(f"Expansion pass failed ({e}); keeping original draft.")
         return parsed
 
+    def _drop_unverified_sources(self, parsed: Dict[str, Any], brief: ResearchBrief) -> Dict[str, Any]:
+        """Remove citations that research did not verify, rather than failing an otherwise good article.
+
+        The cited link is unwrapped in the body (its text stays). The quality gate still enforces the minimum
+        number of verified sources afterwards.
+        """
+        from src.quality_checks import normalize_url  # imported here: quality_checks imports this module
+
+        verified = {normalize_url(s.url) for s in brief.verified_sources()}
+        if not verified:
+            return parsed  # nothing to compare against: the quality gate decides
+        keep, dropped = [], []
+        for source in parsed.get("sources_used") or []:
+            (keep if normalize_url(str(source.get("url", ""))) in verified else dropped).append(source)
+        if not dropped:
+            return parsed
+        bad = {normalize_url(str(s.get("url", ""))) for s in dropped}
+
+        def unwrap(match: "re.Match[str]") -> str:
+            return match.group(2) if normalize_url(match.group(1)) in bad else match.group(0)
+
+        body = re.sub(
+            r"""<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>(.*?)</a>""", unwrap, parsed.get("html_content", ""),
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        logger.warning(
+            f"Removed {len(dropped)} citation(s) that research did not verify: {[s.get('url') for s in dropped]}"
+        )
+        return dict(parsed, sources_used=keep, html_content=body)
+
     def _voice_guide(self) -> str:
         return self._read_guide(self.voice_guide_path)
 
@@ -864,6 +894,7 @@ against primary documentation."</code>
 
             parsed = self._expand_if_short(parsed, brief)
             parsed = self._simplify_if_hard(parsed)
+            parsed = self._drop_unverified_sources(parsed, brief)
 
             is_fixture = False
             provider_used = self.actual_provider or "unknown"
