@@ -38,7 +38,9 @@
       }
     }
   ],
-  "last_updated": "2026-11-09T06:29:31.357778+00:00",
+  "last_updated": "2026-11-09T11:50:18.496705+00:00",
   "total_runs": 2,
-  "failed_attempts": {}
+  "failed_attempts": {
+    "best-free-invoicing-tools-freelancers": 1
+  }
 }
