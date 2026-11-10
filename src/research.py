@@ -141,6 +141,14 @@ class ResearchBrief:
         return "\n".join(lines)
 
 
+# Sources that cannot be verified from page text or are not authoritative for a how-to article:
+# video and social platforms, forums, and company-intelligence profiles.
+DEFAULT_DOMAIN_BLOCKLIST = (
+    "youtube.com", "youtu.be", "reddit.com", "quora.com", "pinterest.com", "facebook.com", "instagram.com",
+    "tiktok.com", "x.com", "twitter.com", "cbinsights.com", "crunchbase.com", "similarweb.com",
+)
+
+
 class ResearchCollector:
     """Collects and verifies research sources using Tavily Search API and direct page extraction."""
 
@@ -158,7 +166,9 @@ class ResearchCollector:
         self.max_retries = max_retries
         self.tavily_api_key = (tavily_api_key or os.getenv("TAVILY_API_KEY") or "").strip()
         self.domain_allowlist = [d.strip().lower() for d in (domain_allowlist or []) if d.strip()]
-        self.domain_blocklist = [d.strip().lower() for d in (domain_blocklist or []) if d.strip()]
+        self.domain_blocklist = [
+            d.strip().lower() for d in (DEFAULT_DOMAIN_BLOCKLIST if domain_blocklist is None else domain_blocklist) if d.strip()
+        ]
         self.last_fetched_content: str = ""
 
     def _search_tavily(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
@@ -225,7 +235,7 @@ class ResearchCollector:
 
             # Check blocklist first
             for b in self.domain_blocklist:
-                clean_b = b.lstrip("www.").strip().lower()
+                clean_b = re.sub(r"^www\.", "", b.strip().lower())
                 if host == clean_b or host.endswith("." + clean_b):
                     logger.info(f"URL '{url}' blocked: domain '{host}' matches blocklist entry '{b}'.")
                     return False

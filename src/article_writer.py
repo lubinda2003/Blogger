@@ -137,7 +137,7 @@ class ArticleWriter:
         prompt_template_path: str = "templates/article_prompt.md",
         provider: str = "auto",
         groq_api_key: Optional[str] = None,
-        groq_model: str = "llama-3.3-70b-versatile",
+        groq_model: str = "openai/gpt-oss-120b",
         min_word_count: int = 800,
         max_reading_grade: float = 11.0,
         voice_guide_path: str = "templates/voice_guide.md",
@@ -155,7 +155,7 @@ class ArticleWriter:
         self.prompt_template_path = Path(prompt_template_path)
         self.provider = (provider or os.getenv("LLM_PROVIDER", "auto")).strip().lower()
         self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY")
-        self.groq_model = groq_model or os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        self.groq_model = groq_model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
         self.actual_provider: str = ""
         self.actual_model: str = ""
 
@@ -257,7 +257,7 @@ class ArticleWriter:
         bad = {normalize_url(str(s.get("url", ""))) for s in dropped}
 
         def unwrap(match: "re.Match[str]") -> str:
-            return match.group(2) if normalize_url(match.group(1)) in bad else match.group(0)
+            return match.group(2) if normalize_url(html.unescape(match.group(1))) in bad else match.group(0)
 
         body = re.sub(
             r"""<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>(.*?)</a>""", unwrap, parsed.get("html_content", ""),

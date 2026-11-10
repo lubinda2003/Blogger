@@ -39,7 +39,7 @@ class AppConfig:
     llm_provider: str = "auto"  # "auto", "gemini", or "groq"
     gemini_model: str = "gemini-3.8-flash"
     gemini_fallback_model: str = "gemini-3.5-flash"
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"  # llama-3.3-70b-versatile was retired by Groq on 2026-08-16
     gemini_temperature: float = 0.3
     gemini_max_tokens: int = 8192
 
@@ -252,7 +252,7 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         blogger_refresh_token=os.getenv("BLOGGER_REFRESH_TOKEN"),
         gemini_model=os.getenv("GEMINI_MODEL") or gemini_cfg.get("model", "gemini-3.8-flash"),
         gemini_fallback_model=os.getenv("GEMINI_FALLBACK_MODEL") or gemini_cfg.get("fallback_model", "gemini-3.5-flash"),
-        groq_model=os.getenv("GROQ_MODEL") or "llama-3.3-70b-versatile",
+        groq_model=os.getenv("GROQ_MODEL") or "openai/gpt-oss-120b",
         gemini_temperature=gemini_temp,
         gemini_max_tokens=gemini_tokens,
         zambia_context_enabled=zambia_enabled,
