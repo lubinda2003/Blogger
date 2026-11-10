@@ -103,7 +103,7 @@ class TestStyleAndWriter(unittest.TestCase):
             self.assertIn("models/gemini-3.8-flash:generateContent", req.full_url)
 
     def test_groq_rest_call_success(self):
-        """ArticleWriter must support Groq API REST calls with llama-3.3-70b-versatile."""
+        """ArticleWriter must support Groq API REST calls with the default Groq model."""
         writer = ArticleWriter(groq_api_key="gsk-mock-key", provider="groq")
         with patch("urllib.request.urlopen") as mock_urlopen:
             resp = MagicMock()
@@ -130,7 +130,7 @@ class TestStyleAndWriter(unittest.TestCase):
             self.assertEqual(res, '{"title": "Failover Article"}')
             mock_groq.assert_called_once_with("Test prompt", max_tokens=None)
             self.assertEqual(writer.actual_provider, "groq")
-            self.assertEqual(writer.actual_model, "llama-3.3-70b-versatile")
+            self.assertEqual(writer.actual_model, "openai/gpt-oss-120b")
 
     def test_gemini_header_auth_and_user_agent(self):
         """Gemini REST call must send x-goog-api-key header, custom User-Agent, and NO api key in URL."""

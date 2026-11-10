@@ -233,7 +233,7 @@ class QualityGate:
                 else None
             )
             found_hrefs = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_str, re.IGNORECASE)
-            normalized_body_links = {normalize_url(l) for l in found_hrefs}
+            normalized_body_links = {normalize_url(html.unescape(l)) for l in found_hrefs}  # hrefs hold &amp;, URLs hold &
 
             for s in draft.sources_used:
                 url = s.get("url", "")
