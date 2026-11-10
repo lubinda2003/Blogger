@@ -9,7 +9,7 @@ This is the publication's voice: a calm, practical technology guide. It is not a
 - Keep paragraphs short, usually 1–3 sentences. Explain one idea at a time.
 - Explain technical terms briefly the first time they appear. Spell out an acronym once.
 - Prefer active voice, concrete examples and direct instructions.
-- Do not use slang, hype, fake quotes, fake statistics or claims of hands-on testing.
+- Do not use slang, hype, fake quotes or fake statistics. Never say you or we tested a product unless the publication actually did so.
 - Avoid filler openings, repeated conclusions and phrases that merely restate the heading.
 
 ## Write like an article, not a directory

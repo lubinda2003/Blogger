@@ -36,8 +36,8 @@ def sanitize_html(body: str) -> str:
 
 
 
-_REFERENCE_HEADING = re.compile(r"<h([23])\\b[^>]*>(.*?)</h\\1\\s*>", re.I | re.S)
-_REFERENCE_WORDS = re.compile(r"\\b(?:sources?|references?|resources?)\\b", re.I)
+_REFERENCE_HEADING = re.compile(r"<h([23])\b[^>]*>(.*?)</h\1\s*>", re.I | re.S)
+_REFERENCE_WORDS = re.compile(r"\b(?:sources?|references?|resources?)\b", re.I)
 
 
 def deduplicate_reference_sections(body: str) -> str:
