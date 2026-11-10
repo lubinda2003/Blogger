@@ -453,14 +453,16 @@ def run_pipeline(
     t0 = time.time()
 
     # Prepare final HTML - NEVER passes local paths
-    public_img = screenshot_res.public_url if (screenshot_res and screenshot_res.success) else None
+    public_screenshot_items = [
+        {"url": item.public_url, "caption": item.caption, "alt": item.alt_text}
+        for item in screenshot_results
+        if item.success and item.public_url and not item.is_mock
+    ]
     final_html = SEOMetadata.inject_seo_and_assets(
         html_body=apply_layout(draft.html_content),
         title=draft.title,
         meta_description=draft.meta_description,
-        public_screenshot_url=public_img,
-        screenshot_caption=screenshot_res.caption if public_img else None,
-        screenshot_alt=screenshot_res.alt_text if public_img else None,
+        public_screenshot_items=public_screenshot_items,
         featured_image_url=featured.public_url if featured else None,
         featured_image_alt=featured.alt_text if featured else None,
     )
