@@ -11,7 +11,7 @@ An automated research, writing, quality-checking, and Blogger publishing pipelin
 
 Website: https://digitaltoolkitguide.blogspot.com/
 
-The project runs through GitHub Actions. It uses repository files for topic history and deduplication; Cloudflare Workers and D1 are not required by the active content pipeline.
+The entire content pipeline runs through GitHub Actions. GitHub Actions handles research, article generation, quality checks, run reports, and Blogger draft creation through the Blogger API.
 
 ## Publication scope
 
@@ -81,7 +81,6 @@ scripts/             Setup and repository utility scripts
 src/                 Pipeline implementation
 templates/            Article-generation prompt templates
 tests/                Automated tests
-worker/               Reference implementation; not part of the active pipeline
 README.md             Project documentation
 requirements.txt      Root-level dependency file, if used by local tooling
 server.ts             Developer console server
