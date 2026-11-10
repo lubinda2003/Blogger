@@ -56,9 +56,10 @@
       }
     }
   ],
-  "last_updated": "2026-11-10T11:24:27.695633+00:00",
+  "last_updated": "2026-11-10T19:18:51.182965+00:00",
   "total_runs": 3,
   "failed_attempts": {
-    "best-free-invoicing-tools-freelancers": 2
+    "best-free-invoicing-tools-freelancers": 2,
+    "claude-code-web-prototyping": 1
   }
 }
