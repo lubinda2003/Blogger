@@ -100,6 +100,7 @@ class SEOMetadata:
         include_schema: bool = True,
         featured_image_url: Optional[str] = None,
         featured_image_alt: Optional[str] = None,
+        public_screenshot_items: Optional[List[Dict[str, str]]] = None,
     ) -> str:
         """Inject structured data and optional public screenshot image markup into article HTML.
 
@@ -123,19 +124,25 @@ class SEOMetadata:
                 f'</figure>'
             )
 
-        # STRICT CHECK: Only embed image if it is a valid public HTTPS URL
-        if public_screenshot_url and public_screenshot_url.startswith("https://"):
-            # Double check it is not a runner-local path pretending to be https
-            if not any(sub in public_screenshot_url for sub in ("localhost", "127.0.0.1", "output/")):
-                clean_alt = html.escape(screenshot_alt or title)
-                clean_caption = html.escape(screenshot_caption or "")
-                img_block = (
-                    f'<figure class="article-screenshot" style="margin:24px 0; text-align:center;">\n'
-                    f'  <img src="{html.escape(public_screenshot_url)}" alt="{clean_alt}" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #e2e8f0;" />\n'
-                    f'  <figcaption style="font-size:13px; color:#64748b; margin-top:8px;">{clean_caption}</figcaption>\n'
-                    f'</figure>'
-                )
-                blocks.append(img_block)
+        # Multiple verified screenshots support product comparisons; retain legacy single-image compatibility.
+        screenshot_items = public_screenshot_items or (
+            [{"url": public_screenshot_url, "caption": screenshot_caption or "", "alt": screenshot_alt or title}]
+            if public_screenshot_url else []
+        )
+        for item in screenshot_items:
+            image_url = item.get("url", "")
+            if not image_url.startswith("https://") or any(
+                sub in image_url for sub in ("localhost", "127.0.0.1", "output/")
+            ):
+                continue
+            clean_alt = html.escape(item.get("alt", title))
+            clean_caption = html.escape(item.get("caption", ""))
+            blocks.append(
+                f'<figure class="article-screenshot" style="margin:24px 0; text-align:center;">\\n'
+                f'  <img src="{html.escape(image_url)}" alt="{clean_alt}" loading="lazy" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #e2e8f0;" />\\n'
+                f'  <figcaption style="font-size:13px; color:#64748b; margin-top:8px;">{clean_caption}</figcaption>\\n'
+                f'</figure>'
+            )
 
         blocks.append(html_body)
         return "\n\n".join(blocks)
