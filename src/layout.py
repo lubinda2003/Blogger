@@ -35,6 +35,36 @@ def sanitize_html(body: str) -> str:
     return _JS_URLS.sub(lambda m: f"{m.group(1)}={m.group(2)}#{m.group(2)}", out)
 
 
+
+_REFERENCE_HEADING = re.compile(r"<h([23])\\b[^>]*>(.*?)</h\\1\\s*>", re.I | re.S)
+_REFERENCE_WORDS = re.compile(r"\\b(?:sources?|references?|resources?)\\b", re.I)
+
+
+def deduplicate_reference_sections(body: str) -> str:
+    """Keep only the first final source/reference section; remove repeated variants."""
+    headings = list(_REFERENCE_HEADING.finditer(body or ""))
+    reference_headings = []
+    for match in headings:
+        label = re.sub(r"<[^>]+>", " ", html.unescape(match.group(2)))
+        if _REFERENCE_WORDS.search(label) and len(label.split()) <= 5:
+            reference_headings.append(match)
+
+    if len(reference_headings) < 2:
+        return body
+
+    # Preserve the first section. Later duplicate reference sections are removed
+    # through the next heading, or to the end when they are the final section.
+    removals = []
+    for match in reference_headings[1:]:
+        next_heading = next((h for h in headings if h.start() > match.start()), None)
+        end = next_heading.start() if next_heading else len(body)
+        removals.append((match.start(), end))
+
+    for start, end in reversed(removals):
+        body = body[:start] + body[end:]
+    return body
+
+
 def _slug(text: str) -> str:
     plain = re.sub(r"<[^>]+>", "", html.unescape(text)).lower()
     return re.sub(r"[^a-z0-9]+", "-", plain).strip("-") or "section"
@@ -104,6 +134,7 @@ def _style_compare_tables(body: str) -> str:
 def apply_layout(body: str) -> str:
     """Sanitize, add the table of contents, then style the components. Safe to apply twice."""
     body = sanitize_html(body)
+    body = deduplicate_reference_sections(body)
     body = add_table_of_contents(body)
     body = _style_callouts(body)
     body = _style_steps(body)

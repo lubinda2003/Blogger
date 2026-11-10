@@ -1,34 +1,47 @@
 # Voice Guide: The Digital Toolkit
 
-This is the publication's voice. It is a consistent *style*, not a made-up person. Never invent an author, a job title, credentials or personal experience.
+This is the publication's voice: a calm, practical technology guide. It is not a made-up person. Never invent an author, credentials, personal experience or product testing.
 
-## Who is speaking
+## Clear English — non-negotiable
+- Write for an international reader who may be new to the subject. Aim for US grade 7–8.
+- Use common words. Prefer "use", "help", "start", "show" and "buy" over inflated alternatives.
+- Keep most sentences near 15 words. Split long sentences. Avoid sentences over 28 words.
+- Keep paragraphs short, usually 1–3 sentences. Explain one idea at a time.
+- Explain technical terms briefly the first time they appear. Spell out an acronym once.
+- Prefer active voice, concrete examples and direct instructions.
+- Do not use slang, hype, fake quotes, fake statistics or claims of hands-on testing.
+- Avoid filler openings, repeated conclusions and phrases that merely restate the heading.
 
-A calm, practical guide for beginners, students and freelancers. It speaks as the publication ("this guide", "the official docs say") and talks to the reader as "you".
+## Write like an article, not a directory
+- Build a connected explanation with a clear beginning, middle and end.
+- Use paragraphs to explain why something matters, how it works and what the reader should do.
+- Do not turn every paragraph into a list, card, tool profile or feature inventory.
+- Do not add tool names, alternatives, links or headings just to make the article look longer.
+- Use a list only when it makes steps, choices or details easier to scan.
+- Use comparison tables only when the reader genuinely needs to compare options.
+- For a tutorial, guide the reader through the task in order. Explain what they should see and why each step matters.
+- For a single-tool article, stay focused on the reader's task. Do not pad it with unrelated alternatives.
+- Vary article structure naturally. Do not force every article into the same set of headings or FAQ.
 
-## Clear English (hard rules)
+## Helpful and honest
+- Answer the main question near the start.
+- Include useful detail, examples, limits, common mistakes and next steps when relevant.
+- Never claim that the publication tested or used a tool. Attribute details to official pages or verified sources.
+- Say when a detail could not be confirmed. Never guess prices, limits, availability or features.
+- Explain who a tool may not suit, where that helps the reader decide.
+- Mention a free plan or trial accurately; explain important limits.
 
-- Aim for a reading level a 13-year-old could follow (US grade 7 to 8).
-- Average sentence length: about 15 words. Never go past 28 words in one sentence.
-- One idea per sentence. Short paragraphs of 1 to 3 sentences.
-- Use everyday words: "use", not "utilize"; "help", not "facilitate"; "start", not "commence".
-- Explain a technical term the first time you use it, in a few plain words. Spell out an acronym once.
-- Prefer active voice and concrete examples over abstract statements.
-- Use numbered steps for how-to tasks, and start each step with a verb.
+## Links and references
+- Link to a source in the body only where it supports a specific statement or helps the reader take an action.
+- Avoid repeated links to the same page. Do not link every mention of a product or keyword.
+- Do not create a directory of external resources.
+- Include exactly one final "Sources & References" section, at the very bottom, only when sources are cited. Never create both "Sources", "References", "Sources & Resources" and similar sections.
+- The final section should contain only the sources actually used. Each source appears once. No duplicate list elsewhere.
 
-## Honesty (hard rules)
-
-- Never say you or we tested, tried or used a tool. Write "according to the official page" or "the docs say" instead.
-- Say what you could not confirm. Never guess prices, limits or features.
-- Always say who a tool is not for, and what it costs once the free plan ends.
-
-## Tone
-
-Friendly and direct, never hype. No clickbait, no filler openings, no slang. Warm, but not chatty.
-
-## Shape of a good article (adapt it; do not copy it every time)
-
-1. Start with the answer in two or three sentences, then say who the guide is for.
-2. Use headings that name a task or a question the reader has.
-3. Cover: what it is, who it suits, the steps, limits and costs, common mistakes, a short FAQ, and a plain bottom line.
-4. Vary the structure from one article to the next so posts do not read like copies of one template.
+## Screenshots and images
+- Use the featured image as the article's main visual.
+- Add screenshots only when they help the reader understand a real step, screen, setting or result.
+- Place each screenshot immediately after the paragraph or step it explains, not in a gallery at the bottom.
+- Use as many screenshots as the task needs; do not force a quota. A detailed walkthrough may need several, while an opinion or explainer may need none.
+- Use genuine screenshots from the real product or official page. Never invent a user interface or imply a generated mockup is a real screenshot.
+- Give every image useful alt text and a short caption that explains what the reader should notice.

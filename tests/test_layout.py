@@ -9,7 +9,7 @@ from pathlib import Path
 from src import main as pipeline
 from src.article_writer import ArticleWriter
 from src.config import load_config
-from src.layout import add_table_of_contents, apply_layout, sanitize_html
+from src.layout import add_table_of_contents, apply_layout, deduplicate_reference_sections, sanitize_html
 from src.research import ResearchCollector
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
@@ -82,6 +82,20 @@ class TestTableOfContents(unittest.TestCase):
     def test_applying_twice_changes_nothing(self):
         once = apply_layout(H2)
         self.assertEqual(apply_layout(once), once)
+
+
+class TestReferenceSections(unittest.TestCase):
+
+    def test_duplicate_reference_sections_are_removed(self):
+        body = (
+            "<h2>Guide</h2><p>Useful article text.</p>"
+            "<h2>Sources &amp; References</h2><ul><li>Source A</li></ul>"
+            "<h2>References &amp; Resources</h2><ul><li>Source B</li></ul>"
+        )
+        out = apply_layout(body)
+        self.assertEqual(len(re.findall(r"<h2[^>]*>[^<]*(?:Sources|References)", out)), 1)
+        self.assertIn("Source A", out)
+        self.assertNotIn("Source B", out)
 
 
 class TestSanitize(unittest.TestCase):
