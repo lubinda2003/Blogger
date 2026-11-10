@@ -72,10 +72,27 @@
         ],
         "word_count": 963
       }
+    },
+    {
+      "topic_id": "minimal-ecommerce-setup-shopify-gumroad",
+      "topic_title": "Gumroad vs Shopify for Selling Digital Products: An Honest Comparison",
+      "fingerprint": "4cadd797b7d5af84",
+      "post_id": "1232502997889212876",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-10T21:31:19.808689+00:00",
+      "metadata": {
+        "labels": [
+          "Digital Business Tools",
+          "E-commerce Platforms"
+        ],
+        "word_count": 1055
+      }
     }
   ],
-  "last_updated": "2026-11-10T20:44:35.560265+00:00",
-  "total_runs": 4,
+  "last_updated": "2026-11-10T21:31:19.808712+00:00",
+  "total_runs": 5,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1
