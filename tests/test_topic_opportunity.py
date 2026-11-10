@@ -29,7 +29,7 @@ class TopicOpportunityTests(unittest.TestCase):
         self.assertGreaterEqual(result.score, 0)
         self.assertLessEqual(result.score, 100)
         self.assertEqual(result.result_count, 3)
-        self.assertIn("not search-volume", result.to_dict()["metric_note"])
+        self.assertIn("no search-volume", result.to_dict()["metric_note"])
 
     @patch.object(TopicOpportunityScorer, "_search")
     def test_rank_prefers_scored_candidate_over_static_queue_order(self, search):
