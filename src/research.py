@@ -284,10 +284,14 @@ class ResearchCollector:
         if not claim or not content_corpus:
             return None
 
-        corpus_lower = content_corpus.lower()
-        # Reject soft 404s, parked pages, and access denied barriers
+        # Reject soft 404s, parked pages and access-denied barriers. Look at the visible text only: modern sites
+        # embed phrases like "page not found" in their JavaScript, and a long article that mentions one in passing
+        # is not an error page. Real error pages say it up front, or are very short.
         error_indicators = ["404 not found", "page not found", "access denied", "403 forbidden", "verify you are human"]
-        if any(ind in corpus_lower for ind in error_indicators):
+        visible = self._clean_corpus_text(content_corpus, max_chars=200000).lower()
+        if any(ind in visible[:400] for ind in error_indicators) or (
+            len(visible) < 1500 and any(ind in visible for ind in error_indicators)
+        ):
             return None
 
         stop_words = {
@@ -330,6 +334,16 @@ class ResearchCollector:
             required_threshold = max(2, int(len(tokens) * 0.65)) if len(tokens) >= 3 else len(tokens)
             if len(set(block_matches)) >= required_threshold:
                 return block[:250].strip()
+
+        # 3. Passage-level co-occurrence: roundup and comparison articles spread a long title's keywords over a
+        #    heading and the paragraphs under it, so a single sentence rarely holds most of them. Accept a short
+        #    passage (four consecutive blocks) that holds at least 70% of them.
+        if len(tokens) >= 3:
+            needed = min(len(tokens), max(3, -(-len(tokens) * 7 // 10)))  # ceil(70%), at least 3
+            for i in range(len(blocks)):
+                passage = " ".join(blocks[i:i + 4]).lower()
+                if len({t for t in tokens if t in passage}) >= needed:
+                    return blocks[i][:250].strip()
 
         return None
 
