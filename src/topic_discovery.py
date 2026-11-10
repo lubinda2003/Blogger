@@ -71,7 +71,7 @@ class TopicDiscovery:
                     requires_screenshot=req_screenshot,
                     target_url=row.get("target_url", "").strip(),
                     target_audience=row.get("target_audience", "Digital Workers").strip(),
-                    screenshot_targets=[u.strip() for u in row.get("screenshot_targets", "").split(";") if u.strip()],
+                    screenshot_targets=[u.strip() for u in (row.get("screenshot_targets") or "").split(";") if u.strip()],
                 )
                 if item.id and item.topic:
                     items.append(item)
