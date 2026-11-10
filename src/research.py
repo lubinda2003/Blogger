@@ -31,6 +31,27 @@ def mentions_brand(brand: Optional[str], text: str) -> bool:
     """True when no brand applies, or the page text names the tool at least twice."""
     return not brand or (text or "").lower().count(brand) >= 2
 
+def topic_relevance_claim(topic_title: str, target_url: str = "") -> str:
+    """Build a short, topic-specific relevance phrase instead of an impossible generic claim."""
+    brand = topic_brand(topic_title, target_url)
+    words = re.findall(r"[a-zA-Z0-9]+", topic_title or "")
+    if brand:
+        lowered = [word.lower() for word in words]
+        try:
+            index = lowered.index(brand)
+        except ValueError:
+            index = -1
+        if index >= 0:
+            # The first meaningful word after the named product is usually its feature or subject.
+            ignored = {"how", "to", "use", "with", "without", "for", "and", "the", "a", "an"}
+            for word in lowered[index + 1:]:
+                if word not in ignored and len(word) > 2:
+                    return f"{brand} {word}"
+            return brand
+    ignored = {"how", "to", "use", "with", "without", "for", "and", "the", "a", "an", "best", "guide"}
+    meaningful = [word.lower() for word in words if word.lower() not in ignored and len(word) > 2]
+    return " ".join(meaningful[:3]) or (topic_title or "").strip()
+
 
 @dataclass
 class SourceCitation:
@@ -490,7 +511,7 @@ class ResearchCollector:
                 candidate_sources.append((
                     f"{topic_title} - Primary Reference",
                     target_url,
-                    ["Official capabilities and workflow instructions"],
+                    [topic_relevance_claim(topic_title, target_url)],
                 ))
 
             # In dry-run mode, ensure at least 2 synthetic source fixtures are present
@@ -529,7 +550,7 @@ class ResearchCollector:
                     continue
                 t_title = res.get("title") or f"{topic_title} Reference"
                 t_snippet = res.get("raw_content", "") or res.get("content", "")
-                candidate_pool.append((t_title, t_url, [f"Official features and workflow instructions for {topic_title}"], t_snippet))
+                candidate_pool.append((t_title, t_url, [topic_relevance_claim(topic_title, target_url)], t_snippet))
 
         # Include topic candidate sources
         for title, url, claims in candidate_sources:
