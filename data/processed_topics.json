@@ -54,10 +54,28 @@
         ],
         "word_count": 1109
       }
+    },
+    {
+      "topic_id": "claude-code-web-prototyping",
+      "topic_title": "How to Prototype Web Tools with Claude Artifacts—No Coding Needed",
+      "fingerprint": "2f1f580a0a06c5e1",
+      "post_id": "3285275202721211828",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-10T20:44:35.560252+00:00",
+      "metadata": {
+        "labels": [
+          "Artificial Intelligence And AI Tools",
+          "Claude",
+          "Tutorial"
+        ],
+        "word_count": 963
+      }
     }
   ],
-  "last_updated": "2026-11-10T19:18:51.182965+00:00",
-  "total_runs": 3,
+  "last_updated": "2026-11-10T20:44:35.560265+00:00",
+  "total_runs": 4,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1
