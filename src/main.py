@@ -310,7 +310,7 @@ def run_pipeline(
     # Topic-owned URLs are trusted editorial targets; the model cannot invent capture destinations.
     t0 = time.time()
     screenshot_results = []
-    capture_targets = topic.screenshot_targets or ([topic.target_url] if topic.requires_screenshot else [])
+    capture_targets = topic.screenshot_targets or ([topic.target_url] if (topic.requires_screenshot or draft.screenshot_needed) else [])
     if draft.screenshot_needed or topic.requires_screenshot or topic.screenshot_targets:
         capturer = ScreenshotCapture(
             output_dir=os.path.join(config.output_dir, "screenshots"),
