@@ -21,6 +21,7 @@ from src.screenshot_capture import ScreenshotCapture
 from src.seo_metadata import SEOMetadata
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
+from src.topic_opportunity import TopicOpportunityScorer
 
 # Configure logging with structured clean formatting
 logging.basicConfig(
@@ -109,7 +110,28 @@ def run_pipeline(
         return 1
 
     discovery = TopicDiscovery(csv_path=config.topics_csv_path, state_store=state_store)
-    topic = discovery.select_next_topic(requested_id=target_topic_id)
+    opportunity_scorer = TopicOpportunityScorer(api_key=config.tavily_api_key)
+    if target_topic_id:
+        topic = discovery.select_next_topic(requested_id=target_topic_id)
+        opportunity_note = "Manual topic selection; search screening bypassed."
+    else:
+        eligible = [
+            item for item in discovery.load_queue()
+            if not state_store.is_duplicate(item.id, item.topic)
+            and not state_store.is_max_failed(item.id, max_failures=3)
+        ]
+        ranked = opportunity_scorer.rank(eligible)
+        topic = discovery.select_next_topic(requested_id=ranked[0].id) if ranked else None
+        if opportunity_scorer.last_results:
+            best = opportunity_scorer.last_results[0]
+            opportunity_note = (
+                f"SERP opportunity estimate {best.score}/100; {best.assessment}. "
+                "This is not search volume or formal keyword difficulty."
+            )
+        elif config.tavily_api_key:
+            opportunity_note = "Search screening returned no usable results; retained editorial queue priority."
+        else:
+            opportunity_note = "Search screening skipped; retained editorial queue priority."
 
     if not topic:
         logger.info("No eligible unprocessed topics found in queue. Safe no-op.")
@@ -125,7 +147,7 @@ def run_pipeline(
     reporter.selected_topic_id = topic.id
     reporter.selected_topic = topic.topic
 
-    topic_details = f"Selected topic '{topic.topic}' (Priority {topic.priority}) [Repository state active]"
+    topic_details = f"Selected topic '{topic.topic}' (Priority {topic.priority}) [Repository state active]. {opportunity_note}"
 
     reporter.add_stage(
         stage_name="Topic Selection",
