@@ -67,6 +67,36 @@ class TestInjection(unittest.TestCase):
         out = self._inject(featured_image_url=self.URL, public_screenshot_url="https://cdn.example/s.png")
         self.assertLess(out.index("article-cover"), out.index("article-screenshot"))
 
+    def test_screenshots_are_placed_in_the_matching_product_sections(self):
+        body = (
+            "<p>Introduction.</p>"
+            "<h2>How Obsidian Works</h2><p>Obsidian stores notes locally.</p><p>More detail.</p>"
+            "<h2>How Notion Works</h2><p>Notion is a collaborative workspace.</p><p>More detail.</p>"
+            "<h2>Sources &amp; References</h2><ul><li>Source</li></ul>"
+        )
+        items = [
+            {"url": "https://cdn.example/obsidian.png", "source_url": "https://obsidian.md", "caption": "Obsidian interface", "alt": "Obsidian"},
+            {"url": "https://cdn.example/notion.png", "source_url": "https://www.notion.so", "caption": "Notion interface", "alt": "Notion"},
+        ]
+        out = SEOMetadata.inject_seo_and_assets(body, "Title", "Desc", public_screenshot_items=items)
+        self.assertLess(out.index("How Obsidian Works"), out.index("obsidian.png"))
+        self.assertLess(out.index("obsidian.png"), out.index("How Notion Works"))
+        self.assertLess(out.index("How Notion Works"), out.index("notion.png"))
+        self.assertLess(out.index("notion.png"), out.index("Sources &amp; References"))
+        self.assertEqual(out.count('class="article-screenshot"'), 2)
+
+    def test_unmatched_screenshot_falls_back_before_sources_not_before_intro(self):
+        out = self._inject(public_screenshot_items=[{
+            "url": "https://cdn.example/s.png", "source_url": "https://example.org", "caption": "Example", "alt": "Example"
+        }])
+        self.assertLess(out.index("<p>Body</p>"), out.index("s.png"))
+
+    def test_screenshot_markup_has_real_newlines_not_literal_backslash_n(self):
+        out = self._inject(public_screenshot_url="https://cdn.example/s.png")
+        self.assertNotIn(r"\\n  <img", out)
+        self.assertNotIn(r"\\n  <figcaption", out)
+        self.assertIn("\\n  <img", out)
+
     def test_no_cover_without_a_url(self):
         self.assertNotIn("article-cover", self._inject())
 
