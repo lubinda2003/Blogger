@@ -146,7 +146,7 @@ class FeaturedImageGenerator:
 
     def generate(self, title: str, kicker: str, slug: str, brief: Optional[dict] = None) -> FeaturedImage:
         try:
-            safe = re.sub(r"[^a-z0-9\\-]+", "-", slug.lower()).strip("-") or "article"
+            safe = re.sub(r"[^a-z0-9\-]+", "-", slug.lower()).strip("-") or "article"
             self.output_dir.mkdir(parents=True, exist_ok=True)
             path = self.output_dir / f"{safe}.jpg"
             if os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on"):
@@ -171,7 +171,7 @@ class FeaturedImageGenerator:
                 self._render_png(build_html(title, kicker, seed=safe), path)
             data = path.read_bytes()
             valid_jpeg = data.startswith(JPEG_MAGIC)
-            valid_png = data.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+            valid_png = data.startswith(b"\x89PNG\r\n\x1a\n")
             if not (valid_jpeg or valid_png) or len(data) < 2000:
                 raise ValueError("rendered file is not a valid JPEG or PNG")
             return FeaturedImage(
