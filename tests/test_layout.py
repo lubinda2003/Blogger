@@ -53,6 +53,14 @@ class TestStepsAndTables(unittest.TestCase):
         self.assertIn('<th style="', out)
         self.assertIn('<td style="', out)
 
+    def test_markdown_pipe_table_is_converted_and_styled(self):
+        body = "| Tool | Best for |\n| --- | :---: |\n| Alpha | Research |\n| Beta | Writing |"
+        out = apply_layout(body)
+        self.assertIn('<table class="compare">', out)
+        self.assertIn("<th>Tool</th>", out)
+        self.assertIn("<td>Research</td>", out)
+        self.assertIn("overflow-x:auto", out)
+        self.assertNotIn("| --- |", out)
     def test_other_tables_are_untouched(self):
         body = "<table><tr><td>x</td></tr></table>"
         self.assertEqual(apply_layout(body), body)
