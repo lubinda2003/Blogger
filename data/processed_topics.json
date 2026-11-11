@@ -161,10 +161,28 @@
         ],
         "word_count": 1318
       }
+    },
+    {
+      "topic_id": "e-commerce-what-are-the-best-software-solutions-for-freelancers-startups",
+      "topic_title": "E-Commerce Software for Freelancers and Small Businesses: Comparing Top Solutions",
+      "fingerprint": "cebff24c6b44da77",
+      "post_id": "759769603378839952",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-11T12:59:57.564214+00:00",
+      "metadata": {
+        "labels": [
+          "Digital Business Tools",
+          "E-Commerce",
+          "Freelance Stack"
+        ],
+        "word_count": 1517
+      }
     }
   ],
-  "last_updated": "2026-11-11T08:48:31.498857+00:00",
-  "total_runs": 9,
+  "last_updated": "2026-11-11T12:59:57.564237+00:00",
+  "total_runs": 10,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
