@@ -90,7 +90,7 @@ def build_html(title: str, kicker: str, seed: str) -> str:
     art = art.replace("__ACCENT__", accent).replace("__POP__", pop).replace("__BG2__", bg)
     # Small deterministic decorative dots make repeat runs stable but not identical across articles.
     dots = "".join(
-        f'<circle cx="{760 + digest[i] % 350}" cy="{100 + digest[i+1] % 470}" r="{5 + digest[i+2] % 10}" fill="__POP__" opacity=".5"/>'
+        f'<circle cx="{760 + digest[i] % 350}" cy="{100 + digest[i+1] % 470}" r="{5 + digest[i+2] % 10}" fill="{pop}" opacity=".5"/>'
         for i in (0, 3, 6, 9, 12, 15)
     )
     title_html = html.escape(title.strip())
