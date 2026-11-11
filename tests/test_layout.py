@@ -57,8 +57,8 @@ class TestStepsAndTables(unittest.TestCase):
         body = "| Tool | Best for |\n| --- | :---: |\n| Alpha | Research |\n| Beta | Writing |"
         out = apply_layout(body)
         self.assertIn('<table class="compare" style=', out)
-        self.assertIn("<th>Tool</th>", out)
-        self.assertIn("<td>Research</td>", out)
+        self.assertRegex(out, r"<th style=\"[^\"]*\">Tool</th>")
+        self.assertRegex(out, r"<td style=\"[^\"]*\">Research</td>")
         self.assertIn("overflow-x:auto", out)
         self.assertNotIn("| --- |", out)
     def test_other_tables_are_untouched(self):
