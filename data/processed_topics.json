@@ -146,11 +146,11 @@
       }
     }
   ],
-  "last_updated": "2026-11-11T07:44:20.575352+00:00",
+  "last_updated": "2026-11-11T08:30:41.974422+00:00",
   "total_runs": 8,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
-    "canva-brand-kit-design-walkthrough": 1
+    "canva-brand-kit-design-walkthrough": 2
   }
 }
