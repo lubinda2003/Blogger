@@ -91,32 +91,35 @@ class SEOMetadata:
         return f'<script type="application/ld+json">\n{json_str}\n</script>'
 
     @staticmethod
-    def _place_screenshot_in_section(body: str, image_url: str, figure: str, source_url: Optional[str] = None) -> str:
-        """Place screenshots after the first explanatory paragraph in a matching product section."""
-        host = (urlparse(source_url or image_url).hostname or "").lower()
-        host = re.sub(r"^(?:www|app|help|docs)\.", "", host)
-        brand = host.split(".")[0].replace("-", " ").strip()
-        aliases = {
-            "notion": ("notion",), "obsidian": ("obsidian",), "canva": ("canva",),
-            "shopify": ("shopify",), "claude": ("claude", "anthropic"),
-            "openai": ("openai", "chatgpt"), "chatgpt": ("chatgpt", "openai"),
-        }
-        terms = aliases.get(brand, (brand,)) if brand else ()
-        headings = list(re.finditer(r"<h([23])\b[^>]*>(.*?)</h\1\s*>", body, re.I | re.S))
-        target = None
+    def _place_screenshot_in_section(body: str, image_url: str, figure: str, source_url: Optional[str] = None, used_sections: Optional[set] = None) -> str:
+        """Place screenshots beside distinct relevant sections, not in one product gallery."""
+        from urllib.parse import unquote
+        used_sections = used_sections if used_sections is not None else set()
+        parsed = urlparse(source_url or image_url)
+        path_terms = set(re.findall(r"[a-z]{3,}", unquote(parsed.path).lower()))
+        path_terms -= {"www", "help", "docs", "app", "com", "html", "page", "pages"}
+        headings = list(re.finditer(r"<h([23])\\b[^>]*>(.*?)</h\\1\\s*>", body, re.I | re.S))
+        candidates = []
         for index, heading in enumerate(headings):
-            heading_text = re.sub(r"<[^>]+>", " ", html.unescape(heading.group(2))).lower()
-            if terms and any(term in heading_text for term in terms):
-                section_end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
-                paragraph = re.search(r"</p\s*>", body[heading.end():section_end], re.I)
-                target = heading.end() + paragraph.end() if paragraph else heading.end()
-                break
-        if target is not None:
-            return body[:target] + "\n" + figure + body[target:]
-        refs = re.search(r"<h[23]\b[^>]*>[^<]*(?:sources?|references?)\b.*?</h[23]\s*>", body, re.I | re.S)
-        if refs:
-            return body[:refs.start()] + figure + "\n" + body[refs.start():]
-        return body.rstrip() + "\n" + figure
+            label = re.sub(r"<[^>]+>", " ", html.unescape(heading.group(2)))
+            label = re.sub(r"\\s+", " ", label).strip()
+            key = label.casefold()
+            if not key or key in used_sections or re.search(r"\\b(faq|frequently asked|sources|references|conclusion)\\b", key):
+                continue
+            end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
+            section = re.sub(r"<[^>]+>", " ", html.unescape(body[heading.end():end])).lower()
+            words = set(re.findall(r"[a-z]{3,}", (label + " " + section[:1200]).lower()))
+            candidates.append((len(path_terms & words), heading, key, end))
+        if candidates:
+            score = max(item[0] for item in candidates)
+            _, heading, key, end = next(item for item in candidates if item[0] == score)
+            paragraph = re.search(r"</p\\s*>", body[heading.end():end], re.I)
+            target = heading.end() + paragraph.end() if paragraph else heading.end()
+            used_sections.add(key)
+            return body[:target] + "\\n" + figure + body[target:]
+        refs = re.search(r"<h[23]\\b.*?\\b(?:sources?|references?)\\b.*?</h[23]\\s*>", body, re.I | re.S)
+        target = refs.start() if refs else len(body)
+        return body[:target] + "\\n" + figure + body[target:]
 
     @staticmethod
     def inject_seo_and_assets(
@@ -160,6 +163,7 @@ class SEOMetadata:
         )
         body_with_screenshots = html_body
         seen_urls = set()
+        used_screenshot_sections = set()
         for item in screenshot_items:
             image_url = item.get("url", "")
             if not image_url.startswith("https://") or any(
@@ -177,7 +181,7 @@ class SEOMetadata:
                 '</figure>'
             )
             body_with_screenshots = SEOMetadata._place_screenshot_in_section(
-                body_with_screenshots, image_url, figure, item.get("source_url")
+                body_with_screenshots, image_url, figure, item.get("source_url"), used_screenshot_sections
             )
         body_with_screenshots = (
             '<div class="dt-article-body" style="font-family:Arial,Helvetica,sans-serif;'
