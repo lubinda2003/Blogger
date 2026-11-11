@@ -1,10 +1,4 @@
-"""Generated header image for every article.
-
-One consistent look (navy and gold, same layout) with a small per-article variation, rendered locally with
-Playwright from plain HTML. No AI image model, no stock photos and no external assets, so there is nothing to
-license and nothing that can break. The image is hosted from the repository (see ScreenshotCapture) and is
-only embedded after it has been published successfully.
-"""
+"""Offline topic-aware editorial cover images rendered with local HTML, CSS, SVG and Playwright."""
 
 import hashlib
 import html
@@ -94,7 +88,6 @@ def build_html(title: str, kicker: str, seed: str) -> str:
             '<path d="M810 395h220M810 430h165" stroke="__ACCENT__" stroke-width="10" stroke-linecap="round" opacity=".55"/>'
         )
     art = art.replace("__ACCENT__", accent).replace("__POP__", pop).replace("__BG2__", bg)
-    dots = dots.replace("__POP__", pop)
     # Small deterministic decorative dots make repeat runs stable but not identical across articles.
     dots = "".join(
         f'<circle cx="{760 + digest[i] % 350}" cy="{100 + digest[i+1] % 470}" r="{5 + digest[i+2] % 10}" fill="__POP__" opacity=".5"/>'
@@ -136,72 +129,6 @@ class FeaturedImage:
     alt_text: str = ""
     public_url: Optional[str] = None
     error_message: str = ""
-
-
-def _title_size(length: int) -> int:
-    """Longer titles get smaller type so they always fit in at most four lines."""
-    for limit, size in ((30, 84), (45, 72), (60, 64), (80, 56)):
-        if length <= limit:
-            return size
-    return 46
-
-
-def build_html(title: str, kicker: str, seed: str) -> str:
-    """Render a self-contained editorial cover with a topic-aware visual composition."""
-    digest = hashlib.sha1(seed.encode("utf-8")).digest()
-    circles = []
-    for i in range(3):
-        cx = 90 + digest[i * 3] % 1080
-        cy = 35 + digest[i * 3 + 1] % 560
-        r = 65 + digest[i * 3 + 2] % 150
-        circles.append(
-            f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="{GOLD}" stroke-opacity="0.10" stroke-width="2"/>'
-        )
-    lowered = title.lower()
-    if any(word in lowered for word in (" vs ", "versus", "comparison", "compared")):
-        art = (
-            '<rect x="25" y="70" width="175" height="250" rx="18" class="art-card"/>'
-            '<rect x="240" y="70" width="175" height="250" rx="18" class="art-card"/>'
-            '<rect x="48" y="100" width="129" height="18" rx="6" class="art-soft"/>'
-            '<rect x="263" y="100" width="129" height="18" rx="6" class="art-soft"/>'
-            '<rect x="48" y="145" width="129" height="74" rx="9" class="art-glow"/>'
-            '<rect x="263" y="145" width="129" height="74" rx="9" class="art-glow"/>'
-            '<path d="M62 190 L87 170 L111 182 L151 154" fill="none" class="art-line"/>'
-            '<path d="M277 190 L302 177 L326 158 L366 173" fill="none" class="art-line"/>'
-            '<rect x="48" y="242" width="95" height="9" rx="4" class="art-muted"/>'
-            '<rect x="263" y="242" width="95" height="9" rx="4" class="art-muted"/>'
-            '<circle cx="220" cy="194" r="34" class="art-gold"/>'
-            '<text x="220" y="203" text-anchor="middle" font-size="23" font-weight="800" fill="#08101f">VS</text>'
-            '<path d="M75 355 H365" stroke="#d4af37" stroke-opacity=".55" stroke-width="2"/>'
-            '<circle cx="220" cy="355" r="7" class="art-gold"/>'
-        )
-    else:
-        art = (
-            '<rect x="50" y="60" width="340" height="275" rx="18" class="art-card"/>'
-            '<rect x="50" y="60" width="340" height="38" rx="18" class="art-soft"/>'
-            '<circle cx="76" cy="79" r="5" class="art-gold"/><circle cx="95" cy="79" r="5" class="art-muted"/>'
-            '<rect x="72" y="120" width="82" height="188" rx="9" class="art-soft"/>'
-            '<rect x="174" y="120" width="194" height="82" rx="9" class="art-glow"/>'
-            '<rect x="174" y="218" width="88" height="90" rx="9" class="art-soft"/>'
-            '<rect x="280" y="218" width="88" height="90" rx="9" class="art-soft"/>'
-            '<path d="M190 178 L220 157 L248 169 L285 139 L344 151" fill="none" class="art-line"/>'
-            '<rect x="88" y="145" width="49" height="8" rx="4" class="art-muted"/>'
-            '<rect x="88" y="166" width="37" height="8" rx="4" class="art-muted"/>'
-            '<rect x="88" y="187" width="45" height="8" rx="4" class="art-muted"/>'
-            '<rect x="190" y="244" width="55" height="8" rx="4" class="art-muted"/>'
-            '<rect x="296" y="244" width="55" height="8" rx="4" class="art-muted"/>'
-            '<circle cx="220" cy="375" r="28" class="art-glow"/>'
-            '<path d="M205 375 L216 386 L238 360" fill="none" class="art-line"/>'
-        )
-    art += "".join(circles)
-    values = {
-        "W": str(WIDTH), "H": str(HEIGHT), "GOLD": GOLD, "SIZE": str(min(_title_size(len(title.strip())), 68)),
-        "ART": art, "BRAND": html.escape(BRAND), "TAGLINE": html.escape(TAGLINE),
-        "KICKER": html.escape((kicker or "Guide").strip().upper()), "TITLE": html.escape(title.strip()),
-    }
-    return re.sub(r"__([A-Z]+)__", lambda m: values[m.group(1)], _TEMPLATE)
-
-
 
 class FeaturedImageGenerator:
     def __init__(self, output_dir: str = "output"):
