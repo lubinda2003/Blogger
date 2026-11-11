@@ -21,6 +21,7 @@ from src.screenshot_capture import ScreenshotCapture
 from src.seo_metadata import SEOMetadata
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
+from src.autonomous_topic_discovery import AutonomousTopicDiscoverer
 from src.topic_opportunity import TopicOpportunityScorer
 from src.visual_tools import (
     audit_html_accessibility, capture_article_previews, generate_supporting_visuals,
@@ -150,39 +151,44 @@ def run_pipeline(
         return 1
 
     discovery = TopicDiscovery(csv_path=config.topics_csv_path, state_store=state_store)
-    opportunity_scorer = TopicOpportunityScorer(api_key=config.tavily_api_key)
     if target_topic_id:
+        # Explicit operator-selected topics remain available from the optional CSV.
         topic = discovery.select_next_topic(requested_id=target_topic_id)
-        opportunity_note = "Manual topic selection; search screening bypassed."
+        opportunity_note = "Manual topic selection from the optional editorial ideas file."
     else:
-        eligible = [
-            item for item in discovery.load_queue()
-            if not state_store.is_duplicate(item.id, item.topic)
-            and not state_store.is_max_failed(item.id, max_failures=3)
-        ]
-        ranked = opportunity_scorer.rank(eligible)
-        topic = discovery.select_next_topic(requested_id=ranked[0].id) if ranked else None
-        if opportunity_scorer.last_results:
-            best = opportunity_scorer.last_results[0]
-            opportunity_note = (
-                f"SERP opportunity estimate {best.score}/100; {best.assessment}. "
-                "This is not search volume or formal keyword difficulty."
-            )
-        elif config.tavily_api_key:
-            opportunity_note = "Search screening returned no usable results; retained editorial queue priority."
+        # Normal operation is autonomous: Tavily supplies fresh candidates across all four
+        # publication pillars. The CSV is not required to keep the pipeline running.
+        discoverer = AutonomousTopicDiscoverer(api_key=config.tavily_api_key)
+        candidates = discoverer.discover(state_store)
+        if candidates:
+            topic = sorted(candidates, key=lambda item: (item.priority, item.id))[0]
+            opportunity_note = discoverer.last_note
+            logger.info("Autonomous discovery selected '%s' from %s candidates.", topic.topic, len(candidates))
         else:
-            opportunity_note = "Search screening skipped; retained editorial queue priority."
+            topic = None
+            opportunity_note = discoverer.last_note
+            logger.error(opportunity_note)
 
     if not topic:
-        logger.info("No eligible unprocessed topics found in queue. Safe no-op.")
+        logger.error("Topic discovery produced no eligible article topic.")
         reporter.add_stage(
-            stage_name="Topic Selection",
-            status="SUCCESS",
+            stage_name="Topic Discovery",
+            status="FAILED",
             duration_seconds=time.time() - t0,
-            details="Topic queue exhausted or all topics already processed. Pipeline completed safely.",
+            details=opportunity_note,
         )
-        reporter.finalize(success=True, next_action="Add new topic entries to data/topics.csv.")
-        return 0
+        reporter.finalize(
+            success=False,
+            next_action="Check TAVILY_API_KEY and Tavily availability, then run discovery again. You do not need to add topics to data/topics.csv.",
+        )
+        return 1
+
+    reporter.add_stage(
+        stage_name="Topic Discovery",
+        status="SUCCESS",
+        duration_seconds=time.time() - t0,
+        details=f"Selected '{topic.topic}' from live search opportunities. {opportunity_note}",
+    )
 
     reporter.selected_topic_id = topic.id
     reporter.selected_topic = topic.topic
