@@ -50,6 +50,22 @@ class TestClaimSupport(unittest.TestCase):
     def test_a_direct_phrase_match_still_works(self):
         self.assertIsNotNone(self.rc.find_supporting_excerpt("free invoicing tool", roundup()))
 
+    def test_numeric_claim_requires_the_same_value(self):
+        page = "<main><p>The free plan includes 10 invoices each month for freelancers using this service.</p></main>"
+        self.assertIsNone(self.rc.find_supporting_excerpt("The free plan includes 100 invoices each month", page))
+
+    def test_numeric_claim_accepts_exact_value_and_unit_marker(self):
+        page = "<main><p>The service charges a 2.9% fee on eligible payments.</p></main>"
+        self.assertIsNotNone(self.rc.find_supporting_excerpt("The service charges a 2.9% fee", page))
+
+    def test_numeric_claim_does_not_treat_plus_as_exact_match(self):
+        page = "<main><p>The platform supports 135 currencies for international payments.</p></main>"
+        self.assertIsNone(self.rc.find_supporting_excerpt("The platform supports 135+ currencies", page))
+
+    def test_non_numeric_claim_matching_is_unchanged(self):
+        page = "<main><p>The free plan includes basic invoicing tools for freelancers.</p></main>"
+        self.assertIsNotNone(self.rc.find_supporting_excerpt("free plan includes basic invoicing tools", page))
+
 
 if __name__ == "__main__":
     unittest.main()
