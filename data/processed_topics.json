@@ -127,10 +127,27 @@
         ],
         "word_count": 1338
       }
+    },
+    {
+      "topic_id": "browser-extensions-boost-focus",
+      "topic_title": "5 Lightweight Browser Extensions That Stop Distractions and Save Battery",
+      "fingerprint": "a730ef4ed54d29dc",
+      "post_id": "2280630574965251204",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-11T07:44:20.575336+00:00",
+      "metadata": {
+        "labels": [
+          "Software And Productivity",
+          "Browser Extensions"
+        ],
+        "word_count": 1238
+      }
     }
   ],
-  "last_updated": "2026-11-11T07:11:56.932171+00:00",
-  "total_runs": 7,
+  "last_updated": "2026-11-11T07:44:20.575352+00:00",
+  "total_runs": 8,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
