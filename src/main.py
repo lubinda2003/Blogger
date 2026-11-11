@@ -14,7 +14,7 @@ from src.blogger_client import BloggerClient
 from src.config import AppConfig, load_config
 from src.featured_image import prepare_featured_image
 from src.layout import apply_layout
-from src.quality_checks import QualityGate
+from src.quality_checks import QualityGate, validate_final_blogger_html
 from src.report import PipelineReporter
 from src.research import ResearchCollector
 from src.screenshot_capture import ScreenshotCapture
@@ -606,6 +606,28 @@ def run_pipeline(
             f.write(final_html)
     except Exception as e:
         logger.warning(f"Failed to save final.html: {e}")
+
+    # Validate the fully transformed HTML, not only the model's pre-layout draft.
+    final_html_failures = validate_final_blogger_html(final_html)
+    if final_html_failures:
+        failure_detail = final_html_failures[0]
+        logger.error("Final Blogger HTML rejected: %s", final_html_failures)
+        reporter.qa_passed = False
+        reporter.qa_failures = list(reporter.qa_failures) + final_html_failures
+        reporter.add_stage(
+            stage_name="Final HTML Validation",
+            status="FAILED",
+            duration_seconds=0.0,
+            details=failure_detail,
+        )
+        reporter.finalize(success=False, next_action="Fix final HTML validation failures before sending the article to Blogger.")
+        return 1
+    reporter.add_stage(
+        stage_name="Final HTML Validation",
+        status="SUCCESS",
+        duration_seconds=0.0,
+        details="Completed Blogger HTML passed structure, image, link, and safety checks.",
+    )
 
     normalized_labels = SEOMetadata.normalize_labels(draft.labels)
     is_draft = config.publish_mode != "publish"
