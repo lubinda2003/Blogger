@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.visual_tools import (
-    audit_html_accessibility,
+    AXE_JS, MERMAID_JS, audit_html_accessibility,
     generate_supporting_visuals,
     inject_visual_figures,
     optimize_image,
@@ -26,6 +26,18 @@ class TestVisualHelpers(unittest.TestCase):
         rendered, items = render_mermaid_blocks(body, "output")
         self.assertEqual(rendered, body)
         self.assertEqual(items, [])
+
+    @unittest.skipUnless(MERMAID_JS.is_file(), "Mermaid package is not installed")
+    def test_mermaid_renders_to_svg_in_playwright(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "diagram.svg"
+            render_mermaid_blocks(
+                '<pre class="mermaid">flowchart TD; A[Start] --> B[Finish]</pre>',
+                tmp,
+            )
+            from src.visual_tools import render_mermaid_svg
+            render_mermaid_svg("flowchart TD; A[Start] --> B[Finish]", output)
+            self.assertIn("<svg", output.read_text(encoding="utf-8"))
 
     def test_supporting_visual_generation_is_disabled_by_default(self):
         with patch.dict(os.environ, {"IMAGE_GENERATION_ENABLED": "false"}, clear=False):
