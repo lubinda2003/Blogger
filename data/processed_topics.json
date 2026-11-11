@@ -144,10 +144,27 @@
         ],
         "word_count": 1238
       }
+    },
+    {
+      "topic_id": "canva-brand-kit-design-walkthrough",
+      "topic_title": "How to Build a Unified Social Media Brand Kit in Canva",
+      "fingerprint": "f26fc214028519f4",
+      "post_id": "4793274434445655719",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-11T08:48:31.498834+00:00",
+      "metadata": {
+        "labels": [
+          "Tutorials And Practical Solutions",
+          "Canva"
+        ],
+        "word_count": 1318
+      }
     }
   ],
-  "last_updated": "2026-11-11T08:30:41.974422+00:00",
-  "total_runs": 8,
+  "last_updated": "2026-11-11T08:48:31.498857+00:00",
+  "total_runs": 9,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
