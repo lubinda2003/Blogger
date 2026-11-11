@@ -458,7 +458,7 @@ def run_pipeline(
 
     # Prepare final HTML - NEVER passes local paths
     public_screenshot_items = [
-        {"url": item.public_url, "caption": item.caption, "alt": item.alt_text}
+        {"url": item.public_url, "source_url": item.url, "caption": item.caption, "alt": item.alt_text}
         for item in screenshot_results
         if item.success and item.public_url and not item.is_mock
     ]
