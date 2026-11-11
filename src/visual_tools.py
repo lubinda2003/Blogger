@@ -144,7 +144,7 @@ def render_mermaid_blocks(
 ) -> tuple[str, list[dict]]:
     """Render useful Mermaid blocks and replace them only when a public asset URL is available."""
     pattern = re.compile(
-        r'<pre\\b[^>]*class=["\'][^"\']*\\bmermaid\\b[^"\']*["\'][^>]*>(.*?)</pre\\s*>',
+        r'<pre\b[^>]*class=["\'][^"\']*\bmermaid\b[^"\']*["\'][^>]*>(.*?)</pre\s*>',
         re.I | re.S,
     )
     items: list[dict] = []
