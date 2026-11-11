@@ -22,7 +22,6 @@ from src.seo_metadata import SEOMetadata
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
 from src.autonomous_topic_discovery import AutonomousTopicDiscoverer
-from src.topic_opportunity import TopicOpportunityScorer
 from src.visual_tools import (
     audit_html_accessibility, capture_article_previews, generate_supporting_visuals,
     inject_visual_figures, render_mermaid_blocks,
