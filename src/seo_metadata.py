@@ -3,6 +3,7 @@
 import html
 import json
 import re
+from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional
 
 
