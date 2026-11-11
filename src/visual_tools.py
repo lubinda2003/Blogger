@@ -297,6 +297,12 @@ def capture_article_previews(article_html: str, output_dir: str) -> list[str]:
             for name, width, height in (("mobile", 390, 844), ("desktop", 1280, 900)):
                 page = browser.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
                 page.set_content(article_html, wait_until="domcontentloaded")
+                if MERMAID_JS.is_file() and page.locator(".mermaid").count():
+                    page.add_script_tag(path=str(MERMAID_JS.resolve()))
+                    page.evaluate("""async () => {
+                        window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' });
+                        await window.mermaid.run({ querySelector: '.mermaid' });
+                    }""")
                 page.screenshot(path=str(out / f"article-{name}.png"), full_page=True)
                 saved.append(str(out / f"article-{name}.png"))
                 page.close()
