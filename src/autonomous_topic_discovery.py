@@ -110,7 +110,7 @@ class AutonomousTopicDiscoverer:
             self.last_search_count += 1
             category_items = []
             for result in results:
-                title = re.sub(r"\\s+", " ", str(result.get("title") or "")).strip()
+                title = re.sub(r"\s+", " ", str(result.get("title") or "")).strip()
                 url = str(result.get("url") or "").strip()
                 content = str(result.get("content") or result.get("snippet") or "").strip()
                 if len(title) < 24 or len(title) > 150 or not self._allowed_url(url):
