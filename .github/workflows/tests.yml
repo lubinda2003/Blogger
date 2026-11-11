@@ -29,6 +29,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r config/requirements.txt
 
+      - name: Set up Node.js visual tools
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Install visual tooling
+        run: npm install --prefix tools/visuals --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        run: playwright install --with-deps chromium
+
       - name: Run Complete Test Suite
         run: |
           python -m unittest discover tests -v
