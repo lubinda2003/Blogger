@@ -310,6 +310,26 @@ class ResearchCollector:
         raw_units = re.split(r"[\n\r]+|[.?!]\s+", text)
         return [unit.strip() for unit in raw_units if len(unit.strip()) >= 15]
 
+    @staticmethod
+    def _numeric_markers(text: str) -> List[str]:
+        """Return numeric values with adjacent currency, percentage, or plus markers."""
+        markers = []
+        pattern = re.compile(r"(?<![\\w])(?:[$€£]\\s*)?\\d+(?:,\\d{3})*(?:\\.\\d+)?\\+?(?:\\s*%)?")
+        for match in pattern.finditer(text or ""):
+            value = re.sub(r"\\s+", "", match.group(0)).replace(",", "").lower()
+            if value:
+                markers.append(value)
+        return markers
+
+    @classmethod
+    def _supports_numeric_markers(cls, claim: str, evidence: str) -> bool:
+        """A passage cannot support a numeric claim unless every stated value appears in it."""
+        required = cls._numeric_markers(claim)
+        if not required:
+            return True
+        available = cls._numeric_markers(evidence)
+        return all(marker in available for marker in required)
+
     def find_supporting_excerpt(self, claim: str, content_corpus: str) -> Optional[str]:
         """Search actual retrieved text for a sentence or passage that substantively supports the claim."""
         if not claim or not content_corpus:
@@ -352,18 +372,18 @@ class ResearchCollector:
             b_lower = block.lower()
 
             # 1. Direct phrase or subphrase match in block
-            if claim_clean in b_lower:
+            if claim_clean in b_lower and self._supports_numeric_markers(claim, block):
                 return block[:250].strip()
 
             for sp in claim_subphrases:
-                if len(sp) > 8 and sp in b_lower:
+                if len(sp) > 8 and sp in b_lower and self._supports_numeric_markers(claim, block):
                     return block[:250].strip()
 
             # 2. Contextual co-occurrence: Essential tokens must appear TOGETHER in this single sentence/block
             block_matches = [t for t in tokens if t in b_lower]
             # Require at least 2 co-occurring tokens in the same sentence, or all if <= 2 tokens exist
             required_threshold = max(2, int(len(tokens) * 0.65)) if len(tokens) >= 3 else len(tokens)
-            if len(set(block_matches)) >= required_threshold:
+            if len(set(block_matches)) >= required_threshold and self._supports_numeric_markers(claim, block):
                 return block[:250].strip()
 
         # 3. Passage-level co-occurrence: roundup and comparison articles spread a long title's keywords over a
@@ -373,7 +393,7 @@ class ResearchCollector:
             needed = min(len(tokens), max(3, -(-len(tokens) * 7 // 10)))  # ceil(70%), at least 3
             for i in range(len(blocks)):
                 passage = " ".join(blocks[i:i + 4]).lower()
-                if len({t for t in tokens if t in passage}) >= needed:
+                if len({t for t in tokens if t in passage}) >= needed and self._supports_numeric_markers(claim, passage):
                     return blocks[i][:250].strip()
 
         return None
