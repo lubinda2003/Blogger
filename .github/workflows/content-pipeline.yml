@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     env:
-      # Manual runs follow the dry_run input. Scheduled runs are dry-run unless the repository
-      # variable SCHEDULED_LIVE is set to 'true' (Settings > Secrets and variables > Actions > Variables).
-      DRY_RUN: ${{ github.event_name == 'schedule' && vars.SCHEDULED_LIVE != 'true' }}
+      # Fail-safe default: manual and future scheduled runs must not create Blogger drafts.
+      # Change this deliberately only when an operator has approved a live draft run.
+      DRY_RUN: 'true'
 
     steps:
       # actions/checkout@v4 pinned to reviewed commit SHA
