@@ -42,7 +42,7 @@ def _title_size(length: int) -> int:
     for limit, size in ((30, 82), (45, 70), (60, 62), (80, 54)):
         if length <= limit:
             return size
-    return 44
+    return 46
 
 
 def build_html(title: str, kicker: str, seed: str) -> str:
@@ -109,12 +109,12 @@ body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:radi
 .art{position:absolute;inset:0;width:1200px;height:675px}
 </style></head><body><div class="texture"></div><div class="orb"></div>
 <svg class="art" viewBox="0 0 1200 675" aria-hidden="true">__ART____DOTS__</svg>
-<div class="copy"><div><div class="kicker">__KICKER__</div><div class="rule"></div></div><div class="title">__TITLE__</div>
+<div class="copy"><div><div class="kicker">__SAFE_KICKER_SLOT__</div><div class="rule"></div></div><div class="title">__SAFE_TITLE_SLOT__</div>
 <div class="brand"><span class="mark"></span><span>__BRAND__</span></div></div></body></html>"""
     values = {
         "__BG__": bg, "__BG2__": bg, "__ACCENT__": accent, "__POP__": pop, "__INK__": ink,
         "__SIZE__": str(min(_title_size(len(title.strip())), 68)), "__ART__": art, "__DOTS__": dots,
-        "__KICKER__": kicker_html, "__TITLE__": title_html, "__BRAND__": BRAND,
+        "__SAFE_KICKER_SLOT__": kicker_html, "__SAFE_TITLE_SLOT__": title_html, "__BRAND__": BRAND,
     }
     for key, value in values.items():
         template = template.replace(key, value)
