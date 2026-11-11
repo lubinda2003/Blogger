@@ -22,7 +22,10 @@ from src.seo_metadata import SEOMetadata
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
 from src.topic_opportunity import TopicOpportunityScorer
-from src.visual_tools import (\n    audit_html_accessibility, capture_article_previews, generate_supporting_visuals,\n    inject_visual_figures, render_mermaid_blocks,\n)
+from src.visual_tools import (
+    audit_html_accessibility, capture_article_previews, generate_supporting_visuals,
+    inject_visual_figures, render_mermaid_blocks,
+)
 
 # Configure logging with structured clean formatting
 logging.basicConfig(
