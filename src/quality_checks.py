@@ -280,11 +280,11 @@ class QualityGate:
 
         # 7b. Google product and API claims need primary-source evidence.
         source_urls = [s.get("url", "") for s in (draft.sources_used or [])]
-        mentions_google_product = bool(re.search(r"\\b(?:google|gemini)\\b", text_lower))
+        mentions_google_product = bool(re.search(r"\b(?:google|gemini)\b", text_lower))
         has_exact_pricing = bool(
-            re.search(r"\\$\\s?\\d|\\bper\\s+(?:1m|million)\\s+tokens\\b|\\bapi\\s+rates\\b", text_lower)
+            re.search(r"\$\s?\d|\bper\s+(?:1m|million)\s+tokens\b|\bapi\s+rates\b", text_lower)
         )
-        has_model_identifier = bool(re.search(r"\\bgemini\\s+\\d+(?:\\.\\d+)?\\s+flash\\b", text_lower))
+        has_model_identifier = bool(re.search(r"\bgemini\s+\d+(?:\.\d+)?\s+flash\b", text_lower))
         if mentions_google_product and has_exact_pricing and not has_official_google_source(source_urls, pricing=True):
             failures.append(
                 "Evidence check failed: Google/Gemini pricing claims require an official Google AI pricing or Cloud pricing source."
