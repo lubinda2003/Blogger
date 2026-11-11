@@ -114,10 +114,12 @@ body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:radi
     values = {
         "__BG__": bg, "__BG2__": bg, "__ACCENT__": accent, "__POP__": pop, "__INK__": ink,
         "__SIZE__": str(min(_title_size(len(title.strip())), 68)), "__ART__": art, "__DOTS__": dots,
-        "__SAFE_KICKER_SLOT__": kicker_html, "__SAFE_TITLE_SLOT__": title_html, "__BRAND__": BRAND,
+        "__BRAND__": BRAND,
     }
     for key, value in values.items():
         template = template.replace(key, value)
+    template = template.replace("__SAFE_KICKER_SLOT__", kicker_html)
+    template = template.replace("__SAFE_TITLE_SLOT__", title_html)
     return template
 
 
