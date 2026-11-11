@@ -89,10 +89,29 @@
         ],
         "word_count": 1055
       }
+    },
+    {
+      "topic_id": "obsidian-vs-notion-note-taking",
+      "topic_title": "Obsidian vs Notion: Which Note-Taking Tool Fits Your Workflow?",
+      "fingerprint": "e08709fd536eb9fc",
+      "post_id": "8753583739889597983",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-11T06:20:55.581485+00:00",
+      "metadata": {
+        "labels": [
+          "Software And Productivity",
+          "Obsidian",
+          "Notion",
+          "Note-Taking"
+        ],
+        "word_count": 1276
+      }
     }
   ],
-  "last_updated": "2026-11-10T21:31:19.808712+00:00",
-  "total_runs": 5,
+  "last_updated": "2026-11-11T06:20:55.581500+00:00",
+  "total_runs": 6,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1
