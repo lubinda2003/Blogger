@@ -10,6 +10,6 @@ Use these components only when they make the article easier to understand. The p
   `<div class="warning"><p>What to watch out for.</p></div>`
 - **Steps**: use for a task that must be completed in order.
   `<ol class="steps"><li><strong>Do this.</strong> Explain the step in plain English.</li></ol>`
-- **Comparison table**: use only when comparing three or more options across at least three useful points. Keep cells brief and every fact must come from verified research.
+- **Comparison table**: use only when comparing three or more options across at least three useful points. Keep cells brief and every fact must come from verified research. Always return it as real HTML with a `<table class="compare">`, a `<thead>` row of `<th>` cells, and a `<tbody>` of `<td>` cells. Never use a Markdown pipe table or describe a table in plain text.
 
 Most of the article should be normal paragraphs with clear `<h2>` and `<h3>` headings. Do not make the page look like a dashboard, catalogue or directory. Avoid stacking callout boxes and lists.
