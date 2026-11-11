@@ -2,6 +2,7 @@
 
 import html
 import re
+from html.parser import HTMLParser
 from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
@@ -66,6 +67,87 @@ def normalize_url(url: str) -> str:
     domain = parts[0].lower()
     path = "/" + parts[1] if len(parts) > 1 else ""
     return f"{domain}{path}".rstrip("/")
+
+
+class _FinalHTMLInspector(HTMLParser):
+    """Collect structural and security signals from the completed Blogger HTML fragment."""
+
+    VOID_TAGS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"}
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.tags = set()
+        self.ids = set()
+        self.duplicate_ids = set()
+        self.images_without_alt = 0
+        self.bad_images = []
+        self.bad_links = []
+        self.unsafe_attributes = []
+        self.parse_errors = []
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.add(tag.lower())
+        values = {key.lower(): value for key, value in attrs if key}
+        element_id = values.get("id")
+        if element_id:
+            if element_id in self.ids:
+                self.duplicate_ids.add(element_id)
+            self.ids.add(element_id)
+        for key in values:
+            if key.startswith("on"):
+                self.unsafe_attributes.append(f"{tag}[{key}]")
+        if tag.lower() == "img":
+            if not values.get("alt", "").strip():
+                self.images_without_alt += 1
+            src = values.get("src", "")
+            if not src.startswith("https://"):
+                self.bad_images.append(src or "(missing src)")
+        if tag.lower() == "a":
+            href = values.get("href", "").strip().lower()
+            if href and not (href.startswith(("https://", "http://", "#", "mailto:"))):
+                self.bad_links.append(values.get("href", ""))
+            if values.get("target", "").lower() == "_blank":
+                rel = set(values.get("rel", "").lower().split())
+                if not {"noopener", "noreferrer"}.issubset(rel):
+                    self.unsafe_attributes.append("a[target=_blank without noopener noreferrer]")
+
+    def handle_startendtag(self, tag, attrs):
+        self.handle_starttag(tag, attrs)
+
+    def error(self, message):
+        self.parse_errors.append(message)
+
+
+def validate_final_blogger_html(document: str) -> List[str]:
+    """Validate the fully transformed Blogger fragment immediately before API submission."""
+    failures: List[str] = []
+    if not isinstance(document, str) or not document.strip():
+        return ["Final HTML validation failed: document is empty."]
+    inspector = _FinalHTMLInspector()
+    try:
+        inspector.feed(document)
+        inspector.close()
+    except Exception as exc:
+        return [f"Final HTML validation failed: parser could not read document ({exc})."]
+    if "dt-article-body" not in document:
+        failures.append("Final HTML validation failed: styled article body wrapper is missing.")
+    if "h2" not in inspector.tags:
+        failures.append("Final HTML validation failed: article has no section headings (h2).")
+    if "Sources &amp; References" not in document and "Sources & References" not in document:
+        failures.append("Final HTML validation failed: visible Sources & References section is missing.")
+    if inspector.duplicate_ids:
+        failures.append("Final HTML validation failed: duplicate element IDs: " + ", ".join(sorted(inspector.duplicate_ids)) + ".")
+    if inspector.images_without_alt:
+        failures.append(f"Final HTML validation failed: {inspector.images_without_alt} image(s) have no descriptive alt text.")
+    if inspector.bad_images:
+        failures.append("Final HTML validation failed: image sources must be public HTTPS URLs (" + ", ".join(inspector.bad_images[:3]) + ").")
+    if inspector.bad_links:
+        failures.append("Final HTML validation failed: unsafe or unsupported link URL(s) detected.")
+    if inspector.unsafe_attributes:
+        failures.append("Final HTML validation failed: unsafe attributes or external-link protections missing (" + ", ".join(inspector.unsafe_attributes[:3]) + ").")
+    if re.search(r"(?:src|href)\\s*=\\s*[\\\"'](?:javascript:|data:text/html|file:)", document, re.I):
+        failures.append("Final HTML validation failed: dangerous URL scheme detected.")
+    return failures
 
 
 class QualityGate:
