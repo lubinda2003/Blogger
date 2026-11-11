@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 WIDTH, HEIGHT = 1200, 675
 BRAND = "The Digital Toolkit"
 TAGLINE = "Discover smarter tools. Work better. Do more."
-JPEG_MAGIC = b"\\xff\\xd8\\xff"
+JPEG_MAGIC = b"\xff\xd8\xff"
 
 # Topic families deliberately use different art direction; no fixed brand palette.
 PALETTES = {
