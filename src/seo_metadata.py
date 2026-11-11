@@ -90,6 +90,34 @@ class SEOMetadata:
         return f'<script type="application/ld+json">\n{json_str}\n</script>'
 
     @staticmethod
+    def _place_screenshot_in_section(body: str, image_url: str, figure: str, source_url: Optional[str] = None) -> str:
+        """Place screenshots after the first explanatory paragraph in a matching product section."""
+        host = (urlparse(source_url or image_url).hostname or "").lower()
+        host = re.sub(r"^(?:www|app|help|docs)\.", "", host)
+        brand = host.split(".")[0].replace("-", " ").strip()
+        aliases = {
+            "notion": ("notion",), "obsidian": ("obsidian",), "canva": ("canva",),
+            "shopify": ("shopify",), "claude": ("claude", "anthropic"),
+            "openai": ("openai", "chatgpt"), "chatgpt": ("chatgpt", "openai"),
+        }
+        terms = aliases.get(brand, (brand,)) if brand else ()
+        headings = list(re.finditer(r"<h([23])\b[^>]*>(.*?)</h\1\s*>", body, re.I | re.S))
+        target = None
+        for index, heading in enumerate(headings):
+            heading_text = re.sub(r"<[^>]+>", " ", html.unescape(heading.group(2))).lower()
+            if terms and any(term in heading_text for term in terms):
+                section_end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
+                paragraph = re.search(r"</p\s*>", body[heading.end():section_end], re.I)
+                target = heading.end() + paragraph.end() if paragraph else heading.end()
+                break
+        if target is not None:
+            return body[:target] + "\n" + figure + body[target:]
+        refs = re.search(r"<h[23]\b[^>]*>[^<]*(?:sources?|references?)\b.*?</h[23]\s*>", body, re.I | re.S)
+        if refs:
+            return body[:refs.start()] + figure + "\n" + body[refs.start():]
+        return body.rstrip() + "\n" + figure
+
+    @staticmethod
     def inject_seo_and_assets(
         html_body: str,
         title: str,
@@ -124,25 +152,46 @@ class SEOMetadata:
                 f'</figure>'
             )
 
-        # Multiple verified screenshots support product comparisons; retain legacy single-image compatibility.
+        # Place each verified screenshot in the article section it illustrates.
         screenshot_items = public_screenshot_items or (
             [{"url": public_screenshot_url, "caption": screenshot_caption or "", "alt": screenshot_alt or title}]
             if public_screenshot_url else []
         )
+        body_with_screenshots = html_body
+        seen_urls = set()
         for item in screenshot_items:
             image_url = item.get("url", "")
             if not image_url.startswith("https://") or any(
                 sub in image_url for sub in ("localhost", "127.0.0.1", "output/")
-            ):
+            ) or image_url in seen_urls:
                 continue
+            seen_urls.add(image_url)
             clean_alt = html.escape(item.get("alt", title))
             clean_caption = html.escape(item.get("caption", ""))
-            blocks.append(
-                f'<figure class="article-screenshot" style="margin:24px 0; text-align:center;">\\n'
-                f'  <img src="{html.escape(image_url)}" alt="{clean_alt}" loading="lazy" style="max-width:100%; height:auto; border-radius:6px; border:1px solid #e2e8f0;" />\\n'
-                f'  <figcaption style="font-size:13px; color:#64748b; margin-top:8px;">{clean_caption}</figcaption>\\n'
-                f'</figure>'
+            figure = (
+                '<figure class="article-screenshot" style="margin:24px auto 28px;max-width:900px;text-align:center;">\\n'
+                f'  <img src="{html.escape(image_url)}" alt="{clean_alt}" loading="lazy" '
+                'style="display:block;width:100%;max-width:100%;height:auto;margin:0 auto;border-radius:8px;border:1px solid #e2e8f0;" />\\n'
+                f'  <figcaption style="font-size:13px;line-height:1.5;color:#64748b;margin-top:9px;">{clean_caption}</figcaption>\\n'
+                '</figure>'
             )
-
-        blocks.append(html_body)
+            body_with_screenshots = SEOMetadata._place_screenshot_in_section(
+                body_with_screenshots, image_url, figure, item.get("source_url")
+            )
+        body_with_screenshots = (
+            '<div class="dt-article-body" style="font-family:Arial,Helvetica,sans-serif;'
+            'font-size:16px;line-height:1.75;color:#202124;max-width:860px;margin:0 auto;">\\n'
+            + body_with_screenshots + '\\n</div>'
+        )
+        body_with_screenshots = re.sub(
+            r'<h2(?![^>]*\bstyle=)([^>]*)>',
+            r'<h2\1 style="font-family:Arial,Helvetica,sans-serif;font-size:25px;line-height:1.3;font-weight:700;margin:34px 0 12px;color:inherit;">',
+            body_with_screenshots, flags=re.I
+        )
+        body_with_screenshots = re.sub(
+            r'<h3(?![^>]*\bstyle=)([^>]*)>',
+            r'<h3\1 style="font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.4;font-weight:700;margin:24px 0 9px;color:inherit;">',
+            body_with_screenshots, flags=re.I
+        )
+        blocks.append(body_with_screenshots)
         return "\n\n".join(blocks)
