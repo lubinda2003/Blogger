@@ -38,7 +38,7 @@ jobs:
         run: npm install --prefix tools/visuals --no-audit --no-fund
 
       - name: Install Playwright Chromium
-        run: playwright install --with-deps chromium
+        run: playwright install chromium
 
       - name: Run Complete Test Suite
         run: |
