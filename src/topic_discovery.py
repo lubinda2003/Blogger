@@ -22,6 +22,7 @@ class TopicItem:
     requires_screenshot: bool
     target_url: str
     target_audience: str
+    screenshot_targets: List[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -33,6 +34,7 @@ class TopicItem:
             "requires_screenshot": self.requires_screenshot,
             "target_url": self.target_url,
             "target_audience": self.target_audience,
+            "screenshot_targets": self.screenshot_targets or [],
         }
 
 
@@ -69,6 +71,7 @@ class TopicDiscovery:
                     requires_screenshot=req_screenshot,
                     target_url=row.get("target_url", "").strip(),
                     target_audience=row.get("target_audience", "Digital Workers").strip(),
+                    screenshot_targets=[u.strip() for u in (row.get("screenshot_targets") or "").split(";") if u.strip()],
                 )
                 if item.id and item.topic:
                     items.append(item)

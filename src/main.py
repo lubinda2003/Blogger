@@ -307,67 +307,69 @@ def run_pipeline(
 
     # -------------------------------------------------------------
     # Stage 5: Screenshot Capture (Playwright)
-    # -------------------------------------------------------------
+    # Topic-owned URLs are trusted editorial targets; the model cannot invent capture destinations.
     t0 = time.time()
-    screenshot_res = None
-    if draft.screenshot_needed:
+    screenshot_results = []
+    capture_targets = topic.screenshot_targets or ([topic.target_url] if (topic.requires_screenshot or draft.screenshot_needed) else [])
+    if draft.screenshot_needed or topic.requires_screenshot or topic.screenshot_targets:
         capturer = ScreenshotCapture(
             output_dir=os.path.join(config.output_dir, "screenshots"),
             viewport_width=config.screenshot_viewport_width,
             viewport_height=config.screenshot_viewport_height,
             timeout_ms=config.screenshot_timeout_ms,
         )
-        screenshot_res = capturer.capture(
-            url=topic.target_url,
-            slug=topic.id,
-            alt_text=draft.screenshot_alt_text or draft.title,
-            caption=draft.screenshot_caption or f"Screenshot for {topic.topic}",
-            mock_mode=config.dry_run,
-        )
-
-        reporter.screenshot_captured = bool(screenshot_res and screenshot_res.success)
-        if not screenshot_res.success:
-            if topic.requires_screenshot:
-                logger.error(f"Required screenshot capture failed closed: {screenshot_res.error_message}")
-                _record_failure(state_store, config, topic, screenshot_res.error_message)
-                reporter.add_stage(
-                    stage_name="Screenshot Capture",
-                    status="FAILED",
-                    duration_seconds=time.time() - t0,
-                    details=screenshot_res.error_message,
-                )
-                reporter.finalize(success=False, next_action="Verify target URL is accessible without auth walls.")
-                return 1
-            else:
-                warn_msg = screenshot_res.error_message
-                logger.warning(f"Optional screenshot capture failed: {warn_msg}. Continuing without image.")
-                screenshot_res = None
-                draft.screenshot_needed = False  # nothing to validate; QA must not demand it
-                reporter.add_stage(
-                    stage_name="Screenshot Capture",
-                    status="SKIPPED",
-                    duration_seconds=time.time() - t0,
-                    details=f"Optional screenshot failed ({warn_msg}); published without image.",
-                )
-
-        if screenshot_res is not None:
-            img_hosted_msg = (
-                f"Hosted: {screenshot_res.public_url}"
-                if screenshot_res.public_url
-                else "Saved locally; omitted from HTML to prevent broken links"
+        for index, target_url in enumerate(capture_targets, start=1):
+            from urllib.parse import urlparse
+            host = urlparse(target_url).hostname or "product website"
+            result = capturer.capture(
+                url=target_url,
+                slug=f"{topic.id}-{index}",
+                alt_text=f"{host} interface screenshot",
+                caption=f"Official {host} website interface",
+                mock_mode=config.dry_run,
             )
+            screenshot_results.append(result)
+            if not result.success:
+                logger.warning(f"Screenshot capture failed for {target_url}: {result.error_message}")
+                if topic.requires_screenshot:
+                    _record_failure(state_store, config, topic, result.error_message or "Required screenshot failed")
+                    reporter.add_stage(
+                        stage_name="Screenshot Capture",
+                        status="FAILED",
+                        duration_seconds=time.time() - t0,
+                        details=f"Required screenshot failed for {target_url}: {result.error_message}",
+                    )
+                    reporter.finalize(success=False, next_action="Check whether the official product page permits browser access.")
+                    return 1
+
+        screenshot_res = next((item for item in screenshot_results if item.success), None)
+        reporter.screenshot_captured = bool(screenshot_res)
+        successes = sum(1 for item in screenshot_results if item.success)
+        if successes:
             reporter.add_stage(
                 stage_name="Screenshot Capture",
                 status="SUCCESS",
                 duration_seconds=time.time() - t0,
-                details=f"Captured image ({screenshot_res.file_size_bytes} bytes). {img_hosted_msg}",
+                details=f"Captured {successes} of {len(screenshot_results)} configured genuine website screenshot(s).",
+            )
+        else:
+            # An optional screenshot is an enhancement, not a hard QA requirement.
+            # Clear the draft flag when the capture failed; required topics already fail closed above.
+            if not topic.requires_screenshot:
+                draft.screenshot_needed = False
+            reporter.add_stage(
+                stage_name="Screenshot Capture",
+                status="SKIPPED",
+                duration_seconds=time.time() - t0,
+                details="No usable screenshot was captured; no local or mock image will be embedded.",
             )
     else:
+        screenshot_res = None
         reporter.add_stage(
             stage_name="Screenshot Capture",
             status="SKIPPED",
             duration_seconds=0.0,
-            details="Topic does not require software interface screenshots.",
+            details="Neither the editorial topic nor the article requires an interface screenshot.",
         )
 
     if stage_limit == "screenshot":
@@ -455,14 +457,16 @@ def run_pipeline(
     t0 = time.time()
 
     # Prepare final HTML - NEVER passes local paths
-    public_img = screenshot_res.public_url if (screenshot_res and screenshot_res.success) else None
+    public_screenshot_items = [
+        {"url": item.public_url, "caption": item.caption, "alt": item.alt_text}
+        for item in screenshot_results
+        if item.success and item.public_url and not item.is_mock
+    ]
     final_html = SEOMetadata.inject_seo_and_assets(
         html_body=apply_layout(draft.html_content),
         title=draft.title,
         meta_description=draft.meta_description,
-        public_screenshot_url=public_img,
-        screenshot_caption=screenshot_res.caption if public_img else None,
-        screenshot_alt=screenshot_res.alt_text if public_img else None,
+        public_screenshot_items=public_screenshot_items,
         featured_image_url=featured.public_url if featured else None,
         featured_image_alt=featured.alt_text if featured else None,
     )
