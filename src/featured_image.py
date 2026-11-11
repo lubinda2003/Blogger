@@ -94,6 +94,7 @@ def build_html(title: str, kicker: str, seed: str) -> str:
             '<path d="M810 395h220M810 430h165" stroke="__ACCENT__" stroke-width="10" stroke-linecap="round" opacity=".55"/>'
         )
     art = art.replace("__ACCENT__", accent).replace("__POP__", pop).replace("__BG2__", bg)
+    dots = dots.replace("__POP__", pop)
     # Small deterministic decorative dots make repeat runs stable but not identical across articles.
     dots = "".join(
         f'<circle cx="{760 + digest[i] % 350}" cy="{100 + digest[i+1] % 470}" r="{5 + digest[i+2] % 10}" fill="__POP__" opacity=".5"/>'
