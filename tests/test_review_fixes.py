@@ -254,7 +254,7 @@ class TestRepoImageHosting(unittest.TestCase):
             out.stdout = " A assets/x.png" if "status" in cmd else ""
             return out
 
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run", fake_run):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("src.visual_tools.optimize_image", side_effect=lambda path: path), patch("subprocess.run", fake_run):
             url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "notion-project-management-setup", "a" * 64)
         self.assertTrue(url.startswith("https://cdn.jsdelivr.net/gh/lubinda2003/Blogger@main/"))
         self.assertIn("notion-project-management-setup-aaaaaaaaaa.png", url)
@@ -271,7 +271,7 @@ class TestRepoImageHosting(unittest.TestCase):
             out.stdout = " A x"
             return out
 
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run", boom):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("src.visual_tools.optimize_image", side_effect=lambda path: path), patch("subprocess.run", boom):
             self.assertIsNone(self._capture(tmp).publish_to_repo_assets(self._png(tmp), "slug", "b" * 64))
 
     def test_disabled_outside_github_actions(self):
@@ -289,13 +289,13 @@ class TestRepoImageHosting(unittest.TestCase):
             out.stdout = ""  # git status clean: identical image already in repo
             return out
 
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run", fake_run):
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("src.visual_tools.optimize_image", side_effect=lambda path: path), patch("subprocess.run", fake_run):
             url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "slug", "d" * 64)
         self.assertIsNotNone(url)
         self.assertFalse(any("commit" in c or "push" in c for c in calls))
 
     def test_slug_is_sanitised(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("subprocess.run") as run:
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("src.visual_tools.optimize_image", side_effect=lambda path: path), patch("subprocess.run") as run:
             run.return_value.stdout = ""
             url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "../../etc/Pass wd", "e" * 64)
         self.assertNotIn("..", url)

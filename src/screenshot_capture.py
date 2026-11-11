@@ -161,12 +161,14 @@ class ScreenshotCapture:
         if not repo or not ref:
             return None
         try:
-            safe_slug = re.sub(r"[^a-z0-9\-]+", "-", slug.lower()).strip("-") or "image"
+            safe_slug = re.sub(r"[^a-z0-9\\-]+", "-", slug.lower()).strip("-") or "image"
+            from src.visual_tools import optimize_image
+            publish_path = optimize_image(local_path)
             dest_dir = Path(self.repo_assets_dir)
             dest_dir.mkdir(parents=True, exist_ok=True)
             # Content hash in the filename: URLs are immutable, so the CDN can never serve a stale image.
-            dest = dest_dir / f"{safe_slug}-{sha256[:10]}{local_path.suffix.lower() or '.png'}"
-            shutil.copyfile(local_path, dest)
+            dest = dest_dir / f"{safe_slug}-{sha256[:10]}{publish_path.suffix.lower() or '.png'}"
+            shutil.copyfile(publish_path, dest)
             rel = dest.as_posix()
 
             def git(*args: str) -> str:

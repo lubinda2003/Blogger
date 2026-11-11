@@ -9,7 +9,7 @@ import re
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -59,6 +59,19 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
                 "alt_text": {"type": "STRING"},
             },
         },
+        "visual_plan": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "prompt": {"type": "STRING"},
+                    "alt_text": {"type": "STRING"},
+                    "caption": {"type": "STRING"},
+                    "section_heading": {"type": "STRING"},
+                },
+                "required": ["prompt", "alt_text", "caption", "section_heading"],
+            },
+        },
         "featured_image_brief": {
             "type": "OBJECT",
             "properties": {
@@ -93,6 +106,7 @@ class ArticleDraft:
     screenshot_alt_text: Optional[str] = None
     suggested_slug: Optional[str] = None
     featured_image_brief: Optional[Dict[str, str]] = None
+    visual_plan: List[Dict[str, str]] = field(default_factory=list)
     actual_provider: str = ""
     actual_model: str = ""
 
@@ -116,6 +130,7 @@ class ArticleDraft:
             "screenshot_alt_text": self.screenshot_alt_text,
             "suggested_slug": self.suggested_slug,
             "featured_image_brief": self.featured_image_brief,
+            "visual_plan": self.visual_plan,
             "actual_provider": self.actual_provider,
             "actual_model": self.actual_model,
         }
@@ -181,6 +196,18 @@ class ArticleWriter:
         for guide in (self._voice_guide(), self._read_guide(self.layout_guide_path)):
             if guide:
                 prompt += "\n\n---\n\n" + guide + "\n"
+        prompt += (
+            "\n\n## Supporting Visual Plan (optional)\n"
+            "Return a visual_plan array with zero, one, or two custom editorial image concepts only when "
+            "they materially help explain the article. Each item must include: prompt (a specific photorealistic "
+            "scene description with no text, logos, UI claims or invented product screens), alt_text, caption, "
+            "and section_heading (an exact or near-exact article heading where it belongs). Do not create "
+            "decorative filler. Genuine product interfaces must be captured as screenshots, never fabricated. "
+            "Keep the total supporting visuals (screenshots plus custom visuals) at three or fewer.\n"
+            "When a process, decision path, or architecture is genuinely easier to understand visually, include "
+            'at most one <pre class="mermaid">...</pre> block using valid Mermaid flowchart syntax. '
+            "Do not invent statistics or add decorative diagrams.\n"
+        )
         if self.min_word_count:
             prompt += (
                 "\n\n## Length Requirement (hard)\n\n"
@@ -935,8 +962,23 @@ against primary documentation."</code>
             "description": image_desc,
             "alt_text": image_alt,
             "aspect_ratio": "16:9",
-            "note": "Editorial design specification only; does not claim an image is automatically generated or hosted.",
+            "note": "Editorial design specification for the optional image-generation stage.",
         }
+        visual_plan = []
+        for item in parsed.get("visual_plan", [])[:2]:
+            if not isinstance(item, dict):
+                continue
+            prompt_text = str(item.get("prompt", "")).strip()
+            alt_text = str(item.get("alt_text", "")).strip()
+            caption = str(item.get("caption", "")).strip()
+            section_heading = str(item.get("section_heading", "")).strip()
+            if prompt_text and alt_text and section_heading:
+                visual_plan.append({
+                    "prompt": prompt_text[:1800],
+                    "alt_text": alt_text[:240],
+                    "caption": caption[:300],
+                    "section_heading": section_heading[:180],
+                })
 
         return ArticleDraft(
             topic_id=topic.id,
@@ -957,6 +999,7 @@ against primary documentation."</code>
             screenshot_alt_text=screenshot_spec.get("alt_text", f"Official interface for {topic.topic}"),
             suggested_slug=slug,
             featured_image_brief=image_brief,
+            visual_plan=visual_plan,
             actual_provider=provider_used,
             actual_model=model_used,
         )
