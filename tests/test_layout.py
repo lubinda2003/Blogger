@@ -56,7 +56,7 @@ class TestStepsAndTables(unittest.TestCase):
     def test_markdown_pipe_table_is_converted_and_styled(self):
         body = "| Tool | Best for |\n| --- | :---: |\n| Alpha | Research |\n| Beta | Writing |"
         out = apply_layout(body)
-        self.assertIn('<table class="compare">', out)
+        self.assertIn('<table class="compare" style=', out)
         self.assertIn("<th>Tool</th>", out)
         self.assertIn("<td>Research</td>", out)
         self.assertIn("overflow-x:auto", out)
