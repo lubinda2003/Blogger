@@ -145,8 +145,6 @@ def validate_final_blogger_html(document: str) -> List[str]:
         failures.append("Final HTML validation failed: unsafe or unsupported link URL(s) detected.")
     if inspector.unsafe_attributes:
         failures.append("Final HTML validation failed: unsafe attributes or external-link protections missing (" + ", ".join(inspector.unsafe_attributes[:3]) + ").")
-    if re.search(r"(?:src|href)\\s*=\\s*[\\\"'](?:javascript:|data:text/html|file:)", document, re.I):
-        failures.append("Final HTML validation failed: dangerous URL scheme detected.")
     return failures
 
 
