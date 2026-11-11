@@ -485,8 +485,10 @@ def run_pipeline(
                 repo_assets_dir="assets/visuals",
             )
             diagram_publisher = diagram_host.publish_to_repo_assets
+        successful_screenshots = sum(1 for item in screenshot_results if item.success and not item.is_mock)
         article_body, diagram_assets = render_mermaid_blocks(
-            article_body, config.output_dir, publisher=diagram_publisher
+            article_body, config.output_dir, publisher=diagram_publisher,
+            max_items=max(0, 3 - successful_screenshots),
         )
         if diagram_assets:
             reporter.add_stage(
