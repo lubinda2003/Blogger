@@ -170,10 +170,10 @@ class SEOMetadata:
             clean_alt = html.escape(item.get("alt", title))
             clean_caption = html.escape(item.get("caption", ""))
             figure = (
-                '<figure class="article-screenshot" style="margin:24px auto 28px;max-width:900px;text-align:center;">\\n'
+                '<figure class="article-screenshot" style="margin:24px auto 28px;max-width:900px;text-align:center;">\n'
                 f'  <img src="{html.escape(image_url)}" alt="{clean_alt}" loading="lazy" '
-                'style="display:block;width:100%;max-width:100%;height:auto;margin:0 auto;border-radius:8px;border:1px solid #e2e8f0;" />\\n'
-                f'  <figcaption style="font-size:13px;line-height:1.5;color:#64748b;margin-top:9px;">{clean_caption}</figcaption>\\n'
+                'style="display:block;width:100%;max-width:100%;height:auto;margin:0 auto;border-radius:8px;border:1px solid #e2e8f0;" />\n'
+                f'  <figcaption style="font-size:13px;line-height:1.5;color:#64748b;margin-top:9px;">{clean_caption}</figcaption>\n'
                 '</figure>'
             )
             body_with_screenshots = SEOMetadata._place_screenshot_in_section(
@@ -181,8 +181,8 @@ class SEOMetadata:
             )
         body_with_screenshots = (
             '<div class="dt-article-body" style="font-family:Arial,Helvetica,sans-serif;'
-            'font-size:16px;line-height:1.75;color:#202124;max-width:860px;margin:0 auto;">\\n'
-            + body_with_screenshots + '\\n</div>'
+            'font-size:16px;line-height:1.75;color:#202124;max-width:860px;margin:0 auto;">\n'
+            + body_with_screenshots + '\n</div>'
         )
         body_with_screenshots = re.sub(
             r'<h2(?![^>]*\bstyle=)([^>]*)>',
