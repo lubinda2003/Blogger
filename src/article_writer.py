@@ -205,7 +205,7 @@ class ArticleWriter:
             "decorative filler. Genuine product interfaces must be captured as screenshots, never fabricated. "
             "Keep the total supporting visuals (screenshots plus custom visuals) at three or fewer.\n"
             "When a process, decision path, or architecture is genuinely easier to understand visually, include "
-            "at most one <pre class=\\"mermaid\\">...</pre> block using valid Mermaid flowchart syntax. "
+            'at most one <pre class="mermaid">...</pre> block using valid Mermaid flowchart syntax. '
             "Do not invent statistics or add decorative diagrams.\n"
         )
         if self.min_word_count:
