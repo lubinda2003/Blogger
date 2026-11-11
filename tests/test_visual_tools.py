@@ -34,14 +34,19 @@ class TestVisualHelpers(unittest.TestCase):
     def test_supporting_visual_generation_is_capped_at_two(self):
         with patch.dict(os.environ, {"IMAGE_GENERATION_ENABLED": "true"}, clear=False), \
              patch("src.visual_tools.generate_gemini_image") as generate:
-            generate.side_effect = lambda prompt, path, **kw: Path(path)
-            with patch("src.visual_tools.Path.mkdir"):
-                items = generate_supporting_visuals(
-                    [{"prompt": "one", "alt_text": "one", "caption": "", "section_heading": "One"},
-                     {"prompt": "two", "alt_text": "two", "caption": "", "section_heading": "Two"},
-                     {"prompt": "three", "alt_text": "three", "caption": "", "section_heading": "Three"}],
-                    "output",
-                )
+            def fake_generate(prompt, path, **kw):
+                target = Path(path)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"test image bytes")
+                return target
+
+            generate.side_effect = fake_generate
+            items = generate_supporting_visuals(
+                [{"prompt": "one", "alt_text": "one", "caption": "", "section_heading": "One"},
+                 {"prompt": "two", "alt_text": "two", "caption": "", "section_heading": "Two"},
+                 {"prompt": "three", "alt_text": "three", "caption": "", "section_heading": "Three"}],
+                "output",
+            )
             self.assertEqual(generate.call_count, 2)
             self.assertEqual(len(items), 2)
 
