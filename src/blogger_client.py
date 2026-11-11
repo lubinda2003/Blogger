@@ -175,28 +175,44 @@ class BloggerClient:
             except Exception as e:
                 raise RuntimeError(f"Blogger reconciliation check failed ({e}). Stopping to prevent duplicates.") from e
 
-        # 2. List recent posts and check topic_id marker or label
+        # 2. Page through every Blogger post and check topic_id marker or label.
+        # Blogger returns nextPageToken when more results exist. Reconciliation is
+        # fail-closed: any page error or repeated token aborts before insertion.
         if topic_id:
             try:
-                list_url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts?fetchBodies=true&maxResults=50&status=draft&status=live&status=scheduled"
-                req = urllib.request.Request(
-                    list_url,
-                    headers={
-                        "Authorization": f"Bearer {self._access_token}",
-                        "User-Agent": USER_AGENT,
-                    },
-                    method="GET",
+                base_url = (
+                    f"{self.BASE_URL}/blogs/{self.blog_id}/posts"
+                    "?fetchBodies=true&maxResults=50"
+                    "&status=draft&status=live&status=scheduled"
                 )
-                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                    data = json.loads(resp.read().decode("utf-8"))
-                    items = data.get("items", [])
-                    marker = f"topic_id: {topic_id} -->"  # exact: "foo" must not match "foo-bar"
-                    label_tag = f"TopicID:{topic_id}"
-                    for item in items:
+                page_token = None
+                seen_page_tokens = set()
+                marker = f"topic_id: {topic_id} -->"  # exact: "foo" must not match "foo-bar"
+                label_tag = f"TopicID:{topic_id}"
+
+                while True:
+                    list_url = base_url
+                    if page_token:
+                        list_url += f"&pageToken={urllib.parse.quote(page_token, safe='')}"
+                    req = urllib.request.Request(
+                        list_url,
+                        headers={
+                            "Authorization": f"Bearer {self._access_token}",
+                            "User-Agent": USER_AGENT,
+                        },
+                        method="GET",
+                    )
+                    with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                        data = json.loads(resp.read().decode("utf-8"))
+
+                    for item in data.get("items", []):
                         content = item.get("content", "")
                         item_labels = item.get("labels", [])
                         if marker in content or label_tag in item_labels:
-                            logger.info(f"Reconciliation matched existing post ID {item.get('id')} by topic_id marker/label '{topic_id}'")
+                            logger.info(
+                                f"Reconciliation matched existing post ID {item.get('id')} "
+                                f"by topic_id marker/label '{topic_id}'"
+                            )
                             return BloggerPostResult(
                                 success=True,
                                 post_id=item.get("id"),
@@ -205,8 +221,19 @@ class BloggerClient:
                                 is_draft=item.get("status") == "DRAFT",
                                 reconciled_existing=True,
                             )
+
+                    next_page_token = data.get("nextPageToken")
+                    if not next_page_token:
+                        break
+                    if next_page_token in seen_page_tokens:
+                        raise RuntimeError("Blogger returned a repeated page token during reconciliation.")
+                    seen_page_tokens.add(next_page_token)
+                    page_token = next_page_token
             except Exception as e:
-                raise RuntimeError(f"Blogger post list reconciliation failed ({e}). Stopping to prevent duplicates.") from e
+                raise RuntimeError(
+                    f"Blogger post list reconciliation failed ({e}). "
+                    "Stopping to prevent duplicates."
+                ) from e
 
         return None
 

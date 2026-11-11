@@ -154,6 +154,71 @@ class TestBloggerPayload(unittest.TestCase):
             errors = cfg.validate_for_mode(stage="all")
             self.assertFalse(any("CONFIRM_LIVE_PUBLISH" in e for e in errors))
 
+    def test_topic_id_reconciliation_finds_match_on_second_page(self):
+        """Topic markers on older pages must prevent duplicate insertion."""
+        self.client._access_token = "mock-token"
+        page_one = MagicMock()
+        page_one.__enter__.return_value.read.return_value = b'{"items":[{"id":"newer","title":"Newer"}],"nextPageToken":"page/2 + token"}'
+        page_two = MagicMock()
+        page_two.__enter__.return_value.read.return_value = (
+            b'{"items":[{"id":"older","title":"Older","url":"https://example.com/older",'
+            b'"status":"DRAFT","content":"<!-- topic_id: archived-topic -->"}]}'
+        )
+
+        with patch("urllib.request.urlopen", side_effect=[page_one, page_two]) as mock_urlopen:
+            result = self.client.reconcile_existing_post("", topic_id="archived-topic")
+
+        self.assertTrue(result.reconciled_existing)
+        self.assertEqual(result.post_id, "older")
+        self.assertEqual(mock_urlopen.call_count, 2)
+        self.assertIn("pageToken=page%2F2%20%2B%20token", mock_urlopen.call_args_list[1].args[0].full_url)
+
+    def test_topic_id_reconciliation_stops_after_final_page(self):
+        """A response without nextPageToken must not cause an unnecessary request."""
+        self.client._access_token = "mock-token"
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = b'{"items":[]}'
+
+        with patch("urllib.request.urlopen", return_value=response) as mock_urlopen:
+            result = self.client.reconcile_existing_post("", topic_id="not-present")
+
+        self.assertIsNone(result)
+        self.assertEqual(mock_urlopen.call_count, 1)
+
+    def test_topic_id_reconciliation_fails_closed_on_later_page_error(self):
+        """A later-page API failure must stop reconciliation rather than risk a duplicate."""
+        self.client._access_token = "mock-token"
+        first_page = MagicMock()
+        first_page.__enter__.return_value.read.return_value = b'{"items":[],"nextPageToken":"page-2"}'
+        later_error = urllib.error.HTTPError(
+            url="https://www.googleapis.com/blogger/v3/blogs/1234567890/posts",
+            code=503,
+            msg="Service Unavailable",
+            hdrs={},
+            fp=MagicMock(read=lambda: b"Unavailable"),
+        )
+
+        with patch("urllib.request.urlopen", side_effect=[first_page, later_error]):
+            with self.assertRaises(RuntimeError) as cm:
+                self.client.reconcile_existing_post("", topic_id="topic")
+
+        self.assertIn("Stopping to prevent duplicates", str(cm.exception))
+
+    def test_topic_id_reconciliation_rejects_repeated_page_token(self):
+        """Repeated pagination tokens must not create an infinite request loop."""
+        self.client._access_token = "mock-token"
+        first_page = MagicMock()
+        first_page.__enter__.return_value.read.return_value = b'{"items":[],"nextPageToken":"same"}'
+        second_page = MagicMock()
+        second_page.__enter__.return_value.read.return_value = b'{"items":[],"nextPageToken":"same"}'
+
+        with patch("urllib.request.urlopen", side_effect=[first_page, second_page]) as mock_urlopen:
+            with self.assertRaises(RuntimeError) as cm:
+                self.client.reconcile_existing_post("", topic_id="topic")
+
+        self.assertIn("repeated page token", str(cm.exception))
+        self.assertEqual(mock_urlopen.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()
