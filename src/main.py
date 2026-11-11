@@ -22,7 +22,7 @@ from src.seo_metadata import SEOMetadata
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
 from src.topic_opportunity import TopicOpportunityScorer
-from src.visual_tools import audit_html_accessibility, capture_article_previews, render_mermaid_blocks
+from src.visual_tools import (\n    audit_html_accessibility, capture_article_previews, generate_supporting_visuals,\n    inject_visual_figures, render_mermaid_blocks,\n)
 
 # Configure logging with structured clean formatting
 logging.basicConfig(
@@ -533,7 +533,21 @@ def run_pipeline(
         {"url": item.public_url, "source_url": item.url, "caption": item.caption, "alt": item.alt_text}
         for item in screenshot_results
         if item.success and item.public_url and not item.is_mock
-    ]
+    ][:3]
+    visual_publisher = None
+    if not config.dry_run:
+        visual_host = ScreenshotCapture(
+            output_dir=os.path.join(config.output_dir, "visuals"),
+            repo_assets_dir="assets/visuals",
+        )
+        visual_publisher = visual_host.publish_to_repo_assets
+    supporting_visuals = generate_supporting_visuals(
+        draft.visual_plan,
+        config.output_dir,
+        publisher=visual_publisher,
+        max_items=max(0, 3 - len(public_screenshot_items) - len(diagram_assets)),
+    )
+    article_body = inject_visual_figures(article_body, supporting_visuals)
     final_html = SEOMetadata.inject_seo_and_assets(
         html_body=apply_layout(article_body),
         title=draft.title,
