@@ -29,7 +29,7 @@ Articles should use plain English, practical examples, accurate sourcing, and ho
 ## How the pipeline works
 
 1. **Configuration and safety checks** — load settings and validate required credentials.
-2. **Topic selection** — select an eligible topic from `data/topics.csv` and check repository state.
+2. **Autonomous topic discovery** — Tavily searches across the four editorial pillars, identifies fresh search-result opportunities, filters previously processed topics, and selects a candidate. The CSV is optional for manual topic selection, not a required queue.
 3. **Duplicate reconciliation** — in live mode, check Blogger for an existing post before generating another.
 4. **Research** — discover and verify sources; insufficient evidence stops the run.
 5. **Article generation** — generate structured article content using the configured language-model provider.
@@ -50,7 +50,7 @@ Workflow: [Blogger Content Pipeline](.github/workflows/content-pipeline.yml)
 - Default dry-run setting: **true**.
 - Default publishing mode: **draft**.
 - Provider choice: `auto` (Gemini with Groq failover), `groq`, or `gemini`.
-- Optional input: a specific topic ID from `data/topics.csv`.
+- Optional input: a specific topic ID from the optional `data/topics.csv` editorial ideas file. Leave it empty for autonomous Tavily discovery.
 - Runs are serialized so concurrent executions do not race over topic state.
 - Reports and output artifacts are uploaded; the latest scrubbed report is also published to the `run-reports` branch.
 
@@ -144,7 +144,7 @@ Some live pipeline functions require valid API credentials and network access. K
 
 ## Topic state and run reports
 
-- `data/topics.csv` contains candidate topics.
+- `data/topics.csv` is an optional manual/editorial seed list. Normal runs discover topics through Tavily and do not depend on this file.
 - `data/processed_topics.json` records processed-topic state and helps prevent duplicate work.
 - Live runs can commit updated topic state back to the branch.
 - The workflow uploads execution artifacts with a 14-day retention period.
