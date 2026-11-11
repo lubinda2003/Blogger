@@ -80,6 +80,11 @@ jobs:
         run: |
           playwright install --with-deps chromium
 
+      # Run the complete regression suite before any live generation or Blogger write.
+      - name: Run automated tests
+        run: |
+          python -m unittest discover -s tests -v
+
       - name: Run Editorial & Publishing Pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
