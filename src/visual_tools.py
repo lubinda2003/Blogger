@@ -3,6 +3,7 @@
 The Python pipeline keeps Playwright as its only browser automation layer. Mermaid and
 axe-core are loaded from locally installed npm packages; Sharp handles image conversion.
 """
+import base64
 import hashlib
 import html
 import json
@@ -10,6 +11,8 @@ import logging
 import re
 import subprocess
 import tempfile
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -19,6 +22,61 @@ MERMAID_JS = Path("tools/visuals/node_modules/mermaid/dist/mermaid.min.js")
 AXE_JS = Path("tools/visuals/node_modules/axe-core/axe.min.js")
 SHARP_SCRIPT = Path("scripts/optimize-image.mjs")
 
+
+def generate_gemini_image(
+    prompt: str,
+    output_path: Path,
+    api_key: Optional[str] = None,
+    model: Optional[str] = None,
+    aspect_ratio: str = "16:9",
+) -> Path:
+    """Generate a single image through the Gemini API using the existing API key."""
+    import os
+
+    key = api_key or os.getenv("GEMINI_API_KEY")
+    if not key:
+        raise RuntimeError("GEMINI_API_KEY is not configured for image generation.")
+    model_name = model or os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
+    endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+    payload = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "responseModalities": ["IMAGE"],
+            "responseFormat": {"image": {"aspectRatio": aspect_ratio, "imageSize": "1K"}},
+        },
+    }
+    request = urllib.request.Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "x-goog-api-key": key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=120) as response:
+            result = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:600]
+        raise RuntimeError(f"Gemini image API returned HTTP {exc.code}: {detail}") from exc
+    except Exception as exc:
+        raise RuntimeError(f"Gemini image generation request failed: {exc}") from exc
+
+    for candidate in result.get("candidates", []):
+        for part in candidate.get("content", {}).get("parts", []):
+            inline = part.get("inlineData") or part.get("inline_data")
+            if not inline or not inline.get("data"):
+                continue
+            mime = (inline.get("mimeType") or inline.get("mime_type") or "image/png").lower()
+            extension = ".jpg" if "jpeg" in mime or "jpg" in mime else ".png"
+            target = Path(output_path).with_suffix(extension)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(base64.b64decode(inline["data"]))
+            data = target.read_bytes()
+            valid = data.startswith(b"\\xff\\xd8\\xff") if extension == ".jpg" else data.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+            if not valid or len(data) < 5000:
+                target.unlink(missing_ok=True)
+                raise RuntimeError("Gemini returned invalid or unexpectedly small image data.")
+            return target
+    raise RuntimeError("Gemini returned no image data.")
 
 def optimize_image(path: Path, output_format: str = "webp") -> Path:
     """Convert raster images to compact WebP with Sharp; safely retain the original on failure."""
