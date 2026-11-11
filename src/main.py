@@ -380,18 +380,32 @@ def run_pipeline(
                 for item in screenshot_results
             )
             failure_detail = f"All {len(screenshot_results)} trusted screenshot target(s) failed. {failures}"
-            _record_failure(state_store, config, topic, failure_detail)
-            reporter.add_stage(
-                stage_name="Screenshot Capture",
-                status="FAILED",
-                duration_seconds=time.time() - t0,
-                details=failure_detail,
-            )
-            reporter.finalize(
-                success=False,
-                next_action="Review the failed screenshot targets or add an accessible official screenshot target to the topic queue.",
-            )
-            return 1
+            image_generation_enabled = os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on")
+            if image_generation_enabled:
+                logger.warning(
+                    "%s Continuing because custom visual generation is enabled; "
+                    "the article will rely on generated explanatory visuals instead of blocked screenshots.",
+                    failure_detail,
+                )
+                reporter.add_stage(
+                    stage_name="Screenshot Capture",
+                    status="WARNING",
+                    duration_seconds=time.time() - t0,
+                    details=f"{failure_detail} Custom visuals will be used as the fallback.",
+                )
+            else:
+                _record_failure(state_store, config, topic, failure_detail)
+                reporter.add_stage(
+                    stage_name="Screenshot Capture",
+                    status="FAILED",
+                    duration_seconds=time.time() - t0,
+                    details=failure_detail,
+                )
+                reporter.finalize(
+                    success=False,
+                    next_action="Enable custom visual generation or add an accessible official screenshot target.",
+                )
+                return 1
         reporter.screenshot_captured = bool(screenshot_res)
         successes = sum(1 for item in screenshot_results if item.success)
         if successes:
