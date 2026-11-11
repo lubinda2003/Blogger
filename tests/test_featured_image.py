@@ -64,6 +64,8 @@ class TestBuildHtml(unittest.TestCase):
             self.assertNotIn("http://", page)
             self.assertNotIn("https://", page)
             self.assertNotIn("@import", page)
+            self.assertNotIn("__ACCENT__", page)
+            self.assertNotIn("__POP__", page)
 
     def test_placeholder_like_text_in_the_title_is_not_substituted(self):
         page = build_html("__KICKER__ and __BRAND__", "Guide", "seed")
