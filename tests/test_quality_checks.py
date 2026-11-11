@@ -2,7 +2,7 @@
 
 import unittest
 from src.article_writer import ArticleDraft, ArticleWriter
-from src.quality_checks import QualityGate
+from src.quality_checks import QualityGate, validate_final_blogger_html
 from src.screenshot_capture import ScreenshotResult
 
 
@@ -172,6 +172,45 @@ class TestQualityChecks(unittest.TestCase):
         self.assertIn('href="https://help.shopify.com"', result)
         self.assertIn('target="_blank"', result)
         self.assertIn('rel="noopener noreferrer"', result)
+
+
+class TestFinalBloggerHTMLValidation(unittest.TestCase):
+    def _valid_html(self):
+        return '''<script type="application/ld+json">{"@type":"TechArticle"}</script>
+        <div class="dt-article-body"><h2 id="overview">Overview</h2>
+        <p>Article content.</p><img src="https://cdn.example/image.jpg" alt="Product settings screen" />
+        <a href="https://example.com/docs" target="_blank" rel="noopener noreferrer">Official docs</a>
+        <h2>Sources &amp; References</h2><p>Sources listed here.</p></div>'''
+
+    def test_valid_final_fragment_passes(self):
+        self.assertEqual(validate_final_blogger_html(self._valid_html()), [])
+
+    def test_missing_sources_section_fails(self):
+        failures = validate_final_blogger_html(self._valid_html().replace("Sources &amp; References", "Further reading"))
+        self.assertTrue(any("Sources & References" in item for item in failures))
+
+    def test_local_or_non_https_image_fails(self):
+        bad = self._valid_html().replace("https://cdn.example/image.jpg", "output/featured/cover.png")
+        self.assertTrue(any("public HTTPS" in item for item in validate_final_blogger_html(bad)))
+
+    def test_missing_alt_text_fails(self):
+        bad = self._valid_html().replace('alt="Product settings screen"', 'alt=""')
+        self.assertTrue(any("alt text" in item for item in validate_final_blogger_html(bad)))
+
+    def test_duplicate_ids_fail(self):
+        bad = self._valid_html().replace('<h2>Sources', '<h2 id="overview">Sources')
+        self.assertTrue(any("duplicate element IDs" in item for item in validate_final_blogger_html(bad)))
+
+    def test_unsafe_link_scheme_fails(self):
+        bad = self._valid_html().replace('href="https://example.com/docs"', 'href="javascript:alert(1)"')
+        self.assertTrue(any("unsafe or unsupported link" in item for item in validate_final_blogger_html(bad)))
+
+    def test_new_tab_link_requires_safe_rel_attributes(self):
+        bad = self._valid_html().replace('rel="noopener noreferrer"', 'rel="nofollow"')
+        self.assertTrue(any("external-link protections" in item for item in validate_final_blogger_html(bad)))
+
+    def test_empty_document_fails(self):
+        self.assertTrue(validate_final_blogger_html(""))
 
 
 if __name__ == "__main__":
