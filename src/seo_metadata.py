@@ -98,13 +98,13 @@ class SEOMetadata:
         parsed = urlparse(source_url or image_url)
         path_terms = set(re.findall(r"[a-z]{3,}", unquote(parsed.path).lower()))
         path_terms -= {"www", "help", "docs", "app", "com", "html", "page", "pages"}
-        headings = list(re.finditer(r"<h([23])\\b[^>]*>(.*?)</h\\1\\s*>", body, re.I | re.S))
+        headings = list(re.finditer(r"<h([23])\b[^>]*>(.*?)</h\1\s*>", body, re.I | re.S))
         candidates = []
         for index, heading in enumerate(headings):
             label = re.sub(r"<[^>]+>", " ", html.unescape(heading.group(2)))
-            label = re.sub(r"\\s+", " ", label).strip()
+            label = re.sub(r"\s+", " ", label).strip()
             key = label.casefold()
-            if not key or key in used_sections or re.search(r"\\b(faq|frequently asked|sources|references|conclusion)\\b", key):
+            if not key or key in used_sections or re.search(r"\b(faq|frequently asked|sources|references|conclusion)\b", key):
                 continue
             end = headings[index + 1].start() if index + 1 < len(headings) else len(body)
             section = re.sub(r"<[^>]+>", " ", html.unescape(body[heading.end():end])).lower()
@@ -113,13 +113,13 @@ class SEOMetadata:
         if candidates:
             score = max(item[0] for item in candidates)
             _, heading, key, end = next(item for item in candidates if item[0] == score)
-            paragraph = re.search(r"</p\\s*>", body[heading.end():end], re.I)
+            paragraph = re.search(r"</p\s*>", body[heading.end():end], re.I)
             target = heading.end() + paragraph.end() if paragraph else heading.end()
             used_sections.add(key)
-            return body[:target] + "\\n" + figure + body[target:]
-        refs = re.search(r"<h[23]\\b.*?\\b(?:sources?|references?)\\b.*?</h[23]\\s*>", body, re.I | re.S)
+            return body[:target] + "\n" + figure + body[target:]
+        refs = re.search(r"<h[23]\b.*?\b(?:sources?|references?)\b.*?</h[23]\s*>", body, re.I | re.S)
         target = refs.start() if refs else len(body)
-        return body[:target] + "\\n" + figure + body[target:]
+        return body[:target] + "\n" + figure + body[target:]
 
     @staticmethod
     def inject_seo_and_assets(
