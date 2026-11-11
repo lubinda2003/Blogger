@@ -95,6 +95,35 @@ class TestBloggerPayload(unittest.TestCase):
         self.assertNotIn("<img", injected)
         self.assertNotIn(local_path, injected)
 
+    def test_multiple_product_screenshots_are_distributed_across_distinct_sections(self):
+        body = (
+            "<h2>Understanding Brand Kit Plans</h2><p>Choose a plan for your team.</p>"
+            "<p>More plan details.</p><h2>Creating Your Brand Kit</h2>"
+            "<p>Open the Brand tab and add your assets.</p><p>Save your kit.</p>"
+            "<h2>Applying Your Brand Kit</h2><p>Use saved colors in a design.</p>"
+            "<h2>Sources &amp; References</h2><p>Official documentation.</p>"
+        )
+        screenshots = [
+            {"url": "https://cdn.example/one.png", "source_url": "https://www.canva.com/",
+             "caption": "Canva plans", "alt": "Plan settings"},
+            {"url": "https://cdn.example/two.png", "source_url": "https://www.canva.com/",
+             "caption": "Canva brand kit", "alt": "Brand kit editor"},
+        ]
+        result = SEOMetadata.inject_seo_and_assets(
+            body, "Canva Brand Kit", "A practical guide.",
+            public_screenshot_items=screenshots, include_schema=False,
+        )
+        plans = result.index("Choose a plan")
+        first_image = result.index("one.png")
+        create = result.index("Open the Brand tab")
+        second_image = result.index("two.png")
+        apply = result.index("Use saved colors")
+        self.assertLess(plans, first_image)
+        self.assertLess(first_image, create)
+        self.assertLess(create, second_image)
+        self.assertLess(second_image, apply)
+        self.assertNotIn("one.png", result[result.index("Sources &amp; References"):])
+
     def test_default_configuration_enforces_dry_run_and_draft(self):
         """Default configuration must enforce dry_run=True and publish_mode='draft'."""
         from src.config import AppConfig
