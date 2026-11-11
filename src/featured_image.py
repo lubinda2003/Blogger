@@ -9,12 +9,15 @@ only embedded after it has been published successfully.
 import hashlib
 import html
 import logging
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Optional
 
 logger = logging.getLogger(__name__)
+
+from src.visual_tools import generate_gemini_image
 
 WIDTH, HEIGHT = 1200, 630  # the standard link-preview / Open Graph ratio
 BRAND = "The Digital Toolkit"
@@ -141,18 +144,39 @@ class FeaturedImageGenerator:
             finally:
                 browser.close()
 
-    def generate(self, title: str, kicker: str, slug: str) -> FeaturedImage:
+    def generate(self, title: str, kicker: str, slug: str, brief: Optional[dict] = None) -> FeaturedImage:
         try:
-            safe = re.sub(r"[^a-z0-9\-]+", "-", slug.lower()).strip("-") or "article"
+            safe = re.sub(r"[^a-z0-9\\-]+", "-", slug.lower()).strip("-") or "article"
             self.output_dir.mkdir(parents=True, exist_ok=True)
             path = self.output_dir / f"{safe}.jpg"
-            self._render_png(build_html(title, kicker, seed=safe), path)
+            if os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on"):
+                description = (brief or {}).get("description", "")
+                photo_prompt = (
+                    "Create a premium, photorealistic editorial technology photograph for an international "
+                    "technology publication. Show one believable real-world scene that visually communicates "
+                    f"the article topic: {title.strip()}. Creative direction: {description}. "
+                    "Natural daylight or realistic studio lighting, authentic materials, carefully art-directed "
+                    "composition, restrained modern colour palette, clear subject, subtle depth of field. "
+                    "Landscape 16:9 crop with useful negative space. This must look like commissioned editorial "
+                    "photography, not an AI illustration, 3D render, stock-photo collage, dashboard mockup, "
+                    "floating icons, glowing circuitry, or futuristic interface. No text, no letters, no logos, "
+                    "no watermark, no UI screenshots."
+                )
+                try:
+                    path = generate_gemini_image(photo_prompt, path, aspect_ratio="16:9")
+                except Exception as image_error:
+                    logger.warning("Photographic cover generation failed; using local fallback: %s", image_error)
+                    self._render_png(build_html(title, kicker, seed=safe), path)
+            else:
+                self._render_png(build_html(title, kicker, seed=safe), path)
             data = path.read_bytes()
-            if not data.startswith(JPEG_MAGIC) or len(data) < 2000:
-                raise ValueError("rendered file is not a valid JPEG")
+            valid_jpeg = data.startswith(JPEG_MAGIC)
+            valid_png = data.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+            if not (valid_jpeg or valid_png) or len(data) < 2000:
+                raise ValueError("rendered file is not a valid JPEG or PNG")
             return FeaturedImage(
                 success=True, file_path=path, sha256=hashlib.sha256(data).hexdigest(),
-                alt_text=f"Cover image for the guide: {title.strip()}",
+                alt_text=(brief or {}).get("alt_text") or f"Editorial cover photograph for: {title.strip()}",
             )
         except Exception as e:  # an image must never block an article
             logger.warning(f"Featured image not generated: {e}")
@@ -168,6 +192,7 @@ def prepare_featured_image(
     output_dir: str = "output",
     generator: Optional[FeaturedImageGenerator] = None,
     publisher: Optional[Callable[[Path, str, str], Optional[str]]] = None,
+    brief: Optional[dict] = None,
 ) -> Optional[FeaturedImage]:
     """Render the header image and, in live runs only, publish it. Returns None when disabled.
 
@@ -176,7 +201,7 @@ def prepare_featured_image(
     """
     if not enabled:
         return None
-    image = (generator or FeaturedImageGenerator(output_dir)).generate(title, kicker, slug)
+    image = (generator or FeaturedImageGenerator(output_dir)).generate(title, kicker, slug, brief=brief)
     if image.success and not dry_run:
         if publisher is None:
             from src.screenshot_capture import ScreenshotCapture
