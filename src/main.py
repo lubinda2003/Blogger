@@ -42,6 +42,42 @@ def _record_failure(state_store: StateStore, config: AppConfig, topic, message: 
         logger.warning(f"Could not record failure for topic '{topic.id}': {e}")
 
 
+def _build_screenshot_targets(topic, brief, needed: bool) -> list:
+    """Return trusted screenshot URLs, with verified same-product pages as fallbacks.
+
+    The topic's configured targets stay first. If a site blocks browser capture on its
+    homepage, verified research pages on that same domain can still provide genuine UI
+    screenshots. Unrelated third-party sources are never used as screenshot targets.
+    """
+    from urllib.parse import urlparse
+
+    if not needed and not topic.screenshot_targets:
+        return []
+
+    targets = list(topic.screenshot_targets or [])
+    if not targets and topic.target_url:
+        targets.append(topic.target_url)
+
+    target_host = (urlparse(topic.target_url).hostname or "").lower()
+    if target_host.startswith("www."):
+        target_host = target_host[4:]
+
+    if target_host and brief:
+        for source in brief.verified_sources():
+            candidate = source.url
+            parsed = urlparse(candidate)
+            host = (parsed.hostname or "").lower()
+            if host.startswith("www."):
+                host = host[4:]
+            if parsed.scheme not in ("http", "https") or not host:
+                continue
+            if host == target_host or host.endswith("." + target_host):
+                targets.append(candidate)
+
+    # Preserve editorial order while removing duplicate URLs.
+    return list(dict.fromkeys(url for url in targets if url))
+
+
 def run_pipeline(
     config: AppConfig,
     target_topic_id: Optional[str] = None,
@@ -310,8 +346,9 @@ def run_pipeline(
     # Topic-owned URLs are trusted editorial targets; the model cannot invent capture destinations.
     t0 = time.time()
     screenshot_results = []
-    capture_targets = topic.screenshot_targets or ([topic.target_url] if (topic.requires_screenshot or draft.screenshot_needed) else [])
-    if draft.screenshot_needed or topic.requires_screenshot or topic.screenshot_targets:
+    needs_screenshot = draft.screenshot_needed or topic.requires_screenshot or bool(topic.screenshot_targets)
+    capture_targets = _build_screenshot_targets(topic, brief, needs_screenshot)
+    if capture_targets:
         capturer = ScreenshotCapture(
             output_dir=os.path.join(config.output_dir, "screenshots"),
             viewport_width=config.screenshot_viewport_width,
@@ -331,18 +368,26 @@ def run_pipeline(
             screenshot_results.append(result)
             if not result.success:
                 logger.warning(f"Screenshot capture failed for {target_url}: {result.error_message}")
-                if topic.requires_screenshot:
-                    _record_failure(state_store, config, topic, result.error_message or "Required screenshot failed")
-                    reporter.add_stage(
-                        stage_name="Screenshot Capture",
-                        status="FAILED",
-                        duration_seconds=time.time() - t0,
-                        details=f"Required screenshot failed for {target_url}: {result.error_message}",
-                    )
-                    reporter.finalize(success=False, next_action="Check whether the official product page permits browser access.")
-                    return 1
 
         screenshot_res = next((item for item in screenshot_results if item.success), None)
+        if topic.requires_screenshot and screenshot_res is None:
+            failures = "; ".join(
+                f"{item.url}: {item.error_message or 'capture failed'}"
+                for item in screenshot_results
+            )
+            failure_detail = f"All {len(screenshot_results)} trusted screenshot target(s) failed. {failures}"
+            _record_failure(state_store, config, topic, failure_detail)
+            reporter.add_stage(
+                stage_name="Screenshot Capture",
+                status="FAILED",
+                duration_seconds=time.time() - t0,
+                details=failure_detail,
+            )
+            reporter.finalize(
+                success=False,
+                next_action="Review the failed screenshot targets or add an accessible official screenshot target to the topic queue.",
+            )
+            return 1
         reporter.screenshot_captured = bool(screenshot_res)
         successes = sum(1 for item in screenshot_results if item.success)
         if successes:
