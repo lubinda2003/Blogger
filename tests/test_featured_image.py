@@ -10,6 +10,8 @@ from src.featured_image import (
     FeaturedImageGenerator,
     _title_size,
     build_html,
+    _topic_family,
+    PALETTES,
 )
 
 FAKE_JPEG = JPEG_MAGIC + b"\x00" * 3000
@@ -41,8 +43,27 @@ class TestBuildHtml(unittest.TestCase):
     def test_brand_is_present_and_there_are_no_external_assets(self):
         page = build_html("Notion Setup Guide", "Tutorial", "seed")
         self.assertIn("The Digital Toolkit", page)
+        self.assertNotIn("https://", page)
         for external in ("http://", "https://", "url(", "@import"):
             self.assertNotIn(external, page)
+
+    def test_topic_families_have_distinct_visual_palettes(self):
+        self.assertEqual(_topic_family("Best AI Tools", "AI and AI Tools"), "ai")
+        self.assertEqual(_topic_family("Notion productivity workspace", "Software"), "software")
+        self.assertEqual(_topic_family("Freelance invoicing for business", "Business"), "business")
+        self.assertEqual(_topic_family("How to set up your account", "Tutorial"), "tutorial")
+        self.assertEqual(len(set(PALETTES.values())), len(PALETTES))
+
+    def test_thumbnail_contains_topic_palette_and_no_remote_assets(self):
+        ai = build_html("Best AI Tools", "AI Tools", "ai")
+        business = build_html("Freelance invoicing", "Digital Business", "biz")
+        self.assertIn(PALETTES["ai"][1], ai)
+        self.assertIn(PALETTES["business"][1], business)
+        self.assertNotEqual(ai, business)
+        for page in (ai, business):
+            self.assertNotIn("http://", page)
+            self.assertNotIn("https://", page)
+            self.assertNotIn("@import", page)
 
     def test_placeholder_like_text_in_the_title_is_not_substituted(self):
         page = build_html("__KICKER__ and __BRAND__", "Guide", "seed")
@@ -66,7 +87,7 @@ class TestGenerator(unittest.TestCase):
         self.assertTrue(img.success)
         self.assertEqual(img.file_path.suffix, ".jpg")
         self.assertEqual(len(img.sha256), 64)
-        self.assertEqual(img.alt_text, "Cover image for the guide: Notion Setup Guide")
+        self.assertEqual(img.alt_text, "Editorial cover graphic for: Notion Setup Guide")
 
     def test_invalid_image_data_is_rejected(self):
         def bad(self, page_html, out_path):
