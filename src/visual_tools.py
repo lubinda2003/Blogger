@@ -71,7 +71,7 @@ def generate_gemini_image(
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_bytes(base64.b64decode(inline["data"]))
             data = target.read_bytes()
-            valid = data.startswith(b"\\xff\\xd8\\xff") if extension == ".jpg" else data.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+            valid = data.startswith(b"\xff\xd8\xff") if extension == ".jpg" else data.startswith(b"\x89PNG\r\n\x1a\n")
             if not valid or len(data) < 5000:
                 target.unlink(missing_ok=True)
                 raise RuntimeError("Gemini returned invalid or unexpectedly small image data.")
