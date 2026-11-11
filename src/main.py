@@ -507,6 +507,7 @@ def run_pipeline(
         kicker=topic.category,
         slug=topic.id,
         output_dir=config.output_dir,
+        brief=draft.featured_image_brief,
     )
     if featured is not None:
         if featured.public_url:
