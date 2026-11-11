@@ -20,7 +20,7 @@ class TestSeoAssetMarkup(unittest.TestCase):
             }],
             include_schema=False,
         )
-        self.assertNotIn(r"\\n", result)
+        self.assertNotIn(r"\n", result)
         self.assertIn("\n", result)
         self.assertIn('<figure class="article-screenshot"', result)
 
@@ -31,7 +31,7 @@ class TestSeoAssetMarkup(unittest.TestCase):
             meta_description="A useful guide with practical steps and clear explanations.",
             include_schema=False,
         )
-        self.assertNotIn(r"\\n", result)
+        self.assertNotIn(r"\n", result)
         self.assertTrue(result.endswith("</div>"))
 
 
