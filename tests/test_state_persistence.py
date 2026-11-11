@@ -22,8 +22,10 @@ class TestStatePersistence(unittest.TestCase):
         self.assertTrue(config.dry_run, "dry_run must default to True for safety")
         self.assertEqual(config.publish_mode, "draft", "publish_mode must default to 'draft'")
 
-        # Default loaded config must also respect safe defaults
-        loaded = load_config()
+        # Check code defaults independently of workflow-level environment overrides.
+        # GitHub Actions may set DRY_RUN=false for an explicitly requested live draft run.
+        with patch.dict(os.environ, {}, clear=True):
+            loaded = load_config()
         self.assertTrue(loaded.dry_run)
         self.assertEqual(loaded.publish_mode, "draft")
 
