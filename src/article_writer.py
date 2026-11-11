@@ -533,7 +533,7 @@ class ArticleWriter:
         # The model may already have written the required final references section.
         # Do not append a second section (or leave an empty wrapper after layout cleanup).
         if "article-sources" in html_content or re.search(
-            r"<h[23]\\b[^>]*>\\s*(?:Sources\\s*&amp;\\s*References|Sources\\s+and\\s+References)\\s*</h[23]\\s*>",
+            r"<h[23]\b[^>]*>\s*(?:Sources\s*&amp;\s*References|Sources\s+and\s+References)\s*</h[23]\s*>",
             html_content,
             flags=re.IGNORECASE,
         ):
