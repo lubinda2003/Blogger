@@ -22,6 +22,7 @@ from src.seo_metadata import SEOMetadata
 from src.state_store import StateStore
 from src.topic_discovery import TopicDiscovery
 from src.topic_opportunity import TopicOpportunityScorer
+from src.visual_tools import audit_html_accessibility, capture_article_previews, render_mermaid_blocks
 
 # Configure logging with structured clean formatting
 logging.basicConfig(
@@ -472,6 +473,31 @@ def run_pipeline(
         reporter.finalize(success=True, next_action="Stage limit reached: qa.")
         return 0
 
+    # Render authored Mermaid diagrams with the existing Playwright browser. In live mode,
+    # host the SVGs in the repository; dry-runs keep source blocks for safe preview.
+    article_body = draft.html_content
+    diagram_assets = []
+    try:
+        diagram_publisher = None
+        if not config.dry_run:
+            diagram_host = ScreenshotCapture(
+                output_dir=os.path.join(config.output_dir, "visuals"),
+                repo_assets_dir="assets/visuals",
+            )
+            diagram_publisher = diagram_host.publish_to_repo_assets
+        article_body, diagram_assets = render_mermaid_blocks(
+            article_body, config.output_dir, publisher=diagram_publisher
+        )
+        if diagram_assets:
+            reporter.add_stage(
+                stage_name="Article Diagrams",
+                status="SUCCESS" if all(item.get("path") for item in diagram_assets) else "WARNING",
+                duration_seconds=0,
+                details=f"Rendered {len(diagram_assets)} explanatory diagram(s); public embedding is limited to live runs.",
+            )
+    except Exception as exc:
+        logger.warning("Article diagram rendering skipped without blocking the article: %s", exc)
+
     # Header image: generated per article and hosted from the repo in live runs. Never fatal.
     t_img = time.time()
     featured = prepare_featured_image(
@@ -508,13 +534,32 @@ def run_pipeline(
         if item.success and item.public_url and not item.is_mock
     ]
     final_html = SEOMetadata.inject_seo_and_assets(
-        html_body=apply_layout(draft.html_content),
+        html_body=apply_layout(article_body),
         title=draft.title,
         meta_description=draft.meta_description,
         public_screenshot_items=public_screenshot_items,
         featured_image_url=featured.public_url if featured else None,
         featured_image_alt=featured.alt_text if featured else None,
     )
+
+    # Accessibility and responsive previews are diagnostic: findings are recorded, never
+    # allowed to silently discard a valid article or block Blogger draft creation.
+    try:
+        accessibility = audit_html_accessibility(
+            final_html, os.path.join(config.output_dir, "accessibility-report.json")
+        )
+        if accessibility.get("available"):
+            logger.info(
+                "Article accessibility scan: %s violation(s), %s passed rule(s).",
+                len(accessibility.get("violations", [])), accessibility.get("passes", 0),
+            )
+    except Exception as exc:
+        logger.warning("Accessibility audit skipped without blocking publication: %s", exc)
+    try:
+        previews = capture_article_previews(final_html, config.output_dir)
+        logger.info("Saved responsive article previews: %s", ", ".join(previews))
+    except Exception as exc:
+        logger.warning("Responsive article previews could not be captured: %s", exc)
 
     try:  # the finished post exactly as it will be published, for review in the run artifact
         os.makedirs(config.output_dir, exist_ok=True)
