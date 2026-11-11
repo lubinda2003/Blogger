@@ -353,6 +353,10 @@ def run_pipeline(
                 details=f"Captured {successes} of {len(screenshot_results)} configured genuine website screenshot(s).",
             )
         else:
+            # An optional screenshot is an enhancement, not a hard QA requirement.
+            # Clear the draft flag when the capture failed; required topics already fail closed above.
+            if not topic.requires_screenshot:
+                draft.screenshot_needed = False
             reporter.add_stage(
                 stage_name="Screenshot Capture",
                 status="SKIPPED",
