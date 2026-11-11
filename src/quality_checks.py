@@ -2,6 +2,7 @@
 
 import html
 import re
+from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
@@ -26,6 +27,32 @@ class QAReport:
             "warnings": self.warnings,
             "metrics": self.metrics,
         }
+
+
+
+
+GOOGLE_OFFICIAL_PRODUCT_DOMAINS = (
+    "ai.google.dev",
+    "cloud.google.com",
+    "support.google.com",
+    "workspace.google.com",
+    "developers.googleblog.com",
+    "blog.google",
+)
+GOOGLE_OFFICIAL_PRICING_DOMAINS = ("ai.google.dev", "cloud.google.com")
+
+
+def has_official_google_source(source_urls, pricing: bool = False) -> bool:
+    """Return True only when a citation URL belongs to an official Google product source."""
+    allowed = GOOGLE_OFFICIAL_PRICING_DOMAINS if pricing else GOOGLE_OFFICIAL_PRODUCT_DOMAINS
+    for url in source_urls or []:
+        try:
+            host = (urlparse(url).hostname or "").lower()
+        except (TypeError, ValueError):
+            continue
+        if any(host == domain or host.endswith("." + domain) for domain in allowed):
+            return True
+    return False
 
 
 def normalize_url(url: str) -> str:
@@ -250,6 +277,22 @@ class QualityGate:
                         failures.append(
                             f"Sources check failed: Cited source '{url}' is not linked in the article body."
                         )
+
+        # 7b. Google product and API claims need primary-source evidence.
+        source_urls = [s.get("url", "") for s in (draft.sources_used or [])]
+        mentions_google_product = bool(re.search(r"\\b(?:google|gemini)\\b", text_lower))
+        has_exact_pricing = bool(
+            re.search(r"\\$\\s?\\d|\\bper\\s+(?:1m|million)\\s+tokens\\b|\\bapi\\s+rates\\b", text_lower)
+        )
+        has_model_identifier = bool(re.search(r"\\bgemini\\s+\\d+(?:\\.\\d+)?\\s+flash\\b", text_lower))
+        if mentions_google_product and has_exact_pricing and not has_official_google_source(source_urls, pricing=True):
+            failures.append(
+                "Evidence check failed: Google/Gemini pricing claims require an official Google AI pricing or Cloud pricing source."
+            )
+        elif mentions_google_product and has_model_identifier and not has_official_google_source(source_urls, pricing=False):
+            failures.append(
+                "Evidence check failed: Specific Gemini model availability claims require an official Google product or developer source."
+            )
 
         # 8. Affiliate Disclosure
         found_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_str, re.IGNORECASE)
