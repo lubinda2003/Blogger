@@ -93,9 +93,9 @@ class TestInjection(unittest.TestCase):
 
     def test_screenshot_markup_has_real_newlines_not_literal_backslash_n(self):
         out = self._inject(public_screenshot_url="https://cdn.example/s.png")
-        self.assertNotIn(r"\\n  <img", out)
-        self.assertNotIn(r"\\n  <figcaption", out)
-        self.assertIn("\\n  <img", out)
+        self.assertNotIn(r"\n  <img", out)
+        self.assertNotIn(r"\n  <figcaption", out)
+        self.assertIn("\n  <img", out)
 
     def test_no_cover_without_a_url(self):
         self.assertNotIn("article-cover", self._inject())
