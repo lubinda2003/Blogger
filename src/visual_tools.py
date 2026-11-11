@@ -266,21 +266,21 @@ def inject_visual_figures(article_html: str, visual_items: list[dict]) -> str:
             f'<figcaption style="font-size:13px;line-height:1.5;color:#64748b;margin-top:9px;">{caption}</figcaption>'
             '</figure>'
         )
-        heading_text = re.sub(r"\\s+", " ", html.unescape(str(item.get("section_heading", "")))).strip().lower()
-        headings = list(re.finditer(r"<h([23])\\b[^>]*>(.*?)</h\\1\\s*>", updated, re.I | re.S))
+        heading_text = re.sub(r"\s+", " ", html.unescape(str(item.get("section_heading", "")))).strip().lower()
+        headings = list(re.finditer(r"<h([23])\b[^>]*>(.*?)</h\1\s*>", updated, re.I | re.S))
         target = None
         for index, heading in enumerate(headings):
             label = re.sub(r"<[^>]+>", " ", html.unescape(heading.group(2)))
-            label = re.sub(r"\\s+", " ", label).strip().lower()
+            label = re.sub(r"\s+", " ", label).strip().lower()
             if heading_text and (heading_text == label or heading_text in label or label in heading_text):
                 section_end = headings[index + 1].start() if index + 1 < len(headings) else len(updated)
-                paragraph = re.search(r"</p\\s*>", updated[heading.end():section_end], re.I)
+                paragraph = re.search(r"</p\s*>", updated[heading.end():section_end], re.I)
                 target = heading.end() + paragraph.end() if paragraph else heading.end()
                 break
         if target is None:
-            refs = re.search(r"<h[23]\\b[^>]*>[^<]*(?:sources?|references?)\\b.*?</h[23]\\s*>", updated, re.I | re.S)
+            refs = re.search(r"<h[23]\b[^>]*>[^<]*(?:sources?|references?)\b.*?</h[23]\s*>", updated, re.I | re.S)
             target = refs.start() if refs else len(updated)
-        updated = updated[:target] + "\\n" + figure + updated[target:]
+        updated = updated[:target] + "\n" + figure + updated[target:]
     return updated
 
 
