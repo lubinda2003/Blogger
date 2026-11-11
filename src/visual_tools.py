@@ -141,6 +141,7 @@ def render_mermaid_blocks(
     article_html: str,
     output_dir: str,
     publisher: Optional[Callable[[Path, str, str], Optional[str]]] = None,
+    max_items: int = 2,
 ) -> tuple[str, list[dict]]:
     """Render useful Mermaid blocks and replace them only when a public asset URL is available."""
     pattern = re.compile(
@@ -149,7 +150,7 @@ def render_mermaid_blocks(
     )
     items: list[dict] = []
     updated = article_html
-    for index, match in enumerate(list(pattern.finditer(article_html)), start=1):
+    for index, match in enumerate(list(pattern.finditer(article_html))[:max(0, max_items)], start=1):
         source = html.unescape(re.sub(r"<[^>]+>", "", match.group(1))).strip()
         if not source or len(source) > 12000:
             continue
@@ -207,6 +208,80 @@ def audit_html_accessibility(article_html: str, output_path: Optional[str] = Non
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(result, indent=2), encoding="utf-8")
     return result
+
+
+def generate_supporting_visuals(
+    visual_plan: list[dict],
+    output_dir: str,
+    publisher: Optional[Callable[[Path, str, str], Optional[str]]] = None,
+    max_items: int = 2,
+) -> list[dict]:
+    """Generate up to two useful editorial photographs and return only safely hosted assets."""
+    import os
+
+    if os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() not in ("true", "1", "yes", "on"):
+        return []
+    items = []
+    for index, plan in enumerate((visual_plan or [])[:max(0, min(2, max_items))], start=1):
+        try:
+            prompt = (
+                "Create a premium photorealistic editorial photograph for an international technology publication. "
+                f"Subject and scene: {plan.get('prompt', '')}. "
+                "Use natural lighting, authentic materials, believable real-world details and an art-directed "
+                "composition. It must look like commissioned editorial photography, not a 3D render, illustration, "
+                "generic AI art, collage, fabricated software screenshot or dashboard. No text, letters, logos, "
+                "watermarks or fake interface elements. Landscape 4:3 composition."
+            )
+            path = generate_gemini_image(
+                prompt, Path(output_dir) / "visuals" / f"supporting-{index}.jpg", aspect_ratio="4:3"
+            )
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            public_url = publisher(path, f"supporting-{index}", digest) if publisher else None
+            items.append({
+                "path": str(path),
+                "url": public_url if public_url and public_url.startswith("https://") else None,
+                "alt": str(plan.get("alt_text", "Editorial article photograph"))[:240],
+                "caption": str(plan.get("caption", ""))[:300],
+                "section_heading": str(plan.get("section_heading", ""))[:180],
+                "kind": "photo",
+            })
+        except Exception as exc:
+            logger.warning("Supporting visual %s could not be generated: %s", index, exc)
+    return items
+
+
+def inject_visual_figures(article_html: str, visual_items: list[dict]) -> str:
+    """Insert hosted custom visuals after the first explanatory paragraph of their target section."""
+    updated = article_html
+    for item in visual_items or []:
+        url = item.get("url", "")
+        if not url.startswith("https://") or any(token in url.lower() for token in ("localhost", "127.0.0.1")):
+            continue
+        alt = html.escape(str(item.get("alt", "Editorial article visual")))
+        caption = html.escape(str(item.get("caption", "")))
+        figure = (
+            '<figure class="article-visual" style="margin:26px auto;max-width:900px;text-align:center;">'
+            f'<img src="{html.escape(url)}" alt="{alt}" loading="lazy" '
+            'style="display:block;width:100%;height:auto;margin:0 auto;border-radius:8px;" />'
+            f'<figcaption style="font-size:13px;line-height:1.5;color:#64748b;margin-top:9px;">{caption}</figcaption>'
+            '</figure>'
+        )
+        heading_text = re.sub(r"\\s+", " ", html.unescape(str(item.get("section_heading", "")))).strip().lower()
+        headings = list(re.finditer(r"<h([23])\\b[^>]*>(.*?)</h\\1\\s*>", updated, re.I | re.S))
+        target = None
+        for index, heading in enumerate(headings):
+            label = re.sub(r"<[^>]+>", " ", html.unescape(heading.group(2)))
+            label = re.sub(r"\\s+", " ", label).strip().lower()
+            if heading_text and (heading_text == label or heading_text in label or label in heading_text):
+                section_end = headings[index + 1].start() if index + 1 < len(headings) else len(updated)
+                paragraph = re.search(r"</p\\s*>", updated[heading.end():section_end], re.I)
+                target = heading.end() + paragraph.end() if paragraph else heading.end()
+                break
+        if target is None:
+            refs = re.search(r"<h[23]\\b[^>]*>[^<]*(?:sources?|references?)\\b.*?</h[23]\\s*>", updated, re.I | re.S)
+            target = refs.start() if refs else len(updated)
+        updated = updated[:target] + "\\n" + figure + updated[target:]
+    return updated
 
 
 def capture_article_previews(article_html: str, output_dir: str) -> list[str]:
