@@ -131,8 +131,41 @@ def _style_compare_tables(body: str) -> str:
     return re.sub(r'<table class="compare">(.*?)</table>', repl, body, flags=re.S)
 
 
+def convert_markdown_tables(body: str) -> str:
+    """Convert Markdown pipe tables in generated article HTML into Blogger-safe comparison tables."""
+    lines = (body or "").splitlines()
+    output = []
+    i = 0
+    while i < len(lines):
+        header = lines[i].strip()
+        if i + 1 < len(lines):
+            separator = lines[i + 1].strip()
+            cells = [cell.strip() for cell in header.strip("|").split("|")]
+            separators = [cell.strip() for cell in separator.strip("|").split("|")]
+            is_table = (len(cells) >= 2 and len(cells) == len(separators) and
+                        all(re.fullmatch(r":?-{3,}:?", cell) for cell in separators))
+            if is_table:
+                rows = []
+                i += 2
+                while i < len(lines) and "|" in lines[i]:
+                    row = [cell.strip() for cell in lines[i].strip().strip("|").split("|")]
+                    if len(row) != len(cells):
+                        break
+                    rows.append(row)
+                    i += 1
+                def render_cell(value: str, tag: str) -> str:
+                    return f"<{tag}>{html.escape(value, quote=False)}</{tag}>"
+                head = "<thead><tr>" + "".join(render_cell(value, "th") for value in cells) + "</tr></thead>"
+                body_rows = "".join("<tr>" + "".join(render_cell(value, "td") for value in row) + "</tr>" for row in rows)
+                output.append(f'<table class="compare">{head}<tbody>{body_rows}</tbody></table>')
+                continue
+        output.append(lines[i])
+        i += 1
+    return "\n".join(output)
+
 def apply_layout(body: str) -> str:
     """Sanitize, add the table of contents, then style the components. Safe to apply twice."""
+    body = convert_markdown_tables(body)
     body = sanitize_html(body)
     body = deduplicate_reference_sections(body)
     body = add_table_of_contents(body)
