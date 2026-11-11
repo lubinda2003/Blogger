@@ -108,10 +108,29 @@
         ],
         "word_count": 1276
       }
+    },
+    {
+      "topic_id": "gemini-long-document-analysis",
+      "topic_title": "How to Analyze 100-Page PDFs and Spreadsheets with Google Gemini",
+      "fingerprint": "8de6688f02c55792",
+      "post_id": "187388829243400976",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-11T07:11:56.932152+00:00",
+      "metadata": {
+        "labels": [
+          "Artificial Intelligence",
+          "Google Gemini",
+          "Data Analysis",
+          "Tutorials"
+        ],
+        "word_count": 1338
+      }
     }
   ],
-  "last_updated": "2026-11-11T06:52:09.318091+00:00",
-  "total_runs": 6,
+  "last_updated": "2026-11-11T07:11:56.932171+00:00",
+  "total_runs": 7,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
