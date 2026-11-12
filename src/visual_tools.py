@@ -11,6 +11,7 @@ import logging
 import re
 import subprocess
 import tempfile
+import xml.etree.ElementTree as ET
 import urllib.error
 import urllib.request
 from pathlib import Path
@@ -102,6 +103,24 @@ def optimize_image(path: Path, output_format: str = "webp") -> Path:
     return path
 
 
+def _validate_mermaid_svg(svg: str) -> bool:
+    """Reject malformed or dimensionless Mermaid output before it reaches an article."""
+    try:
+        root = ET.fromstring(svg)
+    except ET.ParseError:
+        return False
+    if root.tag.split("}")[-1].lower() != "svg":
+        return False
+    view_box = root.attrib.get("viewBox", "").replace(",", " ").split()
+    if len(view_box) != 4:
+        return False
+    try:
+        _, _, width, height = (float(value) for value in view_box)
+    except (TypeError, ValueError):
+        return False
+    return width > 0 and height > 0
+
+
 def render_mermaid_svg(source: str, output_path: Path) -> Path:
     """Render one Mermaid diagram to a self-contained SVG using the existing Playwright Chromium."""
     if not MERMAID_JS.is_file():
@@ -188,8 +207,8 @@ def render_mermaid_svg(source: str, output_path: Path) -> Path:
                 node.style.margin = '0 auto';
                 return node.outerHTML;
             }""")
-            if not svg or "<svg" not in svg or "viewBox=" not in svg:
-                raise RuntimeError("Mermaid returned an incomplete SVG diagram.")
+            if not svg or not _validate_mermaid_svg(svg):
+                raise RuntimeError("Mermaid returned an invalid or dimensionless SVG diagram.")
             output_path.write_text(svg, encoding="utf-8")
         finally:
             browser.close()
