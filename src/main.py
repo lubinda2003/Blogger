@@ -468,6 +468,7 @@ def run_pipeline(
     reporter.qa_passed = qa_report.passed
     reporter.qa_failures = qa_report.failures
     reporter.qa_warnings = qa_report.warnings
+    reporter.qa_metrics = qa_report.metrics
 
     if not qa_report.passed:
         logger.error(f"Quality gate rejected article: {qa_report.failures}")
