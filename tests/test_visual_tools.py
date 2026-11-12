@@ -11,10 +11,23 @@ from src.visual_tools import (
     inject_visual_figures,
     optimize_image,
     render_mermaid_blocks,
+    _validate_mermaid_svg,
 )
 
 
 class TestVisualHelpers(unittest.TestCase):
+    def test_mermaid_svg_validation_accepts_valid_viewbox(self):
+        self.assertTrue(_validate_mermaid_svg(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400"><text>Step</text></svg>'
+        ))
+
+    def test_mermaid_svg_validation_rejects_missing_or_invalid_dimensions(self):
+        self.assertFalse(_validate_mermaid_svg('<svg xmlns="http://www.w3.org/2000/svg"></svg>'))
+        self.assertFalse(_validate_mermaid_svg(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 0 400"></svg>'
+        ))
+        self.assertFalse(_validate_mermaid_svg('<svg'))
+
     def test_mermaid_blocks_are_ignored_when_not_present(self):
         body = "<p>Plain article body.</p>"
         rendered, items = render_mermaid_blocks(body, "output")
