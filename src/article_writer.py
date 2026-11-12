@@ -328,7 +328,7 @@ class ArticleWriter:
         prompt = (
             "Repair this article's factual evidence failures. Return ONLY JSON with exactly these keys: "
             '"html_content" (complete Blogger-compatible HTML) and "claim_evidence" (array of objects with '
-            '"claim", "source_url", "evidence_quote"). Keep the article's useful structure, headings, advice, '
+            "\"claim\", \"source_url\", \"evidence_quote\"). Keep the article's useful structure, headings, advice, "
             "and practical value. Rewrite unsupported factual sentences into narrower statements that the "
             "provided verified sources directly support, or remove only the unsupported sentence if it cannot "
             "be repaired. Do not invent facts, numbers, prices, dates, product features, quotes, or URLs. "
