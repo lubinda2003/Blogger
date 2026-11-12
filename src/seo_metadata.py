@@ -63,6 +63,7 @@ class SEOMetadata:
         url: Optional[str] = None,
         date_published: Optional[str] = None,
         author_name: Optional[str] = None,
+        image_url: Optional[str] = None,
     ) -> str:
         """Generate valid Schema.org Article JSON-LD for rich snippets."""
         schema_dict: Dict[str, Any] = {
@@ -82,6 +83,8 @@ class SEOMetadata:
             },
             "inLanguage": "en-US",
         }
+        if image_url:
+            schema_dict["image"] = image_url
         if url:
             schema_dict["mainEntityOfPage"] = url
         if date_published:
@@ -141,17 +144,28 @@ class SEOMetadata:
         """
         blocks: List[str] = []
 
+        # Only expose a verified public HTTPS cover URL in either HTML or structured data.
+        public_featured_image_url = (
+            featured_image_url
+            if featured_image_url and featured_image_url.startswith("https://") and not any(
+                sub in featured_image_url for sub in ("localhost", "127.0.0.1", "output/")
+            )
+            else None
+        )
+
         if include_schema:
-            schema = SEOMetadata.generate_schema_jsonld(title=title, description=meta_description)
+            schema = SEOMetadata.generate_schema_jsonld(
+                title=title,
+                description=meta_description,
+                image_url=public_featured_image_url,
+            )
             blocks.append(schema)
 
         # Cover image: same strict public-HTTPS rule as screenshots. Explicit width/height avoid layout shift.
-        if featured_image_url and featured_image_url.startswith("https://") and not any(
-            sub in featured_image_url for sub in ("localhost", "127.0.0.1", "output/")
-        ):
+        if public_featured_image_url:
             blocks.append(
                 f'<figure class="article-cover" style="margin:0 0 24px 0;">\n'
-                f'  <img src="{html.escape(featured_image_url)}" alt="{html.escape(featured_image_alt or title)}" '
+                f'  <img src="{html.escape(public_featured_image_url)}" alt="{html.escape(featured_image_alt or title)}" '
                 f'width="1200" height="630" loading="eager" style="width:100%; max-width:100%; height:auto; border-radius:8px;" />\n'
                 f'</figure>'
             )
