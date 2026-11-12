@@ -462,6 +462,7 @@ def run_pipeline(
         draft=draft,
         screenshot_result=screenshot_res,
         verified_source_urls=verified_urls if not config.dry_run else None,
+        verified_source_evidence=[s.to_dict() for s in brief.verified_sources()] if not config.dry_run else None,
         check_duplicate=not config.dry_run,
     )
 
