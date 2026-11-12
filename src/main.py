@@ -458,13 +458,34 @@ def run_pipeline(
 
     verified_urls = {s.url for s in brief.verified_sources()}
 
+    verified_evidence = [s.to_dict() for s in brief.verified_sources()] if not config.dry_run else None
     qa_report = gate.run_all_checks(
         draft=draft,
         screenshot_result=screenshot_res,
         verified_source_urls=verified_urls if not config.dry_run else None,
-        verified_source_evidence=[s.to_dict() for s in brief.verified_sources()] if not config.dry_run else None,
+        verified_source_evidence=verified_evidence,
         check_duplicate=not config.dry_run,
     )
+
+    # A single evidence-only repair attempt can correct inaccurate model-generated
+    # mappings. Article HTML remains untouched and the same strict gate runs again.
+    if (
+        not qa_report.passed
+        and not config.dry_run
+        and any("Claim evidence check failed" in failure for failure in qa_report.failures)
+    ):
+        logger.warning("Claim-evidence mappings failed validation; attempting one source-grounded repair.")
+        if writer.repair_claim_evidence(draft, verified_evidence or []):
+            repaired_report = gate.run_all_checks(
+                draft=draft,
+                screenshot_result=screenshot_res,
+                verified_source_urls=verified_urls,
+                verified_source_evidence=verified_evidence,
+                check_duplicate=True,
+            )
+            if repaired_report.passed:
+                logger.info("Claim-evidence repair passed the unchanged hard quality gate.")
+            qa_report = repaired_report
 
     reporter.qa_passed = qa_report.passed
     reporter.qa_failures = qa_report.failures

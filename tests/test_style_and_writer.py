@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 import urllib.error
 
-from src.article_writer import ArticleWriter
+from src.article_writer import ArticleDraft, ArticleWriter
 from src.research import ResearchBrief
 from src.topic_discovery import TopicItem
 
@@ -101,6 +101,49 @@ class TestStyleAndWriter(unittest.TestCase):
             args, kwargs = mock_urlopen.call_args
             req = args[0]
             self.assertIn("models/gemini-3.8-flash:generateContent", req.full_url)
+
+    def test_claim_evidence_repair_uses_verbatim_source_and_leaves_article_unchanged(self):
+        writer = ArticleWriter(api_key="mock-api-key")
+        draft = ArticleDraft(
+            topic_id="test", title="Test Article", meta_description="A sufficiently long description for this test.",
+            labels=["Test"], html_content="<p>The service supports recurring invoices.</p>", summary="",
+            sources_used=[{"title": "Docs", "url": "https://example.com/docs"}],
+            primary_intent="Guide", word_count=5, last_checked_date="November 2026",
+            claim_evidence=[{"claim": "The service supports recurring invoices.", "source_url": "https://example.com/docs",
+                             "evidence_quote": "Recurring billing is supported."}],
+        )
+        source_text = "You can create and manage recurring invoices from the billing dashboard."
+        repaired = {"claim_evidence": [{
+            "claim": "The service supports recurring invoices.",
+            "source_url": "https://example.com/docs",
+            "evidence_quote": "You can create and manage recurring invoices from the billing dashboard."
+        }]}
+        with patch.object(writer, "_call_llm_provider", return_value=json.dumps(repaired)) as mock_call:
+            result = writer.repair_claim_evidence(draft, [{
+                "verified": True, "url": "https://example.com/docs", "title": "Docs", "cleaned_text": source_text
+            }])
+        self.assertTrue(result)
+        self.assertEqual(draft.html_content, "<p>The service supports recurring invoices.</p>")
+        self.assertEqual(draft.claim_evidence, repaired["claim_evidence"])
+        self.assertIn(source_text, mock_call.call_args.args[0])
+        self.assertIn("verbatim", mock_call.call_args.args[0])
+
+    def test_claim_evidence_repair_fails_closed_on_invalid_model_output(self):
+        writer = ArticleWriter(api_key="mock-api-key")
+        draft = ArticleDraft(
+            topic_id="test", title="Test Article", meta_description="A sufficiently long description for this test.",
+            labels=["Test"], html_content="<p>Claim text.</p>", summary="",
+            sources_used=[{"title": "Docs", "url": "https://example.com/docs"}],
+            primary_intent="Guide", word_count=2, last_checked_date="November 2026",
+            claim_evidence=[{"claim": "Claim text.", "source_url": "https://example.com/docs", "evidence_quote": "old quote"}],
+        )
+        original = list(draft.claim_evidence)
+        with patch.object(writer, "_call_llm_provider", return_value="not json"):
+            self.assertFalse(writer.repair_claim_evidence(draft, [{
+                "verified": True, "url": "https://example.com/docs", "cleaned_text": "Source text"
+            }]))
+        self.assertEqual(draft.claim_evidence, original)
+        self.assertEqual(draft.html_content, "<p>Claim text.</p>")
 
     def test_groq_rest_call_success(self):
         """ArticleWriter must support Groq API REST calls with the default Groq model."""
