@@ -111,8 +111,16 @@ def render_mermaid_svg(source: str, output_path: Path) -> Path:
     safe_source = html.escape(source.strip())
     page_html = (
         '<!doctype html><html><head><meta charset="utf-8">'
-        '<style>body{margin:0;padding:24px;background:#fff;font-family:Arial,sans-serif}'
-        '.mermaid{display:flex;justify-content:center}</style></head>'
+        '<style>'
+        ':root{color-scheme:light}'
+        'html,body{margin:0;min-height:100%;background:#fff}'
+        'body{padding:36px;box-sizing:border-box;font-family:Inter,Arial,sans-serif}'
+        '.mermaid{display:flex;justify-content:center;align-items:center;width:100%;}'
+        '.mermaid svg{max-width:100%;height:auto;overflow:visible;}'
+        '.mermaid .node rect,.mermaid .node polygon,.mermaid .node circle{stroke-width:1.7px;}'
+        '.mermaid .edgePath .path{stroke-width:1.8px;}'
+        '.mermaid .edgeLabel{background:#fff;}'
+        '</style></head>'
         f'<body><pre class="mermaid">{safe_source}</pre></body></html>'
     )
     output_path = Path(output_path)
@@ -120,17 +128,68 @@ def render_mermaid_svg(source: str, output_path: Path) -> Path:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:
-            page = browser.new_page(viewport={"width": 1200, "height": 900}, device_scale_factor=1)
+            page = browser.new_page(
+                viewport={"width": 1600, "height": 1200},
+                device_scale_factor=2,
+                color_scheme="light",
+            )
             page.set_content(page_html, wait_until="load")
             page.add_script_tag(path=str(MERMAID_JS.resolve()))
             page.evaluate("""async () => {
-                window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' });
+                window.mermaid.initialize({
+                    startOnLoad: false,
+                    securityLevel: 'strict',
+                    theme: 'base',
+                    themeVariables: {
+                        fontFamily: 'Inter, Arial, sans-serif',
+                        fontSize: '16px',
+                        background: '#ffffff',
+                        primaryColor: '#e8f5f2',
+                        primaryTextColor: '#142b35',
+                        primaryBorderColor: '#167d78',
+                        lineColor: '#52717a',
+                        secondaryColor: '#edf3fb',
+                        secondaryTextColor: '#142b35',
+                        secondaryBorderColor: '#54759a',
+                        tertiaryColor: '#fff7e8',
+                        tertiaryTextColor: '#42351e',
+                        tertiaryBorderColor: '#c58a2b',
+                        mainBkg: '#e8f5f2',
+                        nodeBorder: '#167d78',
+                        clusterBkg: '#f5f8fa',
+                        clusterBorder: '#cbd5e1',
+                        edgeLabelBackground: '#ffffff'
+                    },
+                    flowchart: {
+                        curve: 'basis',
+                        nodeSpacing: 56,
+                        rankSpacing: 68,
+                        padding: 18,
+                        htmlLabels: true
+                    }
+                });
+                await document.fonts.ready;
                 await window.mermaid.run({ querySelector: '.mermaid' });
             }""")
             page.wait_for_selector(".mermaid svg", timeout=15000)
-            svg = page.locator(".mermaid svg").evaluate("(node) => node.outerHTML")
-            if not svg or "<svg" not in svg:
-                raise RuntimeError("Mermaid did not return an SVG diagram.")
+            page.wait_for_function("""() => {
+                const svg = document.querySelector('.mermaid svg');
+                if (!svg) return false;
+                const box = svg.getBBox();
+                return box.width > 0 && box.height > 0;
+            }""", timeout=10000)
+            svg = page.locator(".mermaid svg").evaluate("""(node) => {
+                node.setAttribute('role', 'img');
+                node.setAttribute('aria-label', 'The Digital Toolkit explanatory diagram');
+                node.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                node.style.maxWidth = '100%';
+                node.style.height = 'auto';
+                node.style.display = 'block';
+                node.style.margin = '0 auto';
+                return node.outerHTML;
+            }""")
+            if not svg or "<svg" not in svg or "viewBox=" not in svg:
+                raise RuntimeError("Mermaid returned an incomplete SVG diagram.")
             output_path.write_text(svg, encoding="utf-8")
         finally:
             browser.close()
@@ -357,15 +416,52 @@ def capture_article_previews(article_html: str, output_dir: str) -> list[str]:
         browser = p.chromium.launch(headless=True)
         try:
             for name, width, height in (("mobile", 390, 844), ("desktop", 1280, 900)):
-                page = browser.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
+                page = browser.new_page(
+                    viewport={"width": width, "height": height},
+                    device_scale_factor=2,
+                    color_scheme="light",
+                )
                 page.set_content(article_html, wait_until="domcontentloaded")
+                page.evaluate("""async () => {
+                    await document.fonts.ready;
+                    await Promise.all(Array.from(document.images).map((img) => {
+                        if (img.complete) return Promise.resolve();
+                        return new Promise((resolve) => {
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', resolve, { once: true });
+                        });
+                    }));
+                }""")
                 if MERMAID_JS.is_file() and page.locator(".mermaid").count():
                     page.add_script_tag(path=str(MERMAID_JS.resolve()))
                     page.evaluate("""async () => {
-                        window.mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' });
+                        window.mermaid.initialize({
+                            startOnLoad: false,
+                            securityLevel: 'strict',
+                            theme: 'base',
+                            themeVariables: {
+                                fontFamily: 'Inter, Arial, sans-serif',
+                                fontSize: '16px',
+                                background: '#ffffff',
+                                primaryColor: '#e8f5f2',
+                                primaryTextColor: '#142b35',
+                                primaryBorderColor: '#167d78',
+                                lineColor: '#52717a',
+                                secondaryColor: '#edf3fb',
+                                secondaryBorderColor: '#54759a',
+                                tertiaryColor: '#fff7e8',
+                                tertiaryBorderColor: '#c58a2b',
+                                edgeLabelBackground: '#ffffff'
+                            },
+                            flowchart: { curve: 'basis', nodeSpacing: 56, rankSpacing: 68, padding: 18 }
+                        });
                         await window.mermaid.run({ querySelector: '.mermaid' });
                     }""")
-                page.screenshot(path=str(out / f"article-{name}.png"), full_page=True)
+                page.screenshot(
+                    path=str(out / f"article-{name}.png"),
+                    full_page=True,
+                    animations="disabled",
+                )
                 saved.append(str(out / f"article-{name}.png"))
                 page.close()
         finally:
