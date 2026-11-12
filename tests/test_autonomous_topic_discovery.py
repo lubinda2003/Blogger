@@ -69,7 +69,7 @@ class AutonomousTopicDiscoveryTests(unittest.TestCase):
             "score": 0.91,
         }
         duplicate = {
-            "title": "A Better Productivity Workflow for Remote Teams: Build It",
+            "title": "Better Productivity Workflow for Remote Teams: Build",
             "content": "A detailed guide to planning tasks, communication and team workflows.",
             "url": "https://another.example/second",
             "score": 0.95,
