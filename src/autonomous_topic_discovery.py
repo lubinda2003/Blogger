@@ -11,6 +11,7 @@ from typing import List, Optional
 from urllib.parse import urlparse
 
 from src.topic_discovery import TopicItem
+from src.state_store import normalize_fingerprint
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,7 @@ class AutonomousTopicDiscoverer:
             return []
 
         seen_ids = set()
+        seen_fingerprints = set()
         candidates = []
         for category, query, default_intent in EDITORIAL_SEARCHES:
             results = self._search(query)
@@ -119,7 +121,14 @@ class AutonomousTopicDiscoverer:
                 if len(content) < 40:
                     continue
                 topic_id = _slug(title)
-                if not topic_id or topic_id in seen_ids or state_store.is_duplicate(topic_id, title):
+                fingerprint = normalize_fingerprint(title)
+                if (
+                    not topic_id
+                    or not fingerprint
+                    or topic_id in seen_ids
+                    or fingerprint in seen_fingerprints
+                    or state_store.is_duplicate(topic_id, title)
+                ):
                     continue
                 if state_store.is_max_failed(topic_id, max_failures=3):
                     continue
@@ -141,6 +150,7 @@ class AutonomousTopicDiscoverer:
                 )
                 category_items.append((relevance, item))
                 seen_ids.add(topic_id)
+                seen_fingerprints.add(fingerprint)
             category_items.sort(key=lambda pair: pair[0], reverse=True)
             candidates.extend(item for _, item in category_items[:self.max_per_category])
 
