@@ -323,7 +323,7 @@ class ArticleWriter:
         if not sources or not draft.claim_evidence:
             return False
 
-        article_text = re.sub(r"\\s+", " ", re.sub(r"<[^>]+>", " ", html.unescape(draft.html_content or ""))).strip()
+        article_text = re.sub(r"\s+, " ", re.sub(r"<[^>]+>", " ", html.unescape(draft.html_content or ""))).strip()
         prompt = (
             "Repair the claim-to-source evidence mappings for this existing article. "
             "Do NOT rewrite, summarize, or modify the article. Return ONLY a JSON object with one key: "
