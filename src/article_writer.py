@@ -110,7 +110,6 @@ class ArticleDraft:
     primary_intent: str
     word_count: int
     last_checked_date: str
-    claim_evidence: List[Dict[str, str]] = field(default_factory=list)
     is_dry_run_fixture: bool = False
     affiliate_disclosure_required: bool = False
     screenshot_needed: bool = False
@@ -122,6 +121,7 @@ class ArticleDraft:
     visual_plan: List[Dict[str, str]] = field(default_factory=list)
     actual_provider: str = ""
     actual_model: str = ""
+    claim_evidence: List[Dict[str, str]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
