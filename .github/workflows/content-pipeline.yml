@@ -20,9 +20,9 @@ jobs:
     runs-on: ubuntu-22.04
     timeout-minutes: 25
     env:
-      # Fail-safe default: manual and future scheduled runs must not create Blogger drafts.
-      # Change this deliberately only when an operator has approved a live draft run.
-      DRY_RUN: 'true'
+      # Real research, article and visual generation; Blogger writes remain drafts only.
+      # PUBLISH_MODE is hardcoded to draft below and live publishing stays disabled.
+      DRY_RUN: 'false'
 
     steps:
       # actions/checkout@v4 pinned to reviewed commit SHA
