@@ -40,6 +40,7 @@ class PipelineReporter:
         self.qa_passed: Optional[bool] = None
         self.qa_failures: List[str] = []
         self.qa_warnings: List[str] = []
+        self.qa_metrics: Dict[str, Any] = {}
         self.source_count: int = 0
         self.research_sources: List[Dict[str, Any]] = []
         self.screenshot_captured: bool = False
@@ -86,6 +87,7 @@ class PipelineReporter:
                 "passed": self.qa_passed,
                 "failures": self.qa_failures,
                 "warnings": self.qa_warnings,
+                "metrics": self.qa_metrics,
             },
             "metrics": {
                 "source_count": self.source_count,
@@ -151,6 +153,20 @@ class PipelineReporter:
             f"- **Screenshot Captured:** {'Yes' if report['metrics']['screenshot_captured'] else 'No / Skipped'}",
             "",
         ]
+
+        qa_metrics = report["qa"].get("metrics") or {}
+        if qa_metrics:
+            lines.extend(["### 📊 Quality Check Metrics", ""])
+            for key, value in qa_metrics.items():
+                label = key.replace("_", " ").capitalize()
+                display_value = "Yes" if value is True else "No" if value is False else value
+                lines.append(f"- **{label}:** {display_value}")
+            lines.append("")
+
+        if report["qa"].get("warnings"):
+            lines.extend(["### ⚠️ QA Warnings", ""])
+            lines.extend(f"- {warning}" for warning in report["qa"]["warnings"])
+            lines.append("")
 
         if report["blogger"]["post_url"]:
             lines.extend([
