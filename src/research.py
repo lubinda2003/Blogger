@@ -265,7 +265,7 @@ class ResearchCollector:
             if self.domain_allowlist:
                 allowed = False
                 for a in self.domain_allowlist:
-                    clean_a = a.lstrip("www.").strip().lower()
+                    clean_a = re.sub(r"^www\.", "", a.strip().lower())
                     if host == clean_a or host.endswith("." + clean_a):
                         allowed = True
                         break
@@ -679,7 +679,7 @@ class ResearchCollector:
                         else:
                             unverified_claims.append(c)
 
-                    if not claims or not verified_claims:
+                    if not claims:
                         sup = self.find_supporting_excerpt(topic_title, corpus)
                         if sup:
                             supporting_excerpt = sup
@@ -699,7 +699,7 @@ class ResearchCollector:
                             retrieval_date=today,
                             verified=is_verified,
                             content_extraction_success=True,
-                            http_status=200,
+                            http_status=status,
                             evidence_excerpt=supporting_excerpt or tavily_snippet[:250],
                             cleaned_text=cleaned_corpus if is_verified else None,
                             verified_claims=verified_claims if is_verified else [],
