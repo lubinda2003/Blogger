@@ -60,6 +60,28 @@ class AutonomousTopicDiscoveryTests(unittest.TestCase):
         found = AutonomousTopicDiscoverer("test-key").discover(FakeState(duplicates={title_id}))
         self.assertEqual(found, [])
 
+    @patch.object(AutonomousTopicDiscoverer, "_search")
+    def test_normalized_duplicate_titles_are_kept_only_once_across_categories(self, search):
+        first = {
+            "title": "How to Build a Better Productivity Workflow for Remote Teams",
+            "content": "A detailed guide to planning tasks, communication and team workflows.",
+            "url": "https://example.com/first",
+            "score": 0.91,
+        }
+        duplicate = {
+            "title": "A Better Productivity Workflow for Remote Teams: Build It",
+            "content": "A detailed guide to planning tasks, communication and team workflows.",
+            "url": "https://another.example/second",
+            "score": 0.95,
+        }
+        search.side_effect = [[first], [duplicate], [], []]
+
+        found = AutonomousTopicDiscoverer("test-key").discover(FakeState())
+
+        self.assertEqual(len(found), 1)
+        self.assertEqual(found[0].topic, first["title"])
+        self.assertEqual(found[0].category, "Artificial Intelligence and AI Tools")
+
     @patch.object(AutonomousTopicDiscoverer, "_search", return_value=[])
     def test_empty_search_is_not_reported_as_successful_discovery(self, _search):
         discoverer = AutonomousTopicDiscoverer("test-key")
