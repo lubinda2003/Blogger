@@ -314,9 +314,9 @@ class ResearchCollector:
     def _numeric_markers(text: str) -> List[str]:
         """Return numeric values with adjacent currency, percentage, or plus markers."""
         markers = []
-        pattern = re.compile(r"(?<![\\w])(?:[$€£]\\s*)?\\d+(?:,\\d{3})*(?:\\.\\d+)?(?![\\w])(?:\\+)?(?:\\s*%)?")
+        pattern = re.compile(r"(?<![\w])(?:[$€£]\s*)?\d+(?:,\d{3})*(?:\.\d+)?(?![\w])(?:\+)?(?:\s*%)?")
         for match in pattern.finditer(text or ""):
-            value = re.sub(r"\\s+", "", match.group(0)).replace(",", "").lower()
+            value = re.sub(r"\s+", "", match.group(0)).replace(",", "").lower()
             if value:
                 markers.append(value)
         return markers
