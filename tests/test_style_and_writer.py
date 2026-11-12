@@ -150,7 +150,7 @@ class TestStyleAndWriter(unittest.TestCase):
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
 
     def test_groq_user_agent_and_max_tokens(self):
-        """Groq REST call must send custom User-Agent and max_tokens (default 8192)."""
+        """Groq REST call must send custom User-Agent and max_tokens capped at 4000."""
         writer = ArticleWriter(groq_api_key="gsk-test", provider="groq")
         with patch("urllib.request.urlopen") as mock_urlopen:
             resp = MagicMock()
@@ -164,7 +164,7 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
             payload = json.loads(req.data.decode("utf-8"))
-            self.assertEqual(payload.get("max_tokens"), 8192)
+            self.assertEqual(payload.get("max_tokens"), 4000)
 
     def test_fallback_model_chain_tried_before_groq(self):
         """When primary Gemini model fails, fallback Gemini model is tried before Groq."""
