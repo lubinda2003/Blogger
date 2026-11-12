@@ -95,6 +95,38 @@ class TestBloggerPayload(unittest.TestCase):
         self.assertNotIn("<img", injected)
         self.assertNotIn(local_path, injected)
 
+
+    def test_featured_image_is_in_article_structured_data(self):
+        """A public cover image should be represented in Article JSON-LD as well as visible HTML."""
+        import json
+        image_url = "https://cdn.example/article-cover.jpg"
+        result = SEOMetadata.inject_seo_and_assets(
+            html_body="<p>Article text</p>",
+            title="Test Article",
+            meta_description="A useful article description.",
+            featured_image_url=image_url,
+            featured_image_alt="A clear article cover",
+        )
+        json_ld = result.split('<script type="application/ld+json">', 1)[1].split("</script>", 1)[0]
+        schema = json.loads(json_ld)
+        self.assertEqual(schema["image"], image_url)
+        self.assertIn(image_url, result)
+        self.assertIn('alt="A clear article cover"', result)
+
+    def test_local_featured_image_is_excluded_from_structured_data(self):
+        """Runner-local or non-public cover paths must never enter Article JSON-LD."""
+        import json
+        result = SEOMetadata.inject_seo_and_assets(
+            html_body="<p>Article text</p>",
+            title="Test Article",
+            meta_description="A useful article description.",
+            featured_image_url="output/covers/local-cover.jpg",
+        )
+        json_ld = result.split('<script type="application/ld+json">', 1)[1].split("</script>", 1)[0]
+        schema = json.loads(json_ld)
+        self.assertNotIn("image", schema)
+        self.assertNotIn("local-cover.jpg", result)
+
     def test_multiple_product_screenshots_are_distributed_across_distinct_sections(self):
         body = (
             "<h2>Understanding Brand Kit Plans</h2><p>Choose a plan for your team.</p>"
