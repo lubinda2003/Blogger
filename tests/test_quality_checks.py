@@ -121,6 +121,33 @@ class TestQualityChecks(unittest.TestCase):
         self.assertFalse(report.passed)
         self.assertTrue(any("was not verified" in f for f in report.failures))
 
+    def test_live_gate_rejects_claim_with_quote_not_in_source(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["evidence_quote"] = "This unrelated passage says nothing about the claim."
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("quote for claim 1 is not present" in f for f in report.failures))
+
+    def test_live_gate_rejects_claim_from_unverified_source(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["source_url"] = "https://unverified.example/page"
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("not verified in this research run" in f for f in report.failures))
+
+    def test_live_gate_requires_claim_evidence_mapping(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence = []
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("did not provide claim-to-source evidence mappings" in f for f in report.failures))
+
     def test_prohibited_guarantee_fails(self):
         """Test that banned earning guarantees fail immediately."""
         draft = self._create_valid_draft()
