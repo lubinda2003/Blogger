@@ -2,10 +2,8 @@ name: Blogger Content Pipeline
 
 on:
   workflow_dispatch:
-  # Scheduled automation is commented out for initial testing and safety.
-  # Uncomment the schedule below only after end-to-end testing in draft mode.
-  # schedule:
-  #   - cron: "0 8 * * *" # Daily at 08:00 UTC
+  schedule:
+    - cron: "0 8 * * *" # Daily at 08:00 UTC (10:00 AM Zambia time)
 
 permissions:
   contents: write
