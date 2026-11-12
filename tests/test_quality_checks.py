@@ -100,7 +100,7 @@ class TestQualityChecks(unittest.TestCase):
         draft.html_content = "<h2>Short Article</h2><p>This is far too brief to be useful.</p>"
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertFalse(report.passed)
-        self.assertTrue(any("minimum threshold" in f for f in report.failures))
+        self.assertTrue(any("600-word minimum" in f for f in report.failures))
 
     def test_insufficient_sources_fails(self):
         """Test that lack of credible sources fails the gate."""
