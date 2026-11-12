@@ -314,7 +314,7 @@ class ResearchCollector:
     def _numeric_markers(text: str) -> List[str]:
         """Return numeric values with adjacent currency, percentage, or plus markers."""
         markers = []
-        pattern = re.compile(r"(?<![\\w])(?:[$€£]\\s*)?\\d+(?:,\\d{3})*(?:\\.\\d+)?\\+?(?:\\s*%)?")
+        pattern = re.compile(r"(?<![\\w])(?:[$€£]\\s*)?\\d+(?:,\\d{3})*(?:\\.\\d+)?(?![\\w])(?:\\+)?(?:\\s*%)?")
         for match in pattern.finditer(text or ""):
             value = re.sub(r"\\s+", "", match.group(0)).replace(",", "").lower()
             if value:
@@ -328,6 +328,8 @@ class ResearchCollector:
         if not required:
             return True
         available = cls._numeric_markers(evidence)
+        # Compare complete markers, not substrings: 10 must not match 100, and
+        # 135 must not validate the stronger claim "135+".
         return all(marker in available for marker in required)
 
     def find_supporting_excerpt(self, claim: str, content_corpus: str) -> Optional[str]:
