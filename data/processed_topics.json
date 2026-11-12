@@ -181,12 +181,13 @@
       }
     }
   ],
-  "last_updated": "2026-11-12T19:12:50.986972+00:00",
+  "last_updated": "2026-11-12T19:41:19.483746+00:00",
   "total_runs": 10,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
     "canva-brand-kit-design-walkthrough": 2,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1
   }
 }
