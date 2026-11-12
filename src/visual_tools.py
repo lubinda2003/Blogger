@@ -254,21 +254,18 @@ def _render_editorial_svg(plan: dict, output_path: Path, index: int) -> Path:
             '<circle cx="600" cy="345" r="25" fill="' + pop + '"/>'
         )
     safe_heading = html.escape(heading[:90])
-    svg = (
-        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" '
-        'aria-label="' + html.escape(heading or "Editorial illustration") + '">'
-        '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">'
-        '<stop offset="0" stop-color="' + bg + '"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>'
-        '<rect width="1200" height="675" rx="28" fill="url(#bg)"/>'
-        '<path d="M0 520Q300 450 600 545T1200 500V675H0Z" fill="' + accent + '" opacity=".06"/>'
-        '<text x="78" y="82" fill="' + accent + '" font-family="Arial,sans-serif" font-size="20" '
-        'font-weight="700" letter-spacing="5">THE DIGITAL TOOLKIT  /  FIELD GUIDE</text>'
-        + motif +
-        '<text x="78" y="585" fill="' + ink + '" font-family="Arial,sans-serif" font-size="35" '
-        'font-weight="700">' + safe_heading + '</text>'
-        '<text x="78" y="625" fill="' + accent + '" font-family="Arial,sans-serif" font-size="16" '
-        'letter-spacing="2">EXPLANATORY ILLUSTRATION</text></svg>'
-    )
+    svg = "".join([
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" aria-label="',
+        html.escape(heading or "Editorial illustration"), '">',
+        '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">',
+        '<stop offset="0" stop-color="', bg, '"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>',
+        '<rect width="1200" height="675" rx="28" fill="url(#bg)"/>',
+        '<path d="M0 520Q300 450 600 545T1200 500V675H0Z" fill="', accent, '" opacity=".06"/>',
+        '<text x="78" y="82" fill="', accent, '" font-family="Arial,sans-serif" font-size="20" font-weight="700" letter-spacing="5">THE DIGITAL TOOLKIT  /  FIELD GUIDE</text>',
+        motif,
+        '<text x="78" y="585" fill="', ink, '" font-family="Arial,sans-serif" font-size="35" font-weight="700">', safe_heading, '</text>',
+        '<text x="78" y="625" fill="', accent, '" font-family="Arial,sans-serif" font-size="16" letter-spacing="2">EXPLANATORY ILLUSTRATION</text></svg>',
+    ])
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(svg, encoding="utf-8")
