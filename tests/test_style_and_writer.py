@@ -102,31 +102,34 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertIn("models/gemini-3.8-flash:generateContent", req.full_url)
 
-    def test_claim_evidence_repair_uses_verbatim_source_and_leaves_article_unchanged(self):
+    def test_claim_evidence_repair_rewrites_unsupported_sentence_and_mapping(self):
         writer = ArticleWriter(api_key="mock-api-key")
+        original_html = '<p>The service supports recurring invoices.</p><a href="https://example.com/docs">Docs</a>'
         draft = ArticleDraft(
             topic_id="test", title="Test Article", meta_description="A sufficiently long description for this test.",
-            labels=["Test"], html_content="<p>The service supports recurring invoices.</p>", summary="",
+            labels=["Test"], html_content=original_html, summary="",
             sources_used=[{"title": "Docs", "url": "https://example.com/docs"}],
-            primary_intent="Guide", word_count=5, last_checked_date="November 2026",
+            primary_intent="Guide", word_count=8, last_checked_date="November 2026",
             claim_evidence=[{"claim": "The service supports recurring invoices.", "source_url": "https://example.com/docs",
-                             "evidence_quote": "Recurring billing is supported."}],
+                             "evidence_quote": "old quote"}],
         )
+        revised_html = '<p>The billing dashboard lets users manage recurring invoices.</p>' + ("<p>Useful practical guidance for readers.</p>" * 100) + '<a href="https://example.com/docs">Docs</a>'
         source_text = "You can create and manage recurring invoices from the billing dashboard."
-        repaired = {"claim_evidence": [{
-            "claim": "The service supports recurring invoices.",
+        repaired = {"html_content": revised_html, "claim_evidence": [{
+            "claim": "The billing dashboard lets users manage recurring invoices.",
             "source_url": "https://example.com/docs",
-            "evidence_quote": "You can create and manage recurring invoices from the billing dashboard."
+            "evidence_quote": source_text
         }]}
         with patch.object(writer, "_call_llm_provider", return_value=json.dumps(repaired)) as mock_call:
             result = writer.repair_claim_evidence(draft, [{
                 "verified": True, "url": "https://example.com/docs", "title": "Docs", "cleaned_text": source_text
             }])
         self.assertTrue(result)
-        self.assertEqual(draft.html_content, "<p>The service supports recurring invoices.</p>")
+        self.assertEqual(draft.html_content, revised_html)
         self.assertEqual(draft.claim_evidence, repaired["claim_evidence"])
+        self.assertGreater(draft.word_count, 500)
         self.assertIn(source_text, mock_call.call_args.args[0])
-        self.assertIn("verbatim", mock_call.call_args.args[0])
+        self.assertIn("Rewrite unsupported factual sentences", mock_call.call_args.args[0])
 
     def test_claim_evidence_repair_fails_closed_on_invalid_model_output(self):
         writer = ArticleWriter(api_key="mock-api-key")
@@ -209,8 +212,8 @@ class TestStyleAndWriter(unittest.TestCase):
             payload = json.loads(req.data.decode("utf-8"))
             self.assertEqual(payload.get("max_tokens"), 4000)
 
-    def test_fallback_model_chain_tried_before_groq(self):
-        """When primary Gemini model fails, fallback Gemini model is tried before Groq."""
+    def test_groq_is_tried_before_secondary_gemini_in_auto_mode(self):
+        """After primary Gemini fails, auto mode tries Groq before the secondary Gemini model."""
         writer = ArticleWriter(
             api_key="gemini-key",
             model_name="gemini-3.8-flash",
@@ -218,23 +221,13 @@ class TestStyleAndWriter(unittest.TestCase):
             groq_api_key="groq-key",
             provider="auto",
         )
-        call_log = []
-
-        def mock_gemini(prompt, model_name=None, max_tokens=None, is_token_retry=False, max_attempts=None):
-            call_log.append(model_name)
-            if model_name == "gemini-3.8-flash":
-                raise RuntimeError("503 Service Unavailable")
-            return '{"title": "From Fallback Flash"}'
-
-        with patch.object(writer, "_call_gemini_rest", side_effect=mock_gemini), \
-             patch.object(writer, "_call_groq_rest") as mock_groq:
-
-            res = writer._call_llm_provider("Write prompt")
-            self.assertEqual(res, '{"title": "From Fallback Flash"}')
-            self.assertEqual(call_log, ["gemini-3.8-flash", "gemini-3.5-flash"])
-            mock_groq.assert_not_called()
-            self.assertEqual(writer.actual_provider, "gemini")
-            self.assertEqual(writer.actual_model, "gemini-3.5-flash")
+        with patch.object(writer, "_call_gemini_rest", side_effect=RuntimeError("429 RESOURCE_EXHAUSTED")), \
+             patch.object(writer, "_call_groq_rest", return_value='{"title": "From Groq"}') as mock_groq:
+            result = writer._call_llm_provider("Write prompt")
+        self.assertEqual(result, '{"title": "From Groq"}')
+        mock_groq.assert_called_once_with("Write prompt", max_tokens=None)
+        self.assertEqual(writer.actual_provider, "groq")
+        self.assertEqual(writer.actual_model, "openai/gpt-oss-120b")
 
     def test_gemini_503_retried_up_to_5_times(self):
         """Gemini 503 errors must be retried up to 5 times with exponential backoff and jitter."""
