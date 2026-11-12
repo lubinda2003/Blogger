@@ -265,7 +265,7 @@ class ResearchCollector:
             if self.domain_allowlist:
                 allowed = False
                 for a in self.domain_allowlist:
-                    clean_a = re.sub(r"^www\\.", "", a.strip().lower())
+                    clean_a = re.sub(r"^www\.", "", a.strip().lower())
                     if host == clean_a or host.endswith("." + clean_a):
                         allowed = True
                         break
