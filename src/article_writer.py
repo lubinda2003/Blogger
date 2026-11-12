@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "DigitalToolkitContentEngine/1.0"
 DEFAULT_MAX_TOKENS = 8192
+GROQ_MAX_COMPLETION_TOKENS = 4000
 
 # Structured output JSON schema for Gemini v1beta responseSchema
 ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
@@ -490,7 +491,7 @@ class ArticleWriter:
         if not self.groq_api_key:
             raise ValueError("GROQ_API_KEY is not configured in environment or GitHub Secrets.")
 
-        effective_tokens = max_tokens or self.max_tokens
+        effective_tokens = min(max_tokens or self.max_tokens, GROQ_MAX_COMPLETION_TOKENS)
         url = "https://api.groq.com/openai/v1/chat/completions"
         payload = {
             "model": self.groq_model,
