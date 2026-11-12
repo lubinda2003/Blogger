@@ -309,7 +309,7 @@ class ResearchCollector:
             if first_party_subdomain or documentation_path:
                 return 1
 
-            if re.search(r"\\b(official documentation|official docs|developer documentation|help center)\\b",
+            if re.search(r"\b(official documentation|official docs|developer documentation|help center)\b",
                          (title or "").lower()):
                 return 2
             return 3
