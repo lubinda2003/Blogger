@@ -46,6 +46,18 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
                 "required": ["title", "url"],
             },
         },
+        "claim_evidence": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "claim": {"type": "STRING"},
+                    "source_url": {"type": "STRING"},
+                    "evidence_quote": {"type": "STRING"},
+                },
+                "required": ["claim", "source_url", "evidence_quote"],
+            },
+        },
         "primary_intent": {"type": "STRING"},
         "last_checked_date": {"type": "STRING"},
         "affiliate_disclosure_required": {"type": "BOOLEAN"},
@@ -81,7 +93,7 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
             },
         },
     },
-    "required": ["title", "meta_description", "labels", "html_content", "sources_used"],
+    "required": ["title", "meta_description", "labels", "html_content", "sources_used", "claim_evidence"],
 }
 
 
@@ -98,6 +110,7 @@ class ArticleDraft:
     primary_intent: str
     word_count: int
     last_checked_date: str
+    claim_evidence: List[Dict[str, str]] = field(default_factory=list)
     is_dry_run_fixture: bool = False
     affiliate_disclosure_required: bool = False
     screenshot_needed: bool = False
@@ -119,6 +132,7 @@ class ArticleDraft:
             "html_content": self.html_content,
             "summary": self.summary,
             "sources_used": self.sources_used,
+            "claim_evidence": self.claim_evidence,
             "primary_intent": self.primary_intent,
             "word_count": self.word_count,
             "last_checked_date": self.last_checked_date,
@@ -988,6 +1002,7 @@ against primary documentation."</code>
             html_content=html_body,
             summary=parsed.get("summary", ""),
             sources_used=parsed.get("sources_used", []),
+            claim_evidence=parsed.get("claim_evidence", []),
             primary_intent=parsed.get("primary_intent", topic.primary_intent),
             word_count=word_count,
             last_checked_date=parsed.get("last_checked_date", datetime.now(timezone.utc).strftime("%B %Y")),
