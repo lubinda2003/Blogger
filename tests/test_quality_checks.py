@@ -221,6 +221,15 @@ class TestQualityChecks(unittest.TestCase):
         self.assertIn('rel="noopener noreferrer"', result)
 
 
+    def test_preferred_word_count_is_warning_not_hard_block(self):
+        """A useful article below the preferred target should pass with an advisory."""
+        draft = self._create_valid_draft()
+        gate = QualityGate(min_word_count=2000, min_sources=2, is_live_mode=False)
+        report = gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("Length advisory" in warning for warning in report.warnings))
+
+
 class TestFinalBloggerHTMLValidation(unittest.TestCase):
     def _valid_html(self):
         return '''<script type="application/ld+json">{"@type":"TechArticle"}</script>
