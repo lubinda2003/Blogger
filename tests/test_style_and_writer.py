@@ -102,6 +102,20 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertIn("models/gemini-3.8-flash:generateContent", req.full_url)
 
+    def test_gemini_rotates_keys_after_quota_limit(self):
+        writer = ArticleWriter(api_key="key-one", provider="gemini")
+        writer.gemini_api_keys = ["key-one", "key-two", "key-three"]
+        with patch.object(
+            writer, "_call_gemini_rest",
+            side_effect=[RuntimeError("Gemini quota exhausted (429)"), "valid response"],
+        ) as mock_call:
+            result = writer._call_llm_provider("test prompt")
+        self.assertEqual(result, "valid response")
+        self.assertEqual(
+            [call.kwargs["api_key"] for call in mock_call.call_args_list],
+            ["key-one", "key-two"],
+        )
+
     def test_groq_rest_call_success(self):
         """ArticleWriter must support Groq API REST calls with the default Groq model."""
         writer = ArticleWriter(groq_api_key="gsk-mock-key", provider="groq")
