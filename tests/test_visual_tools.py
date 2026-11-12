@@ -39,28 +39,46 @@ class TestVisualHelpers(unittest.TestCase):
             render_mermaid_svg("flowchart TD; A[Start] --> B[Finish]", output)
             self.assertIn("<svg", output.read_text(encoding="utf-8"))
 
-    def test_supporting_visual_generation_is_disabled_by_default(self):
-        with patch.dict(os.environ, {"IMAGE_GENERATION_ENABLED": "false"}, clear=False):
-            self.assertEqual(generate_supporting_visuals([{"prompt": "A scene"}], "output"), [])
+    def test_supporting_visuals_render_local_svg_without_image_api(self):
+        plan = [{"prompt": "A simple workflow showing input, processing and output",
+                 "alt_text": "Three stages of an automated workflow",
+                 "caption": "A simple view of the process",
+                 "section_heading": "How the workflow works"}]
+        with tempfile.TemporaryDirectory() as tmp, \
+             patch("src.visual_tools.generate_gemini_image") as generate:
+            def publish(path, slug, digest):
+                self.assertTrue(path.read_text(encoding="utf-8").startswith("<svg"))
+                self.assertEqual(path.suffix, ".svg")
+                self.assertEqual(len(digest), 64)
+                return "https://cdn.example/" + slug + ".svg"
+
+            items = generate_supporting_visuals(plan, tmp, publisher=publish)
+            generate.assert_not_called()
+            self.assertEqual(len(items), 1)
+            self.assertEqual(items[0]["kind"], "illustration")
+            self.assertEqual(items[0]["url"], "https://cdn.example/supporting-1.svg")
 
     def test_supporting_visual_generation_is_capped_at_two(self):
-        with patch.dict(os.environ, {"IMAGE_GENERATION_ENABLED": "true"}, clear=False), \
-             patch("src.visual_tools.generate_gemini_image") as generate:
-            def fake_generate(prompt, path, **kw):
-                target = Path(path)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(b"test image bytes")
-                return target
-
-            generate.side_effect = fake_generate
+        plans = [
+            {"prompt": f"Concept {i}", "alt_text": f"Concept {i}",
+             "caption": "", "section_heading": f"Section {i}"}
+            for i in range(3)
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
             items = generate_supporting_visuals(
-                [{"prompt": "one", "alt_text": "one", "caption": "", "section_heading": "One"},
-                 {"prompt": "two", "alt_text": "two", "caption": "", "section_heading": "Two"},
-                 {"prompt": "three", "alt_text": "three", "caption": "", "section_heading": "Three"}],
-                "output",
+                plans, tmp,
+                publisher=lambda path, slug, digest: "https://cdn.example/" + slug + ".svg",
             )
-            self.assertEqual(generate.call_count, 2)
             self.assertEqual(len(items), 2)
+
+    def test_supporting_visuals_skip_incomplete_plans(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            items = generate_supporting_visuals(
+                [{"prompt": "Concept only", "alt_text": "", "section_heading": "Section"}],
+                tmp,
+                publisher=lambda path, slug, digest: "https://cdn.example/" + slug + ".svg",
+            )
+            self.assertEqual(items, [])
 
     def test_custom_visual_is_inserted_after_its_section_paragraph(self):
         body = "<h2>Battery Saving</h2><p>First explanation.</p><p>More detail.</p><h2>Next</h2>"
