@@ -39,6 +39,11 @@ class TestQualityChecks(unittest.TestCase):
             html_content=html_with_sources,
             summary="A clear walkthrough detailing copy editing workflows.",
             sources_used=sources,
+            claim_evidence=[{
+                "claim": "Each step is short and easy to follow.",
+                "source_url": "https://ai.google.dev/docs",
+                "evidence_quote": "Each step is short and easy to follow.",
+            }],
             primary_intent="Tutorial",
             word_count=850,
             last_checked_date="October 2026",
@@ -46,6 +51,15 @@ class TestQualityChecks(unittest.TestCase):
             affiliate_disclosure_required=False,
             screenshot_needed=False,
         )
+
+    def _verified_evidence(self):
+        return [{
+            "title": "Official Google Documentation",
+            "url": "https://ai.google.dev/docs",
+            "verified": True,
+            "cleaned_text": "Each step is short and easy to follow.",
+            "evidence_excerpt": "Each step is short and easy to follow.",
+        }]
 
     def test_valid_draft_passes_gate(self):
         """Test that a compliant article passes all quality checks."""
@@ -74,7 +88,9 @@ class TestQualityChecks(unittest.TestCase):
         """Test that dry-run test fixtures can NEVER pass live-mode gates."""
         draft = self._create_valid_draft()
         draft.is_dry_run_fixture = True
-        report = self.live_gate.run_all_checks(draft, check_duplicate=False)
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
         self.assertFalse(report.passed)
         self.assertTrue(any("Live Guard failed: Dry-run test fixture cannot be published" in f for f in report.failures))
 
@@ -98,9 +114,39 @@ class TestQualityChecks(unittest.TestCase):
         """Test that citing an unverified source fails in live mode."""
         draft = self._create_valid_draft()
         verified_urls = {"https://ai.google.dev/docs"}  # W3C was not verified
-        report = self.live_gate.run_all_checks(draft, verified_source_urls=verified_urls, check_duplicate=False)
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_urls=verified_urls,
+            verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
         self.assertFalse(report.passed)
         self.assertTrue(any("was not verified" in f for f in report.failures))
+
+    def test_live_gate_rejects_claim_with_quote_not_in_source(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["evidence_quote"] = "This unrelated passage says nothing about the claim."
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("quote for claim 1 is not present" in f for f in report.failures))
+
+    def test_live_gate_rejects_claim_from_unverified_source(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["source_url"] = "https://unverified.example/page"
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("not verified in this research run" in f for f in report.failures))
+
+    def test_live_gate_requires_claim_evidence_mapping(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence = []
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("did not provide claim-to-source evidence mappings" in f for f in report.failures))
 
     def test_prohibited_guarantee_fails(self):
         """Test that banned earning guarantees fail immediately."""
@@ -154,6 +200,7 @@ class TestQualityChecks(unittest.TestCase):
         report = self.live_gate.run_all_checks(
             draft,
             verified_source_urls=verified_urls,
+            verified_source_evidence=self._verified_evidence(),
             check_duplicate=False,
         )
         self.assertTrue(report.passed, f"Expected pass with normalized URLs, got: {report.failures}")
