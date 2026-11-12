@@ -210,45 +210,110 @@ def audit_html_accessibility(article_html: str, output_path: Optional[str] = Non
     return result
 
 
+def _render_editorial_svg(plan: dict, output_path: Path, index: int) -> Path:
+    """Create a clean, topic-aware editorial illustration using local SVG only.
+
+    This deliberately creates conceptual artwork, not a simulated product interface
+    or a screenshot. It has no network, API, font, or external-asset dependency.
+    """
+    heading = re.sub(r"\s+", " ", str(plan.get("section_heading", "A closer look"))).strip()
+    prompt = re.sub(r"\s+", " ", str(plan.get("prompt", ""))).strip()
+    concept = (heading + " " + prompt).lower()
+    palettes = (
+        ("#14251f", "#a7f3d0", "#fbbf24", "#ecfdf5"),
+        ("#101b36", "#6ee7f9", "#f59e0b", "#dbeafe"),
+        ("#251638", "#c4b5fd", "#fb7185", "#f5f3ff"),
+    )
+    bg, accent, pop, ink = palettes[(index - 1) % len(palettes)]
+    if any(word in concept for word in ("step", "process", "workflow", "sequence", "automate")):
+        motif = (
+            '<g fill="none" stroke="' + accent + '" stroke-width="8" stroke-linecap="round">'
+            '<path d="M245 350H955"/><path d="M875 285l80 65-80 65"/></g>'
+            '<g fill="' + bg + '" stroke="' + accent + '" stroke-width="5">'
+            '<rect x="150" y="260" width="210" height="180" rx="28"/>'
+            '<rect x="495" y="260" width="210" height="180" rx="28"/>'
+            '<rect x="840" y="260" width="210" height="180" rx="28"/></g>'
+            '<g fill="' + pop + '"><circle cx="255" cy="315" r="22"/><circle cx="600" cy="315" r="22"/><circle cx="945" cy="315" r="22"/></g>'
+            '<g fill="' + ink + '" font-family="Arial,sans-serif" font-size="25" font-weight="700" text-anchor="middle">'
+            '<text x="255" y="380">INPUT</text><text x="600" y="380">WORK</text><text x="945" y="380">RESULT</text></g>'
+        )
+    elif any(word in concept for word in ("compare", "versus", "difference", "choose", "option")):
+        motif = (
+            '<g><circle cx="390" cy="345" r="145" fill="' + accent + '" opacity=".18" stroke="' + accent + '" stroke-width="5"/>'
+            '<circle cx="810" cy="345" r="145" fill="' + pop + '" opacity=".18" stroke="' + pop + '" stroke-width="5"/>'
+            '<path d="M600 205v280" stroke="' + ink + '" stroke-width="3" stroke-dasharray="10 14" opacity=".45"/>'
+            '<path d="M325 345h130M390 280v130M745 345h130" stroke="' + accent + '" stroke-width="13" stroke-linecap="round"/>'
+            '<path d="M810 280v130" stroke="' + pop + '" stroke-width="13" stroke-linecap="round"/></g>'
+        )
+    else:
+        motif = (
+            '<circle cx="600" cy="345" r="175" fill="' + accent + '" opacity=".10"/>'
+            '<circle cx="600" cy="345" r="125" fill="none" stroke="' + accent + '" stroke-width="5"/>'
+            '<circle cx="600" cy="345" r="78" fill="' + pop + '" opacity=".25"/>'
+            '<path d="M600 220v250M475 345h250M512 257l176 176M688 257L512 433" stroke="' + accent + '" stroke-width="4" opacity=".7"/>'
+            '<circle cx="600" cy="345" r="25" fill="' + pop + '"/>'
+        )
+    safe_heading = html.escape(heading[:90])
+    svg = (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" role="img" '
+        'aria-label="' + html.escape(heading or "Editorial illustration") + '">'
+        '<defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">'
+        '<stop offset="0" stop-color="' + bg + '"/><stop offset="1" stop-color="#0b1220"/></linearGradient></defs>'
+        '<rect width="1200" height="675" rx="28" fill="url(#bg)"/>'
+        '<path d="M0 520Q300 450 600 545T1200 500V675H0Z" fill="' + accent + '" opacity=".06"/>'
+        '<text x="78" y="82" fill="' + accent + '" font-family="Arial,sans-serif" font-size="20" '
+        'font-weight="700" letter-spacing="5">THE DIGITAL TOOLKIT  /  FIELD GUIDE</text>'
+        + motif +
+        '<text x="78" y="585" fill="' + ink + '" font-family="Arial,sans-serif" font-size="35" '
+        'font-weight="700">' + safe_heading + '</text>'
+        '<text x="78" y="625" fill="' + accent + '" font-family="Arial,sans-serif" font-size="16" '
+        'letter-spacing="2">EXPLANATORY ILLUSTRATION</text></svg>'
+    )
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(svg, encoding="utf-8")
+    return output_path
+
+
 def generate_supporting_visuals(
     visual_plan: list[dict],
     output_dir: str,
     publisher: Optional[Callable[[Path, str, str], Optional[str]]] = None,
     max_items: int = 2,
 ) -> list[dict]:
-    """Generate up to two useful editorial photographs and return only safely hosted assets."""
-    import os
+    """Generate useful supporting illustrations locally and return safely hosted assets.
 
-    if os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() not in ("true", "1", "yes", "on"):
-        return []
+    No image-generation API is called. A visual is included only when the article
+    explicitly supplies a meaningful visual plan and a public HTTPS asset URL is
+    available from the repository publisher.
+    """
     items = []
-    for index, plan in enumerate((visual_plan or [])[:max(0, min(2, max_items))], start=1):
+    plans = (visual_plan or [])[:max(0, min(2, max_items))]
+    for index, plan in enumerate(plans, start=1):
+        if not isinstance(plan, dict):
+            continue
+        heading = str(plan.get("section_heading", "")).strip()
+        alt_text = str(plan.get("alt_text", "")).strip()
+        prompt = str(plan.get("prompt", "")).strip()
+        if not heading or not alt_text or not prompt:
+            continue
         try:
-            prompt = (
-                "Create a premium photorealistic editorial photograph for an international technology publication. "
-                f"Subject and scene: {plan.get('prompt', '')}. "
-                "Use natural lighting, authentic materials, believable real-world details and an art-directed "
-                "composition. It must look like commissioned editorial photography, not a 3D render, illustration, "
-                "generic AI art, collage, fabricated software screenshot or dashboard. No text, letters, logos, "
-                "watermarks or fake interface elements. Landscape 4:3 composition."
-            )
-            path = generate_gemini_image(
-                prompt, Path(output_dir) / "visuals" / f"supporting-{index}.jpg", aspect_ratio="4:3"
+            path = _render_editorial_svg(
+                plan, Path(output_dir) / "visuals" / f"supporting-{index}.svg", index
             )
             digest = hashlib.sha256(path.read_bytes()).hexdigest()
             public_url = publisher(path, f"supporting-{index}", digest) if publisher else None
             items.append({
                 "path": str(path),
                 "url": public_url if public_url and public_url.startswith("https://") else None,
-                "alt": str(plan.get("alt_text", "Editorial article photograph"))[:240],
+                "alt": alt_text[:240],
                 "caption": str(plan.get("caption", ""))[:300],
-                "section_heading": str(plan.get("section_heading", ""))[:180],
-                "kind": "photo",
+                "section_heading": heading[:180],
+                "kind": "illustration",
             })
         except Exception as exc:
-            logger.warning("Supporting visual %s could not be generated: %s", index, exc)
+            logger.warning("Supporting illustration %s could not be generated: %s", index, exc)
     return items
-
 
 def inject_visual_figures(article_html: str, visual_items: list[dict]) -> str:
     """Insert hosted custom visuals after the first explanatory paragraph of their target section."""
