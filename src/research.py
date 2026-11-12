@@ -278,6 +278,44 @@ class ResearchCollector:
             logger.warning(f"Error checking domain rules for '{url}': {e}")
             return False
 
+    @staticmethod
+    def _source_priority(url: str, title: str = "", target_url: str = "") -> int:
+        """Rank likely first-party documentation ahead of general commentary.
+
+        This is a discovery-order preference, not proof that a source is official
+        or that its claims are accurate. Claim verification remains mandatory.
+        """
+        try:
+            candidate = urllib.parse.urlparse(url)
+            host = (candidate.hostname or "").lower()
+            target_host = (urllib.parse.urlparse(target_url).hostname or "").lower()
+            if host.startswith("www."):
+                host = host[4:]
+            if target_host.startswith("www."):
+                target_host = target_host[4:]
+
+            # An editorially supplied target domain is the strongest first-party
+            # signal available without maintaining a brittle vendor-domain list.
+            if target_host and (host == target_host or host.endswith("." + target_host)):
+                return 0
+
+            path = (candidate.path or "").lower()
+            first_party_subdomain = host.split(".")[0] in {
+                "docs", "developer", "developers", "support", "help"
+            }
+            documentation_path = bool(re.search(
+                r"/(docs?|documentation|developers?|support|help|pricing)(/|$)", path
+            ))
+            if first_party_subdomain or documentation_path:
+                return 1
+
+            if re.search(r"\\b(official documentation|official docs|developer documentation|help center)\\b",
+                         (title or "").lower()):
+                return 2
+            return 3
+        except Exception:
+            return 3
+
     def _clean_corpus_text(self, content_corpus: str, max_chars: int = 3000) -> str:
         """Extract clean, coherent plaintext for factual research evidence injection."""
         if not content_corpus:
@@ -578,6 +616,12 @@ class ResearchCollector:
         for title, url, claims in candidate_sources:
             if self._is_domain_allowed(url):
                 candidate_pool.append((title, url, claims, ""))
+
+        # Prefer first-party targets and documentation pages before general commentary.
+        # Ranking affects discovery order only; every source still passes the same evidence checks.
+        candidate_pool.sort(
+            key=lambda item: self._source_priority(item[1], item[0], target_url)
+        )
 
         # Deduplicate candidates by URL
         seen_urls = set()
