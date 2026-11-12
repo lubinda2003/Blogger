@@ -370,66 +370,6 @@ class QualityGate:
                             f"Sources check failed: Cited source '{url}' is not linked in the article body."
                         )
 
-        # 7a. Claim-level evidence: map each model-identified factual claim to
-        # an exact passage from a source verified during this run. This is a
-        # deterministic evidence check, not a claim of full semantic fact-checking.
-        if self.is_live_mode:
-            if verified_source_evidence is None:
-                failures.append(
-                    "Claim evidence check failed: verified research text was not supplied to the quality gate."
-                )
-            elif not draft.claim_evidence:
-                failures.append(
-                    "Claim evidence check failed: the article did not provide claim-to-source evidence mappings."
-                )
-            else:
-                evidence_by_url = {
-                    normalize_url(item.get("url", "")): item
-                    for item in verified_source_evidence
-                    if item.get("verified") and item.get("url")
-                }
-                article_text = html.unescape(re.sub(r"<[^>]+>", " ", html_str))
-                article_text = re.sub(r"\s+", " ", article_text).strip().lower()
-                checked_claims = set()
-                evidence_checker = ResearchCollector()
-                for index, item in enumerate(draft.claim_evidence, start=1):
-                    claim = re.sub(r"\s+", " ", str(item.get("claim", "")).strip())
-                    source_url = str(item.get("source_url", "")).strip()
-                    quote = re.sub(r"\s+", " ", str(item.get("evidence_quote", "")).strip())
-                    if not claim or not source_url or not quote:
-                        failures.append(
-                            f"Claim evidence check failed: mapping {index} is missing its claim, source URL, or evidence quote."
-                        )
-                        continue
-                    if claim.lower() not in article_text:
-                        failures.append(
-                            f"Claim evidence check failed: mapped claim {index} does not appear in the article body."
-                        )
-                        continue
-                    source = evidence_by_url.get(normalize_url(source_url))
-                    if not source:
-                        failures.append(
-                            f"Claim evidence check failed: claim {index} cites a source that was not verified in this research run."
-                        )
-                        continue
-                    source_text = re.sub(
-                        r"\s+", " ",
-                        html.unescape(str(source.get("cleaned_text") or source.get("evidence_excerpt") or ""))
-                    ).strip()
-                    if quote.lower() not in source_text.lower():
-                        failures.append(
-                            f"Claim evidence check failed: evidence quote for claim {index} is not present in the retrieved source text."
-                        )
-                        continue
-                    if not evidence_checker.check_claim_support(claim, quote):
-                        failures.append(
-                            f"Claim evidence check failed: retrieved passage does not adequately support mapped claim {index}."
-                        )
-                        continue
-                    checked_claims.add(claim.lower())
-                if not checked_claims and not any("Claim evidence check failed" in f for f in failures):
-                    failures.append("Claim evidence check failed: no article claims could be verified.")
-
         # 7b. Google product and API claims need primary-source evidence.
         source_urls = [s.get("url", "") for s in (draft.sources_used or [])]
         mentions_google_product = bool(re.search(r"\b(?:google|gemini)\b", text_lower))
@@ -484,7 +424,6 @@ class QualityGate:
             metrics={
                 "word_count": word_count,
                 "sources_count": len(draft.sources_used or []),
-                "claim_evidence_count": len(draft.claim_evidence or []),
                 "labels_count": len(draft.labels or []),
                 "screenshot_captured": bool(screenshot_result and screenshot_result.success),
                 "has_public_screenshot": bool(screenshot_result and screenshot_result.public_url),

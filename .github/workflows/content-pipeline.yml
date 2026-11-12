@@ -64,6 +64,8 @@ jobs:
       - name: Run Editorial & Publishing Pipeline
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
           GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-3.8-flash' }}
           GEMINI_IMAGE_MODEL: ${{ vars.GEMINI_IMAGE_MODEL || 'gemini-3.1-flash-image' }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -137,6 +139,8 @@ jobs:
         if: always()
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEY_2: ${{ secrets.GEMINI_API_KEY_2 }}
+          GEMINI_API_KEY_3: ${{ secrets.GEMINI_API_KEY_3 }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
           BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
@@ -152,7 +156,7 @@ jobs:
           rm -rf /tmp/report && mkdir -p /tmp/report/latest && cp -r output/. /tmp/report/latest/
           python3 - <<'PY'
           import os, pathlib
-          names = ("GEMINI_API_KEY", "GROQ_API_KEY", "TAVILY_API_KEY", "BLOGGER_BLOG_ID", "BLOGGER_CLIENT_ID",
+          names = ("GEMINI_API_KEY", "GEMINI_API_KEY_2", "GEMINI_API_KEY_3", "GROQ_API_KEY", "TAVILY_API_KEY", "BLOGGER_BLOG_ID", "BLOGGER_CLIENT_ID",
                    "BLOGGER_CLIENT_SECRET", "BLOGGER_REFRESH_TOKEN", "REPORT_TOKEN")
           secrets = [v for v in (os.environ.get(n, "") for n in names) if len(v) >= 8]
           for path in pathlib.Path("/tmp/report/latest").rglob("*"):

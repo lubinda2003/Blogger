@@ -211,7 +211,7 @@ class TestLengthRequirementAndFailover(unittest.TestCase):
     def test_primary_model_gets_three_attempts_fallback_gets_default(self):
         seen = []
 
-        def fake(prompt, model_name=None, max_tokens=None, is_token_retry=False, max_attempts=None):
+        def fake(prompt, model_name=None, max_tokens=None, is_token_retry=False, max_attempts=None, api_key=None):
             seen.append((model_name, max_attempts))
             if model_name == self.writer.model_name:
                 raise RuntimeError("503")
