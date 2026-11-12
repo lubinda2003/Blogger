@@ -100,7 +100,7 @@ class TestQualityChecks(unittest.TestCase):
         draft.html_content = "<h2>Short Article</h2><p>This is far too brief to be useful.</p>"
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertFalse(report.passed)
-        self.assertTrue(any("minimum threshold" in f for f in report.failures))
+        self.assertTrue(any("600-word minimum" in f for f in report.failures))
 
     def test_insufficient_sources_fails(self):
         """Test that lack of credible sources fails the gate."""
@@ -219,6 +219,15 @@ class TestQualityChecks(unittest.TestCase):
         self.assertIn('href="https://help.shopify.com"', result)
         self.assertIn('target="_blank"', result)
         self.assertIn('rel="noopener noreferrer"', result)
+
+
+    def test_preferred_word_count_is_warning_not_hard_block(self):
+        """A useful article below the preferred target should pass with an advisory."""
+        draft = self._create_valid_draft()
+        gate = QualityGate(min_word_count=2000, min_sources=2, is_live_mode=False)
+        report = gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("Length advisory" in warning for warning in report.warnings))
 
 
 class TestFinalBloggerHTMLValidation(unittest.TestCase):
