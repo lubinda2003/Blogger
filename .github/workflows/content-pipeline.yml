@@ -30,6 +30,14 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Workflow dispatch events can queue with an older event SHA. Sync to the
+      # current branch head after concurrency has released so a queued run cannot
+      # later overwrite or conflict with state committed by the preceding run.
+      - name: Sync to latest branch state
+        run: |
+          git fetch origin ${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
+
       # actions/setup-python@v5 pinned to reviewed commit SHA
       - name: Set up Python 3.11
         uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
