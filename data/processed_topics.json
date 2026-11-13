@@ -216,16 +216,17 @@
       }
     }
   ],
-  "last_updated": "2026-11-13T19:37:25.757921+00:00",
+  "last_updated": "2026-11-13T20:00:04.510239+00:00",
   "total_runs": 12,
   "failed_attempts": {
-    "claude-code-web-prototyping": 1,
-    "best-free-invoicing-tools-freelancers": 2,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
     "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 1,
     "canva-brand-kit-design-walkthrough": 2,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "claude-code-web-prototyping": 1,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "best-free-invoicing-tools-freelancers": 2,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2
   }
 }
