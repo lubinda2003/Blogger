@@ -622,7 +622,7 @@ class ArticleWriter:
 
         existing_urls = {
             normalized(match)
-            for match in re.findall(r"""href\\s*=\\s*["'](https?://[^"']+)["']""", html_content, re.IGNORECASE)
+            for match in re.findall(r"""href\s*=\s*["'](https?://[^"']+)["']""", html_content, re.IGNORECASE)
         }
         missing_items = []
         seen = set(existing_urls)
@@ -642,12 +642,12 @@ class ArticleWriter:
             return html_content
 
         heading_pattern = re.compile(
-            r"<h[23]\\b[^>]*>\\s*(?:Sources\\s*&amp;\\s*References|Sources\\s*&\\s*References|Sources\\s+and\\s+References)\\s*</h[23]\\s*>",
+            r"<h[23]\b[^>]*>\s*(?:Sources\s*&amp;\s*References|Sources\s*&\s*References|Sources\s+and\s+References)\s*</h[23]\s*>",
             re.IGNORECASE,
         )
         heading = heading_pattern.search(html_content)
         if heading:
-            closing_list = re.search(r"</ul\\s*>", html_content[heading.end():], re.IGNORECASE)
+            closing_list = re.search(r"</ul\s*>", html_content[heading.end():], re.IGNORECASE)
             if closing_list:
                 insert_at = heading.end() + closing_list.start()
                 return html_content[:insert_at] + "\\n" + "\\n".join(missing_items) + "\\n" + html_content[insert_at:]
