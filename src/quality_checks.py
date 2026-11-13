@@ -55,23 +55,51 @@ CLAIM_NEGATIONS = {"no", "not", "never", "cannot", "can't", "doesn't", "don't", 
 
 
 def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
-    """Conservatively match mapped claims to paraphrased article wording."""
-    claim_tokens = [t for t in re.findall(r"[a-z0-9]+", (claim or "").casefold()) if t not in CLAIM_STOP_WORDS]
-    article_tokens = set(re.findall(r"[a-z0-9]+", (article_text or "").casefold()))
-    unique_claim_tokens = set(claim_tokens)
-    if len(unique_claim_tokens) < 3:
+    """Match mapped claims to nearby article wording without cross-contaminating negation/numbers."""
+    claim_tokens = {
+        token for token in re.findall(r"[a-z0-9]+", (claim or "").casefold())
+        if token not in CLAIM_STOP_WORDS
+    }
+    if len(claim_tokens) < 3:
         return False
-    coverage = sum(1 for token in unique_claim_tokens if token in article_tokens) / len(unique_claim_tokens)
-    if coverage < 0.65:
+
+    # Check local one- or two-sentence windows. Looking for negation or numbers across
+    # the entire article incorrectly rejects unrelated claims whenever another section
+    # contains "not", or incorrectly borrows a number from a different paragraph.
+    sentences = [
+        sentence.strip()
+        for sentence in re.split(r"(?<=[.!?])\s+|\n+", (article_text or "").casefold())
+        if sentence.strip()
+    ]
+    if not sentences:
         return False
-    claim_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", claim))
-    article_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", article_text or ""))
-    if not claim_numbers.issubset(article_numbers):
-        return False
+
     negation_pattern = r"\b(?:no|not|never|cannot|can't|doesn't|don't|without|neither|nor)\b"
-    return bool(re.search(negation_pattern, claim.casefold())) == bool(
-        re.search(negation_pattern, (article_text or "").casefold())
-    )
+    claim_has_negation = bool(re.search(negation_pattern, claim.casefold()))
+    claim_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", claim))
+
+    for index in range(len(sentences)):
+        for width in (1, 2):
+            window = " ".join(sentences[index:index + width])
+            if not window:
+                continue
+            window_tokens = set(re.findall(r"[a-z0-9]+", window))
+            coverage = len(claim_tokens & window_tokens) / len(claim_tokens)
+            if coverage < 0.65:
+                continue
+            # Numeric facts must be co-located with the matching wording in one
+            # sentence; a nearby sentence about a different price/limit must not
+            # accidentally satisfy the claim's number.
+            if claim_numbers:
+                sentence_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", sentences[index]))
+                sentence_tokens = set(re.findall(r"[a-z0-9]+", sentences[index]))
+                sentence_coverage = len(claim_tokens & sentence_tokens) / len(claim_tokens)
+                if not claim_numbers.issubset(sentence_numbers) or sentence_coverage < 0.65:
+                    continue
+            if claim_has_negation != bool(re.search(negation_pattern, window)):
+                continue
+            return True
+    return False
 
 
 def has_official_google_source(source_urls, pricing: bool = False) -> bool:
