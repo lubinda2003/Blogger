@@ -69,11 +69,12 @@ class TestDefaultBlocklist(unittest.TestCase):
         for url in ("https://www.notion.com/help", "https://zapier.com/blog/best-free-invoice-software/", "https://waveapps.com/", "https://wired.com/a"):
             self.assertTrue(rc._is_domain_allowed(url), url)
 
-    def test_an_explicit_list_replaces_the_default_and_an_empty_list_disables_blocking(self):
-        self.assertTrue(ResearchCollector(domain_blocklist=[])._is_domain_allowed("https://www.youtube.com/watch?v=abc"))
+    def test_empty_or_custom_lists_extend_rather_than_replace_default_exclusions(self):
+        youtube_url = "https://www.youtube.com/watch?v=abc"
+        self.assertFalse(ResearchCollector(domain_blocklist=[])._is_domain_allowed(youtube_url))
         custom = ResearchCollector(domain_blocklist=["www.waveapps.com"])
         self.assertFalse(custom._is_domain_allowed("https://waveapps.com/pricing"))  # was mangled by lstrip("www.")
-        self.assertTrue(custom._is_domain_allowed("https://www.youtube.com/watch?v=abc"))
+        self.assertFalse(custom._is_domain_allowed(youtube_url))
 
     def test_the_default_list_is_not_empty(self):
         self.assertIn("youtube.com", DEFAULT_DOMAIN_BLOCKLIST)
