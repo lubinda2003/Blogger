@@ -132,7 +132,7 @@ def validate_final_blogger_html(document: str) -> List[str]:
     except Exception as exc:
         return [f"Final HTML validation failed: parser could not read document ({exc})."]
     schema_blocks = re.findall(
-        r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>',
+        r'<script\b[^>]*type=["\\']application/ld\+json["\\'][^>]*>(.*?)</script\s*>',
         document, flags=re.I | re.S,
     )
     if not schema_blocks:
@@ -257,11 +257,11 @@ class QualityGate:
                     "Every material factual claim must map to retrieved source text."
                 )
             else:
-                normalized_article_text = re.sub(r"\\s+", " ", html.unescape(clean_text)).strip().casefold()
+                normalized_article_text = re.sub(r"\s+", " ", html.unescape(clean_text)).strip().casefold()
                 for index, item in enumerate(draft.claim_evidence, start=1):
-                    claim = re.sub(r"\\s+", " ", str(item.get("claim", ""))).strip()
+                    claim = re.sub(r"\s+", " ", str(item.get("claim", ""))).strip()
                     source_url = str(item.get("source_url", "")).strip()
-                    quote = re.sub(r"\\s+", " ", str(item.get("evidence_quote", ""))).strip()
+                    quote = re.sub(r"\s+", " ", str(item.get("evidence_quote", ""))).strip()
                     if not claim or not source_url or not quote:
                         failures.append(f"Evidence check failed: claim mapping #{index} is incomplete.")
                         continue
@@ -274,7 +274,7 @@ class QualityGate:
                         failures.append(f"Evidence check failed: claim #{index} points to a source that was not verified.")
                         continue
                     source_text = re.sub(
-                        r"\\s+", " ",
+                        r"\s+", " ",
                         html.unescape(str(source.get("cleaned_text") or source.get("evidence_excerpt") or "")),
                     ).strip().casefold()
                     if quote.casefold() not in source_text:
