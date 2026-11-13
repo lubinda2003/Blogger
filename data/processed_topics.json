@@ -197,10 +197,27 @@
         ],
         "word_count": 1211
       }
+    },
+    {
+      "topic_id": "10-best-payment-processing-solutions-for-small-business-2026",
+      "topic_title": "10 Best Payment Processing Solutions for Small Business (2026)",
+      "fingerprint": "8db0708dd320da9e",
+      "post_id": "1349464132638868526",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-13T07:11:35.686365+00:00",
+      "metadata": {
+        "labels": [
+          "Digital Business Tools",
+          "Payment Processing"
+        ],
+        "word_count": 1563
+      }
     }
   ],
-  "last_updated": "2026-11-12T20:55:22.048663+00:00",
-  "total_runs": 11,
+  "last_updated": "2026-11-13T07:11:35.686393+00:00",
+  "total_runs": 12,
   "failed_attempts": {
     "best-free-invoicing-tools-freelancers": 2,
     "claude-code-web-prototyping": 1,
