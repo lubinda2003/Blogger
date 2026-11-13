@@ -260,6 +260,20 @@ class TestFinalBloggerHTMLValidation(unittest.TestCase):
     def test_valid_final_fragment_passes(self):
         self.assertEqual(validate_final_blogger_html(self._valid_html()), [])
 
+    def test_missing_blogposting_schema_fails(self):
+        bad = self._valid_html().replace(
+            '<script type="application/ld+json">{"@type":"BlogPosting","headline":"A valid article title","description":"A valid article description."}</script>',
+            "",
+        )
+        self.assertTrue(any("BlogPosting structured data is missing" in item for item in validate_final_blogger_html(bad)))
+
+    def test_invalid_blogposting_schema_fails(self):
+        bad = self._valid_html().replace(
+            '{"@type":"BlogPosting","headline":"A valid article title","description":"A valid article description."}',
+            '{"@type":"TechArticle"}',
+        )
+        self.assertTrue(any("Google-supported BlogPosting type" in item for item in validate_final_blogger_html(bad)))
+
     def test_missing_sources_section_fails(self):
         failures = validate_final_blogger_html(self._valid_html().replace("Sources &amp; References", "Further reading"))
         self.assertTrue(any("Sources & References" in item for item in failures))
