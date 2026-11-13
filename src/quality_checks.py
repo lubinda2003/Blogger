@@ -272,6 +272,20 @@ class QualityGate:
             if screenshot_result and screenshot_result.is_mock:
                 failures.append("Live Guard failed: Mock screenshot cannot be published in live mode.")
 
+        # 1a. SEO metadata guidance. These are advisory, not ranking guarantees or hard gates.
+        title_length = len((draft.title or "").strip())
+        description_length = len((draft.meta_description or "").strip())
+        if title_length < 30 or title_length > 65:
+            warnings.append(
+                f"SEO title advisory: title is {title_length} characters; aim for a concise, descriptive title around 30–65 characters."
+            )
+        if description_length < 120 or description_length > 155:
+            warnings.append(
+                f"SEO description advisory: description is {description_length} characters; the editorial target is 120–155 characters."
+            )
+        if not (draft.meta_description or "").strip():
+            warnings.append("SEO description advisory: no meta description was generated; the opening paragraph should clearly summarise the answer.")
+
         # 1. Plain-English Style and Generic AI Cliché Check
         for pattern in self.GENERIC_AI_CLICHES:
             match = re.search(pattern, text_lower)
@@ -464,6 +478,8 @@ class QualityGate:
                 "word_count": word_count,
                 "sources_count": len(draft.sources_used or []),
                 "labels_count": len(draft.labels or []),
+                "seo_title_characters": len((draft.title or "").strip()),
+                "seo_description_characters": len((draft.meta_description or "").strip()),
                 "screenshot_captured": bool(screenshot_result and screenshot_result.success),
                 "has_public_screenshot": bool(screenshot_result and screenshot_result.public_url),
             },
