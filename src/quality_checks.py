@@ -87,9 +87,15 @@ def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
             coverage = len(claim_tokens & window_tokens) / len(claim_tokens)
             if coverage < 0.65:
                 continue
-            window_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", window))
-            if not claim_numbers.issubset(window_numbers):
-                continue
+            # Numeric facts must be co-located with the matching wording in one
+            # sentence; a nearby sentence about a different price/limit must not
+            # accidentally satisfy the claim's number.
+            if claim_numbers:
+                sentence_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", sentences[index]))
+                sentence_tokens = set(re.findall(r"[a-z0-9]+", sentences[index]))
+                sentence_coverage = len(claim_tokens & sentence_tokens) / len(claim_tokens)
+                if not claim_numbers.issubset(sentence_numbers) or sentence_coverage < 0.65:
+                    continue
             if claim_has_negation != bool(re.search(negation_pattern, window)):
                 continue
             return True
