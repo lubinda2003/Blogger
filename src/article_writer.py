@@ -348,6 +348,10 @@ class ArticleWriter:
             "over 28, everyday words, short paragraphs, one idea per sentence, active voice. Explain jargon in a few plain "
             "words. Keep every fact, number, heading, link, list and code block. Do not add facts, and do not make the "
             "article shorter than it is now. Keep the same title, labels, sources_used and JSON schema. "
+            "Preserve every claim string in claim_evidence exactly as written; those claim sentences must remain "
+            "verbatim in html_content so the independent evidence check can verify them. Preserve every source URL "
+            "as a clickable href. If a sentence cannot be preserved accurately, keep the original wording rather than "
+            "paraphrasing it. "
             "Return the complete JSON object only.\n\n"
             f"PREVIOUS DRAFT JSON:\n{json.dumps(parsed, ensure_ascii=False)}"
         )
@@ -356,9 +360,22 @@ class ArticleWriter:
             if self._validate_schema(rewritten):
                 raise ValueError("rewrite failed schema validation")
             new_html = rewritten.get("html_content", "")
-            lost = set(re.findall(r'href="([^"]+)"', original_html)) - set(re.findall(r'href="([^"]+)"', new_html))
+            href_pattern = re.compile(r"""\\bhref\\s*=\\s*["']([^"']+)["']""", re.IGNORECASE)
+            original_links = {html.unescape(url).strip() for url in href_pattern.findall(original_html)}
+            rewritten_links = {html.unescape(url).strip() for url in href_pattern.findall(new_html)}
+            lost = original_links - rewritten_links
             if lost:
                 raise ValueError(f"rewrite dropped {len(lost)} link(s)")
+            # Evidence mappings are checked against final article text. Never accept a
+            # readability rewrite that paraphrases away the exact claim being verified.
+            visible_text = re.sub(r"\\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", new_html))).strip().casefold()
+            missing_claims = []
+            for mapping in parsed.get("claim_evidence") or []:
+                claim = re.sub(r"\\s+", " ", str(mapping.get("claim", ""))).strip().casefold()
+                if claim and claim not in visible_text:
+                    missing_claims.append(claim)
+            if missing_claims:
+                raise ValueError(f"rewrite changed or removed {len(missing_claims)} evidence-backed claim(s)")
             if self.min_word_count and self._count_words(original_html) >= self.min_word_count > self._count_words(new_html):
                 raise ValueError("rewrite fell below the minimum length")
             after = analyze_readability(new_html)
@@ -609,13 +626,18 @@ class ArticleWriter:
         """Appends a visible Sources & References section with working links if not already present."""
         if not sources_used:
             return html_content
-        # The model may already have written the required final references section.
-        # Do not append a second section (or leave an empty wrapper after layout cleanup).
-        if "article-sources" in html_content or re.search(
-            r"<h[23]\b[^>]*>\s*(?:Sources\s*&amp;\s*References|Sources\s+and\s+References)\s*</h[23]\s*>",
-            html_content,
-            flags=re.IGNORECASE,
-        ):
+        # Keep model-authored references, but repair any missing links from the
+        # verified sources_used list instead of trusting a possibly incomplete section.
+        existing_urls = {
+            html.unescape(url).strip().rstrip("/")
+            for url in re.findall(r"""\\bhref\\s*=\\s*["']([^"']+)["']""", html_content, flags=re.IGNORECASE)
+        }
+        missing_sources = [
+            source for source in sources_used
+            if html.unescape(str(source.get("url") or "")).strip().rstrip("/")
+            and html.unescape(str(source.get("url") or "")).strip().rstrip("/") not in existing_urls
+        ]
+        if not missing_sources:
             return html_content
 
         items = []
@@ -627,6 +649,18 @@ class ArticleWriter:
 
         if not items:
             return html_content
+
+        # If the model already supplied a references list, add missing verified
+        # links to that list without creating a duplicate section.
+        heading_match = re.search(
+            r"<h[23]\\b[^>]*>\\s*(?:Sources\\s*&amp;\\s*References|Sources\\s+and\\s+References)\\s*</h[23]\\s*>",
+            html_content, flags=re.IGNORECASE,
+        )
+        if heading_match:
+            list_end = re.search(r"</ul\\s*>", html_content[heading_match.end():], flags=re.IGNORECASE)
+            if list_end:
+                insert_at = heading_match.end() + list_end.start()
+                return html_content[:insert_at] + "\\n" + "\\n".join(items) + "\\n" + html_content[insert_at:]
 
         sources_block = (
             '\n\n<div class="article-sources" style="margin-top:32px; padding:16px 20px; '
