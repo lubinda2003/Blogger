@@ -610,6 +610,14 @@ def run_pipeline(
     except Exception as exc:
         logger.warning("Responsive article previews could not be captured: %s", exc)
 
+    reporter.visual_assets = {
+        "genuine_screenshots": f"{sum(1 for item in screenshot_results if item.success and not item.is_mock)} captured/hosted; {len(screenshot_results)} attempted",
+        "mermaid_diagrams": f"{sum(1 for item in diagram_assets if item.get('url'))} hosted; {len(diagram_assets)} rendered",
+        "supporting_illustrations": f"{sum(1 for item in supporting_visuals if item.get('url'))} hosted; {len(supporting_visuals)} generated",
+        "featured_image": "hosted" if featured and featured.public_url else ("generated locally/unhosted" if featured and featured.success else "skipped or unavailable"),
+        "responsive_previews": "captured" if previews else "not captured",
+    }
+
     try:  # the finished post exactly as it will be published, for review in the run artifact
         os.makedirs(config.output_dir, exist_ok=True)
         with open(os.path.join(config.output_dir, "final.html"), "w", encoding="utf-8") as f:
