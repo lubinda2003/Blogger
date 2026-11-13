@@ -13,7 +13,7 @@ class AppConfig:
 
     # Execution controls
     dry_run: bool = True
-    publish_mode: str = "draft"  # "draft" or "publish"
+    publish_mode: str = "draft"  # draft-only; public publishing is disabled
     confirm_live_publish: bool = False
     max_articles_per_run: int = 1
 
@@ -70,8 +70,10 @@ class AppConfig:
         """
         errors: List[str] = []
 
-        if self.publish_mode not in ("draft", "publish"):
-            errors.append(f"Invalid PUBLISH_MODE: '{self.publish_mode}'. Must be 'draft' or 'publish'.")
+        if self.publish_mode != "draft":
+            errors.append(
+                "Safety guard: public Blogger publishing is disabled. PUBLISH_MODE must be 'draft'."
+            )
 
         # In non-dry-run mode when writing with LLM
         if not self.dry_run and stage in ("all", "write"):
@@ -93,14 +95,6 @@ class AppConfig:
                 errors.append("BLOGGER_CLIENT_SECRET is required for Blogger OAuth operations.")
             if not self.blogger_refresh_token:
                 errors.append("BLOGGER_REFRESH_TOKEN is required for Blogger OAuth operations.")
-
-        # Safety check: Prevent accidental public posting without explicit affirmation
-        is_confirmed = self.confirm_live_publish or _str_to_bool(os.getenv("CONFIRM_LIVE_PUBLISH"), default=False)
-        if self.publish_mode == "publish" and not is_confirmed:
-            errors.append(
-                "Safety guard: PUBLISH_MODE='publish' requires CONFIRM_LIVE_PUBLISH='true'. "
-                "Defaulting to 'draft' is enforced to avoid accidental unreviewed posts."
-            )
 
         return errors
 
