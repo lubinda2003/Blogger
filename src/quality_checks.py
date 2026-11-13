@@ -107,7 +107,7 @@ def _claim_number_contexts(claim: str) -> List[tuple]:
             continue
         nearby = [
             _claim_token_key(item.group())
-            for item in tokens[max(0, index - 3):index] + tokens[index + 1:index + 4]
+            for item in tokens[max(0, index - 1):index] + tokens[index + 1:index + 3]
             if item.group() not in CLAIM_STOP_WORDS and not re.fullmatch(r"\d+(?:[.,]\d+)?%?", item.group())
         ]
         contexts.append((match.group().rstrip("%"), set(nearby)))
