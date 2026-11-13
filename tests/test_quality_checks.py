@@ -231,14 +231,14 @@ class TestQualityChecks(unittest.TestCase):
 
     def test_seo_metadata_lengths_are_advisory_not_hard_blocks(self):
         draft = self._create_valid_draft()
-        draft.title = "Short"
-        draft.meta_description = "Too short."
+        draft.title = "Useful digital guide"
+        draft.meta_description = "A short but valid description that explains the article topic clearly."
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertTrue(report.passed, report.failures)
         self.assertTrue(any("SEO title advisory" in warning for warning in report.warnings))
         self.assertTrue(any("SEO description advisory" in warning for warning in report.warnings))
-        self.assertEqual(report.metrics["seo_title_characters"], 5)
-        self.assertEqual(report.metrics["seo_description_characters"], 10)
+        self.assertEqual(report.metrics["seo_title_characters"], len("Useful digital guide"))
+        self.assertEqual(report.metrics["seo_description_characters"], len("A short but valid description that explains the article topic clearly."))
 
     def test_preferred_word_count_is_warning_not_hard_block(self):
         """A useful article below the preferred target should pass with an advisory."""
