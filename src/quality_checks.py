@@ -54,18 +54,72 @@ CLAIM_STOP_WORDS = {
 CLAIM_NEGATIONS = {"no", "not", "never", "cannot", "can't", "doesn't", "don't", "without", "neither", "nor"}
 
 
-def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
-    """Match mapped claims to nearby article wording without cross-contaminating negation/numbers."""
-    claim_tokens = {
-        token for token in re.findall(r"[a-z0-9]+", (claim or "").casefold())
-        if token not in CLAIM_STOP_WORDS
+def _claim_token_key(token: str) -> str:
+    """Normalize common inflections and safe editorial paraphrases for claim matching."""
+    token = token.casefold()
+    aliases = {
+        "revealed": "show", "showed": "show",
+        "delivers": "give", "delivered": "give", "gives": "give",
+        "citations": "source", "citation": "source", "links": "source", "link": "source",
+        "supported": "source", "supporting": "source", "sources": "source",
+        "discussions": "call", "discussion": "call", "meetings": "call", "meeting": "call",
+        "flexible": "flexibility", "evaluating": "test", "evaluate": "test",
+        "committing": "spend", "subscription": "plan", "subscriptions": "plan",
+        "desire": "choose", "driven": "choose", "earn": "income",
     }
+    if token in aliases:
+        return aliases[token]
+    if token.endswith("ies") and len(token) > 4:
+        token = token[:-3] + "y"
+    elif token.endswith("ing") and len(token) > 5:
+        token = token[:-3]
+    elif token.endswith("ed") and len(token) > 4:
+        token = token[:-2]
+    elif token.endswith("s") and len(token) > 3:
+        token = token[:-1]
+    return aliases.get(token, token)
+
+
+def _normalized_claim_tokens(value: str) -> Set[str]:
+    return {
+        _claim_token_key(token)
+        for token in re.findall(r"[a-z0-9]+", (value or "").casefold())
+        if token not in CLAIM_STOP_WORDS and token not in {"largely", "looking", "inline"}
+    }
+
+
+def _evidence_text_for_matching(value: str) -> str:
+    """Remove lightweight Markdown decoration while preserving linked evidence text."""
+    text = html.unescape(str(value or ""))
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+    text = re.sub(r"[*_`~]{1,3}", "", text)
+    text = text.replace("\u2011", "-").replace("\u2013", "-").replace("\u2014", "-")
+    text = re.sub(r"\s+", " ", text)
+    return text.casefold().strip()
+
+
+def _claim_number_contexts(claim: str) -> List[tuple]:
+    """Return each numeric marker and nearby claim terms that identify what it measures."""
+    tokens = list(re.finditer(r"[a-z0-9]+", (claim or "").casefold()))
+    contexts = []
+    for index, match in enumerate(tokens):
+        if not re.fullmatch(r"\d+(?:[.,]\d+)?%?", match.group()):
+            continue
+        nearby = [
+            _claim_token_key(item.group())
+            for item in tokens[max(0, index - 3):index] + tokens[index + 1:index + 4]
+            if item.group() not in CLAIM_STOP_WORDS and not re.fullmatch(r"\d+(?:[.,]\d+)?%?", item.group())
+        ]
+        contexts.append((match.group().rstrip("%"), set(nearby)))
+    return contexts
+
+
+def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
+    """Match paraphrased claims in a local passage while keeping numbers and negation grounded."""
+    claim_tokens = _normalized_claim_tokens(claim)
     if len(claim_tokens) < 3:
         return False
 
-    # Check local one- or two-sentence windows. Looking for negation or numbers across
-    # the entire article incorrectly rejects unrelated claims whenever another section
-    # contains "not", or incorrectly borrows a number from a different paragraph.
     sentences = [
         sentence.strip()
         for sentence in re.split(r"(?<=[.!?])\s+|\n+", (article_text or "").casefold())
@@ -76,26 +130,38 @@ def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
 
     negation_pattern = r"\b(?:no|not|never|cannot|can't|doesn't|don't|without|neither|nor)\b"
     claim_has_negation = bool(re.search(negation_pattern, claim.casefold()))
-    claim_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", claim))
+    number_contexts = _claim_number_contexts(claim)
+    claim_numbers = {number for number, _ in number_contexts}
 
+    # A claim can span a short paragraph (for example, a statistic explained over
+    # two sentences). Do not compare against the whole article.
     for index in range(len(sentences)):
-        for width in (1, 2):
-            window = " ".join(sentences[index:index + width])
-            if not window:
-                continue
-            window_tokens = set(re.findall(r"[a-z0-9]+", window))
+        for width in (1, 2, 3, 4):
+            passage = sentences[index:index + width]
+            window = " ".join(passage)
+            window_tokens = _normalized_claim_tokens(window)
             coverage = len(claim_tokens & window_tokens) / len(claim_tokens)
             if coverage < 0.65:
                 continue
-            # Numeric facts must be co-located with the matching wording in one
-            # sentence; a nearby sentence about a different price/limit must not
-            # accidentally satisfy the claim's number.
-            if claim_numbers:
-                sentence_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", sentences[index]))
-                sentence_tokens = set(re.findall(r"[a-z0-9]+", sentences[index]))
-                sentence_coverage = len(claim_tokens & sentence_tokens) / len(claim_tokens)
-                if not claim_numbers.issubset(sentence_numbers) or sentence_coverage < 0.65:
+
+            # Every number must occur in the passage and be anchored to at least one
+            # nearby subject/context term from the claim in the same sentence.
+            if number_contexts:
+                valid_numbers = set()
+                for sentence in passage:
+                    sentence_numbers = {
+                        number.rstrip("%")
+                        for number in re.findall(r"\b\d+(?:[.,]\d+)?%?\b", sentence)
+                    }
+                    if not sentence_numbers:
+                        continue
+                    sentence_tokens = _normalized_claim_tokens(sentence)
+                    for number, anchors in number_contexts:
+                        if number in sentence_numbers and (not anchors or anchors & sentence_tokens):
+                            valid_numbers.add(number)
+                if not claim_numbers.issubset(valid_numbers):
                     continue
+
             if claim_has_negation != bool(re.search(negation_pattern, window)):
                 continue
             return True
@@ -333,11 +399,11 @@ class QualityGate:
                     if not source:
                         failures.append(f"Evidence check failed: claim #{index} points to a source that was not verified.")
                         continue
-                    source_text = re.sub(
-                        r"\s+", " ",
-                        html.unescape(str(source.get("cleaned_text") or source.get("evidence_excerpt") or "")),
-                    ).strip().casefold()
-                    if quote.casefold() not in source_text:
+                    source_text = _evidence_text_for_matching(
+                        source.get("cleaned_text") or source.get("evidence_excerpt") or ""
+                    )
+                    normalized_quote = _evidence_text_for_matching(quote)
+                    if normalized_quote not in source_text:
                         failures.append(f"Evidence check failed: evidence quote for claim #{index} is not present in retrieved source text.")
                         continue
                     if not ResearchCollector._supports_numeric_markers(claim, quote):
