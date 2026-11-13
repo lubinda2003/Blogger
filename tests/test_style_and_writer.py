@@ -324,6 +324,22 @@ class TestStyleAndWriter(unittest.TestCase):
         capturer = ScreenshotCapture()
         self.assertEqual(capturer.image_host_url, None)
 
+    def test_sources_section_repairs_missing_verified_source_links(self):
+        html = (
+            '<div><h2>Article</h2><p>Useful content.</p>'
+            '<h3>Sources &amp; References</h3><ul>'
+            '<li><a href="https://example.com/one">Source one</a></li>'
+            '</ul></div>'
+        )
+        sources = [
+            {"title": "Source one", "url": "https://example.com/one"},
+            {"title": "Source two", "url": "https://example.com/two"},
+        ]
+        result = ArticleWriter.append_sources_section(html, sources)
+        self.assertIn('href="https://example.com/one"', result)
+        self.assertIn('href="https://example.com/two"', result)
+        self.assertEqual(result.count("Sources &amp; References"), 1)
+
     def test_dry_run_fixture_contains_no_ai_cliches(self):
         """Dry run text fixtures must comply with plain-English rules and contain no generic AI cliches."""
         fixture = self.writer._generate_dry_run_fixture(self.topic, self.brief)
