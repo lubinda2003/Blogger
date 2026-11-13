@@ -61,6 +61,41 @@ class TestQualityChecks(unittest.TestCase):
             "evidence_excerpt": "Each step is short and easy to follow.",
         }]
 
+    def test_live_gate_rejects_missing_claim_evidence(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence = []
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
+            verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("no claim_evidence mappings" in item for item in report.failures))
+
+    def test_live_gate_rejects_quote_not_found_in_retrieved_source(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["evidence_quote"] = "This quote does not appear in the retrieved page."
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
+            verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("not present in retrieved source text" in item for item in report.failures))
+
+    def test_live_gate_rejects_unsupported_numeric_claim(self):
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["claim"] = "Each step is short and easy to follow in 2026."
+        draft.claim_evidence[0]["evidence_quote"] = "Each step is short and easy to follow."
+        draft.html_content = draft.html_content.replace(
+            "Each step is short and easy to follow.",
+            "Each step is short and easy to follow in 2026."
+        )
+        report = self.live_gate.run_all_checks(
+            draft, verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
+            verified_source_evidence=self._verified_evidence(), check_duplicate=False
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("numeric values" in item for item in report.failures))
+
     def test_valid_draft_passes_gate(self):
         """Test that a compliant article passes all quality checks."""
         draft = self._create_valid_draft()

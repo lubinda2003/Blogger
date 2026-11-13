@@ -48,6 +48,18 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
                 "required": ["title", "url"],
             },
         },
+        "claim_evidence": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "claim": {"type": "STRING"},
+                    "source_url": {"type": "STRING"},
+                    "evidence_quote": {"type": "STRING"},
+                },
+                "required": ["claim", "source_url", "evidence_quote"],
+            },
+        },
         "primary_intent": {"type": "STRING"},
         "last_checked_date": {"type": "STRING"},
         "affiliate_disclosure_required": {"type": "BOOLEAN"},
@@ -83,7 +95,7 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
             },
         },
     },
-    "required": ["title", "meta_description", "labels", "html_content", "sources_used"],
+    "required": ["title", "meta_description", "labels", "html_content", "sources_used", "claim_evidence"],
 }
 
 
@@ -122,6 +134,7 @@ class ArticleDraft:
             "html_content": self.html_content,
             "summary": self.summary,
             "sources_used": self.sources_used,
+            "claim_evidence": self.claim_evidence,
             "primary_intent": self.primary_intent,
             "word_count": self.word_count,
             "last_checked_date": self.last_checked_date,
@@ -580,6 +593,11 @@ class ArticleWriter:
         for req_field in ("title", "meta_description", "html_content", "labels", "sources_used"):
             if req_field not in data or not data[req_field]:
                 errors.append(f"Missing or empty required field: '{req_field}'")
+
+        if "claim_evidence" in data and not isinstance(data["claim_evidence"], list):
+            errors.append("Field 'claim_evidence' must be an array of claim/source/evidence mappings.")
+        # Older provider/test responses may omit this field; live QA still fails closed
+        # unless the generated draft contains verifiable claim mappings.
 
         if "html_content" in data and len(str(data["html_content"]).strip()) < 200:
             errors.append("Article HTML content is too short (under 200 characters).")
@@ -1065,4 +1083,5 @@ against primary documentation."</code>
             visual_plan=visual_plan,
             actual_provider=provider_used,
             actual_model=model_used,
+            claim_evidence=parsed.get("claim_evidence", []) if isinstance(parsed.get("claim_evidence", []), list) else [],
         )

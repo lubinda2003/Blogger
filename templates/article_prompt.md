@@ -55,6 +55,9 @@ Your task is to produce a useful, accurate article that answers a real reader ne
 - Keep general advice, clearly labelled opinions, and reader instructions out of `claim_evidence`; include factual statements about product features, pricing, limits, dates, availability, statistics, and technical behaviour.
 - For Google, Gemini, Microsoft, Apple and other software product features, prefer official product documentation or official release notes as primary evidence.
 - For exact prices, API rates, model names, model availability and plan limits, require an official pricing page or official developer documentation. A third-party article, video or search snippet is not enough.
+- For services with country restrictions (payment processors, banking, invoicing, subscriptions, marketplaces and payouts), verify supported countries using the provider's official eligibility or availability documentation. Never infer that a service works in a country from a general product page.
+- Write for the international audience. Do not silently treat US-only prices, tax rules, payment methods or availability as universal. State the relevant country or region and clearly label availability as unconfirmed when authoritative evidence is unavailable.
+- For comparisons, map each provider's material pricing, free-plan, feature and country-availability claims to evidence from that provider's own official pages whenever possible. If a comparison cannot be verified, omit or qualify it.
 - If official evidence is unavailable, omit the exact claim or clearly tell the reader to check the vendor's official page. Never fill gaps with plausible-sounding model names, dates or prices.
 - Never invent pricing, features, quotes, statistics, testimonials or first-hand testing.
 - Link to sources naturally in the body only where they support a claim or help the reader.
