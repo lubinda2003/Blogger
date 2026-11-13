@@ -93,7 +93,7 @@ def run_pipeline(
     """
     reporter = PipelineReporter(output_dir=config.output_dir)
     reporter.dry_run = config.dry_run
-    reporter.mode = config.publish_mode
+    reporter.mode = "draft"
 
     logger.info("=" * 65)
     logger.info("Starting Blogger Content Automation Pipeline")
@@ -589,18 +589,35 @@ def run_pipeline(
         accessibility = audit_html_accessibility(
             final_html, os.path.join(config.output_dir, "accessibility-report.json")
         )
+        reporter.accessibility_report = accessibility
         if accessibility.get("available"):
             logger.info(
                 "Article accessibility scan: %s violation(s), %s passed rule(s).",
                 len(accessibility.get("violations", [])), accessibility.get("passes", 0),
             )
+        else:
+            logger.warning("Accessibility scan unavailable: %s", accessibility.get("error"))
     except Exception as exc:
+        reporter.accessibility_report = {
+            "available": False,
+            "target": "final article HTML in an isolated browser document; live Blogger theme is not included",
+            "violations": [], "passes": 0, "incomplete": 0, "error": str(exc),
+        }
         logger.warning("Accessibility audit skipped without blocking publication: %s", exc)
+    previews = []
     try:
         previews = capture_article_previews(final_html, config.output_dir)
         logger.info("Saved responsive article previews: %s", ", ".join(previews))
     except Exception as exc:
         logger.warning("Responsive article previews could not be captured: %s", exc)
+
+    reporter.visual_assets = {
+        "genuine_screenshots": f"{sum(1 for item in screenshot_results if item.success and not item.is_mock)} captured/hosted; {len(screenshot_results)} attempted",
+        "mermaid_diagrams": f"{sum(1 for item in diagram_assets if item.get('url'))} hosted; {len(diagram_assets)} rendered",
+        "supporting_illustrations": f"{sum(1 for item in supporting_visuals if item.get('url'))} hosted; {len(supporting_visuals)} generated",
+        "featured_image": "hosted" if featured and featured.public_url else ("generated locally/unhosted" if featured and featured.success else "skipped or unavailable"),
+        "responsive_previews": "captured" if previews else "not captured",
+    }
 
     try:  # the finished post exactly as it will be published, for review in the run artifact
         os.makedirs(config.output_dir, exist_ok=True)
@@ -632,7 +649,7 @@ def run_pipeline(
     )
 
     normalized_labels = SEOMetadata.normalize_labels(draft.labels)
-    is_draft = config.publish_mode != "publish"
+    is_draft = True
 
     post_res = blogger.insert_post(
         title=draft.title,
@@ -693,7 +710,7 @@ def run_pipeline(
                 topic_title=draft.title,
                 post_id=post_res.post_id if post_res else None,
                 post_url=post_res.post_url if post_res else None,
-                mode=config.publish_mode,
+                mode="draft",
                 meta={"labels": normalized_labels, "word_count": draft.word_count},
             )
             state_details = f"Topic '{topic.id}' recorded in {config.processed_json_path} for repository persistence."

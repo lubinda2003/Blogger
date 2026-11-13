@@ -32,7 +32,7 @@ class TestStatePersistence(unittest.TestCase):
         # Safety guard: live publishing requires CONFIRM_LIVE_PUBLISH='true'
         unsafe_config = AppConfig(dry_run=False, publish_mode="publish")
         errors = unsafe_config.validate_for_mode()
-        self.assertTrue(any("CONFIRM_LIVE_PUBLISH" in err for err in errors))
+        self.assertTrue(any("public Blogger publishing is disabled" in err for err in errors))
 
     def test_duplicate_prevention_by_id_and_fingerprint(self):
         """StateStore must prevent duplicates by topic ID and semantic title fingerprint."""

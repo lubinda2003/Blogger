@@ -255,11 +255,23 @@ def render_mermaid_blocks(
 
 def audit_html_accessibility(article_html: str, output_path: Optional[str] = None) -> dict:
     """Run axe-core against article markup. Findings are reported, not used as a false-positive hard gate."""
+    scan_target = "final article HTML in an isolated browser document; live Blogger theme and surrounding page are not included"
     if not AXE_JS.is_file():
-        return {"available": False, "violations": [], "error": "axe-core is not installed"}
+        result = {
+            "available": False, "target": scan_target, "violations": [],
+            "passes": 0, "incomplete": 0, "error": "axe-core is not installed",
+        }
+        if output_path:
+            path = Path(output_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(result, indent=2), encoding="utf-8")
+        return result
     from playwright.sync_api import sync_playwright  # type: ignore
 
-    result = {"available": True, "violations": [], "passes": 0, "incomplete": 0}
+    result = {
+        "available": True, "target": scan_target, "violations": [],
+        "passes": 0, "incomplete": 0, "error": None,
+    }
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         try:

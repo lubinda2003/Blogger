@@ -35,7 +35,7 @@ Articles should use plain English, practical examples, accurate sourcing, and ho
 5. **Article generation** — generate structured article content using the configured language-model provider.
 6. **Visual assets** — capture required software screenshots and prepare a featured image when enabled.
 7. **Quality checks** — validate article length, sources, style, safety, and duplication.
-8. **Blogger action** — create a draft by default; public publishing requires explicit confirmation.
+8. **Blogger action** — create a draft only; public publishing is disabled in configuration validation and the Blogger client.
 9. **State and reports** — persist topic outcomes and upload run artifacts/reports.
 
 The pipeline is designed to fail closed when important checks fail rather than publish an article that has not passed them.
@@ -46,9 +46,9 @@ The pipeline is designed to fail closed when important checks fail rather than p
 
 Workflow: [Blogger Content Pipeline](.github/workflows/content-pipeline.yml)
 
-- Trigger: manual `workflow_dispatch`. The schedule is currently commented out.
-- Default dry-run setting: **true**.
-- Default publishing mode: **draft**.
+- Triggers: daily schedule at 10:00 AM Zambia time (08:00 UTC) and manual `workflow_dispatch`.
+- Scheduled runs execute the real content-generation pipeline (`DRY_RUN=false`).
+- Blogger delivery is permanently restricted to **drafts** in application code; public publishing is disabled.
 - Provider choice: `auto` (Gemini with Groq failover), `groq`, or `gemini`.
 - Optional input: a specific topic ID from the optional `data/topics.csv` editorial ideas file. Leave it empty for autonomous Tavily discovery.
 - Runs are serialized so concurrent executions do not race over topic state.
@@ -62,13 +62,13 @@ The test workflow runs through its configured GitHub Actions events. Check the A
 
 ## Publishing safety
 
-There are two separate controls:
+The pipeline has two execution modes, but only one Blogger delivery mode:
 
-- **Dry run (`dry_run=true`)**: runs the pipeline in test mode and does not create or publish a Blogger post or mutate processed-topic state.
-- **Live draft (`dry_run=false`, `publish_mode=draft`)**: performs the live pipeline and creates a Blogger draft for review. It is not publicly published.
-- **Live public publishing**: requires `dry_run=false`, `publish_mode=publish`, and `confirm_live_publish=true`. Use this only when you deliberately intend to publish publicly.
+- **Dry run (`dry_run=true`)**: runs in test mode and does not create a Blogger post or mutate processed-topic state.
+- **Live generation (`dry_run=false`)**: performs research and article generation and creates a Blogger **draft** for review.
+- **Public publishing is disabled**: configuration validation rejects `publish_mode=publish`, and the Blogger client refuses any request to create a public post. `CONFIRM_LIVE_PUBLISH` cannot override this protection.
 
-The workflow defaults to dry-run and draft mode. Review every generated draft in Blogger before enabling public publishing.
+Review each draft in Blogger and publish manually from the Blogger dashboard only when you decide it is ready.
 
 ## Repository layout
 
@@ -112,10 +112,9 @@ Do not place API keys, refresh tokens, passwords, or other credentials in source
 2. Select **Blogger Content Pipeline**.
 3. Choose **Run workflow**.
 4. Keep **Dry-run mode** enabled for a safe test.
-5. Leave publishing mode set to **draft**.
-6. Start the run and inspect its job summary and artifacts.
+5. Start the run and inspect its job summary and artifacts.
 
-For a live draft, deliberately turn dry-run off while keeping publishing mode set to `draft`. Do not select public publishing unless you also intentionally confirm it.
+The scheduled workflow runs live generation automatically, but Blogger insertion remains draft-only. Public publishing is blocked in application code; there is no public-publishing workflow option.
 
 ## Local development and tests
 
@@ -157,7 +156,8 @@ Some live pipeline functions require valid API credentials and network access. K
 - Third-party GitHub Actions are pinned to reviewed commit SHAs in the content workflow.
 - Blogger lookup failures and insufficient research evidence stop the pipeline to reduce duplicate or unsupported posts.
 - Local screenshot paths are not intended to be embedded in published HTML; only suitable public HTTPS image URLs should be used.
-- The scheduled trigger is disabled in the workflow. It should only be enabled after end-to-end testing and an explicit decision about the publishing schedule.
+- The content workflow runs daily at 10:00 AM Zambia time and can also be started manually.
+- The Blogger API OAuth permission may be broader than draft creation; application code restricts its own write operation to drafts.
 
 ## License
 

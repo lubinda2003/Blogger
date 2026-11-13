@@ -180,7 +180,7 @@ class TestBloggerPayload(unittest.TestCase):
 
         with patch.dict(os.environ, {"CONFIRM_LIVE_PUBLISH": "false"}, clear=False):
             errors = cfg.validate_for_mode(stage="all")
-            self.assertTrue(any("CONFIRM_LIVE_PUBLISH" in e for e in errors))
+            self.assertTrue(any("public Blogger publishing is disabled" in e for e in errors))
 
         with patch.dict(os.environ, {"CONFIRM_LIVE_PUBLISH": "true"}, clear=False):
             errors = cfg.validate_for_mode(stage="all")
