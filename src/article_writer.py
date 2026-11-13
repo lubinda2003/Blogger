@@ -134,6 +134,7 @@ class ArticleDraft:
             "html_content": self.html_content,
             "summary": self.summary,
             "sources_used": self.sources_used,
+            "claim_evidence": self.claim_evidence,
             "primary_intent": self.primary_intent,
             "word_count": self.word_count,
             "last_checked_date": self.last_checked_date,
@@ -589,9 +590,12 @@ class ArticleWriter:
     def _validate_schema(self, data: Dict[str, Any]) -> List[str]:
         """Validate Gemini output against required fields and structure."""
         errors = []
-        for req_field in ("title", "meta_description", "html_content", "labels", "sources_used"):
+        for req_field in ("title", "meta_description", "html_content", "labels", "sources_used", "claim_evidence"):
             if req_field not in data or not data[req_field]:
                 errors.append(f"Missing or empty required field: '{req_field}'")
+
+        if "claim_evidence" in data and not isinstance(data["claim_evidence"], list):
+            errors.append("Field 'claim_evidence' must be an array of claim/source/evidence mappings.")
 
         if "html_content" in data and len(str(data["html_content"]).strip()) < 200:
             errors.append("Article HTML content is too short (under 200 characters).")
@@ -1077,4 +1081,5 @@ against primary documentation."</code>
             visual_plan=visual_plan,
             actual_provider=provider_used,
             actual_model=model_used,
+            claim_evidence=parsed.get("claim_evidence", []) if isinstance(parsed.get("claim_evidence", []), list) else [],
         )
