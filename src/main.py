@@ -93,7 +93,7 @@ def run_pipeline(
     """
     reporter = PipelineReporter(output_dir=config.output_dir)
     reporter.dry_run = config.dry_run
-    reporter.mode = config.publish_mode
+    reporter.mode = "draft"
 
     logger.info("=" * 65)
     logger.info("Starting Blogger Content Automation Pipeline")
@@ -632,7 +632,7 @@ def run_pipeline(
     )
 
     normalized_labels = SEOMetadata.normalize_labels(draft.labels)
-    is_draft = config.publish_mode != "publish"
+    is_draft = True
 
     post_res = blogger.insert_post(
         title=draft.title,
@@ -693,7 +693,7 @@ def run_pipeline(
                 topic_title=draft.title,
                 post_id=post_res.post_id if post_res else None,
                 post_url=post_res.post_url if post_res else None,
-                mode=config.publish_mode,
+                mode="draft",
                 meta={"labels": normalized_labels, "word_count": draft.word_count},
             )
             state_details = f"Topic '{topic.id}' recorded in {config.processed_json_path} for repository persistence."
