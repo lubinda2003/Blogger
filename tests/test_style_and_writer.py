@@ -163,8 +163,8 @@ class TestStyleAndWriter(unittest.TestCase):
             self.assertEqual(req.headers.get("X-goog-api-key"), "secret-api-key")
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
 
-    def test_groq_user_agent_and_max_tokens(self):
-        """Groq REST call must send custom User-Agent and max_tokens capped at 4000."""
+    def test_groq_user_agent_and_completion_budget(self):
+        """Groq REST call must send custom User-Agent and the expanded completion budget."""
         writer = ArticleWriter(groq_api_key="gsk-test", provider="groq")
         with patch("urllib.request.urlopen") as mock_urlopen:
             resp = MagicMock()
@@ -178,7 +178,9 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
             payload = json.loads(req.data.decode("utf-8"))
-            self.assertEqual(payload.get("max_tokens"), 2500)
+            self.assertEqual(payload.get("max_completion_tokens"), 8192)
+            self.assertNotIn("max_tokens", payload)
+            self.assertEqual(payload.get("reasoning_effort"), "low")
 
     def test_groq_is_tried_before_secondary_gemini_in_auto_mode(self):
         """After primary Gemini fails, auto mode tries Groq before the secondary Gemini model."""

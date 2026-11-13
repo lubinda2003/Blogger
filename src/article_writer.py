@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "DigitalToolkitContentEngine/1.0"
 DEFAULT_MAX_TOKENS = 8192
-GROQ_MAX_COMPLETION_TOKENS = 2500
-GROQ_MAX_PROMPT_CHARS = 12000
+GROQ_MAX_COMPLETION_TOKENS = 8192
+GROQ_MAX_PROMPT_CHARS = 10000
 
 # Structured output JSON schema for Gemini v1beta responseSchema
 ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
@@ -525,7 +525,7 @@ class ArticleWriter:
             raise ValueError("GROQ_API_KEY is not configured in environment or GitHub Secrets.")
 
         prompt = self._fit_groq_prompt(prompt)
-        effective_tokens = min(max_tokens or self.max_tokens, GROQ_MAX_COMPLETION_TOKENS)
+        effective_tokens = min(max_tokens or GROQ_MAX_COMPLETION_TOKENS, GROQ_MAX_COMPLETION_TOKENS)
         url = "https://api.groq.com/openai/v1/chat/completions"
         payload = {
             "model": self.groq_model,
@@ -538,8 +538,12 @@ class ArticleWriter:
             ],
             "response_format": {"type": "json_object"},
             "temperature": self.temperature,
-            "max_tokens": effective_tokens,
+            "max_completion_tokens": effective_tokens,
         }
+        # GPT-OSS is a reasoning model; low effort reserves more of the completion
+        # budget for the requested article JSON instead of internal reasoning.
+        if self.groq_model.startswith("openai/gpt-oss-"):
+            payload["reasoning_effort"] = "low"
 
         data_bytes = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
