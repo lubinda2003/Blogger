@@ -68,20 +68,25 @@ class SEOMetadata:
         """Generate valid Schema.org Article JSON-LD for rich snippets."""
         schema_dict: Dict[str, Any] = {
             "@context": "https://schema.org",
-            "@type": "TechArticle",
+            "@type": "BlogPosting",
             "headline": title,
             "description": description,
             # A real person only if one is configured; never an invented "team" persona.
             "author": (
                 {"@type": "Person", "name": author_name}
                 if author_name
-                else {"@type": "Organization", "name": "The Digital Toolkit"}
+                else {
+                    "@type": "Organization",
+                    "name": "The Digital Toolkit",
+                    "url": "https://digitaltoolkitguide.blogspot.com/p/about-digital-toolkit.html",
+                }
             ),
             "publisher": {
                 "@type": "Organization",
                 "name": "The Digital Toolkit",
+                "url": "https://digitaltoolkitguide.blogspot.com/",
             },
-            "inLanguage": "en-US",
+            "inLanguage": "en",
         }
         if image_url:
             schema_dict["image"] = image_url
@@ -136,6 +141,8 @@ class SEOMetadata:
         featured_image_url: Optional[str] = None,
         featured_image_alt: Optional[str] = None,
         public_screenshot_items: Optional[List[Dict[str, str]]] = None,
+        schema_url: Optional[str] = None,
+        date_published: Optional[str] = None,
     ) -> str:
         """Inject structured data and optional public screenshot image markup into article HTML.
 
@@ -157,6 +164,8 @@ class SEOMetadata:
             schema = SEOMetadata.generate_schema_jsonld(
                 title=title,
                 description=meta_description,
+                url=schema_url if schema_url and schema_url.startswith(("https://", "http://")) else None,
+                date_published=date_published,
                 image_url=public_featured_image_url,
             )
             blocks.append(schema)
