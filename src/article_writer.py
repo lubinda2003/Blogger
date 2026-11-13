@@ -22,7 +22,8 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "DigitalToolkitContentEngine/1.0"
 DEFAULT_MAX_TOKENS = 8192
-GROQ_MAX_COMPLETION_TOKENS = 4000
+GROQ_MAX_COMPLETION_TOKENS = 2500
+GROQ_MAX_PROMPT_CHARS = 12000
 
 # Structured output JSON schema for Gemini v1beta responseSchema
 ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
@@ -481,11 +482,32 @@ class ArticleWriter:
 
         raise RuntimeError(f"Gemini failed after {max_retries} attempts on {clean_model}: {last_error}")
 
+    @staticmethod
+    def _fit_groq_prompt(prompt: str, max_chars: int = GROQ_MAX_PROMPT_CHARS) -> str:
+        """Bound fallback input while preserving opening instructions and final schema rules."""
+        prompt = str(prompt or "")
+        if len(prompt) <= max_chars:
+            return prompt
+        marker = "\\n\\n[Research and supporting context shortened for fallback provider token budget.]\\n\\n"
+        content_budget = max(0, max_chars - len(marker))
+        head_chars = int(content_budget * 0.62)
+        tail_chars = content_budget - head_chars
+        logger.warning(
+            "Reducing Groq fallback prompt from %s to %s characters to respect provider token limits.",
+            len(prompt), max_chars,
+        )
+        return (
+            prompt[:head_chars]
+            + "\n\n[Research and supporting context shortened for fallback provider token budget.]\n\n"
+            + prompt[-tail_chars:]
+        )
+
     def _call_groq_rest(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Call Groq REST API directly with custom User-Agent, exponential backoff, and jitter."""
         if not self.groq_api_key:
             raise ValueError("GROQ_API_KEY is not configured in environment or GitHub Secrets.")
 
+        prompt = self._fit_groq_prompt(prompt)
         effective_tokens = min(max_tokens or self.max_tokens, GROQ_MAX_COMPLETION_TOKENS)
         url = "https://api.groq.com/openai/v1/chat/completions"
         payload = {
@@ -832,34 +854,35 @@ against primary documentation."</code>
             except Exception as e_primary:
                 logger.warning(f"Primary Gemini model ({primary_model}) failed: {e_primary}")
 
-            # 2. In auto mode, try the independent Groq provider before another Gemini request.
-            if prov == "auto" and self.groq_api_key:
-                logger.warning(f"Primary Gemini model failed. Trying Groq fallback ({self.groq_model}) before secondary Gemini...")
-                try:
-                    res = self._call_groq_rest(prompt, max_tokens=max_tokens)
-                    self.actual_provider = "groq"
-                    self.actual_model = self.groq_model
-                    logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-                    return res
-                except Exception as e_groq:
-                    logger.warning(f"Groq fallback ({self.groq_model}) also failed: {e_groq}")
-
-            # 3. Secondary Gemini fallback, only after Groq is unavailable or fails.
+            # 2. Try the secondary Gemini model across configured keys before switching providers.
             fallback_model = (self.fallback_model or "gemini-3.5-flash").strip()
             if fallback_model != primary_model:
                 logger.info(f"Attempting fallback Gemini model in chain ({fallback_model})...")
-                try:
-                    res = self._call_gemini_rest(prompt, model_name=fallback_model, max_tokens=max_tokens)
-                    self.actual_provider = "gemini"
-                    self.actual_model = fallback_model
-                    logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-                    return res
-                except Exception as e_fallback:
-                    logger.warning(f"Fallback Gemini model ({fallback_model}) also failed: {e_fallback}")
+                fallback_errors = []
+                for key_index, key in enumerate(self.gemini_api_keys):
+                    try:
+                        if key_index:
+                            logger.warning(f"Gemini fallback key {key_index + 1}: rotating after quota/rate limit.")
+                        res = self._call_gemini_rest(
+                            prompt, model_name=fallback_model, max_tokens=max_tokens,
+                            api_key=key,
+                        )
+                        self.actual_provider = "gemini"
+                        self.actual_model = fallback_model
+                        logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
+                        return res
+                    except Exception as e_fallback:
+                        fallback_errors.append(str(e_fallback))
+                        message = str(e_fallback).lower()
+                        if not any(token in message for token in ("quota", "429", "resource_exhausted", "rate limit")):
+                            logger.warning(f"Fallback Gemini model ({fallback_model}) failed: {e_fallback}")
+                            break
+                if fallback_errors:
+                    logger.warning("Gemini fallback model exhausted configured keys: %s", fallback_errors[-1])
 
-            # 4. Final Groq fallback if not already used and Groq API key available
+            # 3. Switch to Groq only after all configured Gemini keys/models have been tried.
             if self.groq_api_key:
-                logger.warning(f"Gemini model chain exhausted. Falling back to Groq provider ({self.groq_model})...")
+                logger.warning(f"Gemini model chain exhausted. Trying bounded Groq fallback ({self.groq_model})...")
                 res = self._call_groq_rest(prompt, max_tokens=max_tokens)
                 self.actual_provider = "groq"
                 self.actual_model = self.groq_model

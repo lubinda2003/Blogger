@@ -178,7 +178,7 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
             payload = json.loads(req.data.decode("utf-8"))
-            self.assertEqual(payload.get("max_tokens"), 4000)
+            self.assertEqual(payload.get("max_tokens"), 2500)
 
     def test_groq_is_tried_before_secondary_gemini_in_auto_mode(self):
         """After primary Gemini fails, auto mode tries Groq before the secondary Gemini model."""
