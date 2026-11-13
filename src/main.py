@@ -589,12 +589,20 @@ def run_pipeline(
         accessibility = audit_html_accessibility(
             final_html, os.path.join(config.output_dir, "accessibility-report.json")
         )
+        reporter.accessibility_report = accessibility
         if accessibility.get("available"):
             logger.info(
                 "Article accessibility scan: %s violation(s), %s passed rule(s).",
                 len(accessibility.get("violations", [])), accessibility.get("passes", 0),
             )
+        else:
+            logger.warning("Accessibility scan unavailable: %s", accessibility.get("error"))
     except Exception as exc:
+        reporter.accessibility_report = {
+            "available": False,
+            "target": "final article HTML in an isolated browser document; live Blogger theme is not included",
+            "violations": [], "passes": 0, "incomplete": 0, "error": str(exc),
+        }
         logger.warning("Accessibility audit skipped without blocking publication: %s", exc)
     try:
         previews = capture_article_previews(final_html, config.output_dir)
