@@ -94,29 +94,54 @@ jobs:
 
       # Commit and push updated processed_topics.json back to repository on successful live runs
       - name: Commit and Push Processed Topics State
-        # Also runs after a failed pipeline so failed-attempt counters persist and a bad topic can be skipped.
+        # Persist state even when generation fails; merge independent attempts without discarding counters.
         if: ${{ !cancelled() && env.DRY_RUN == 'false' }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           if git diff --quiet data/processed_topics.json; then
-            echo "No state changes to commit (dry-run or unchanged queue)."
-          else
-            echo "Committing updated processed_topics.json to repository..."
-            git add data/processed_topics.json
-            git commit -m "chore(state): update processed topics [skip ci]"
-            git fetch origin ${{ github.ref_name }}
-            if ! git rebase origin/${{ github.ref_name }}; then
-              echo "Error: Rebase conflict detected while integrating remote state. Aborting rebase and failing safe."
-              git rebase --abort
-              exit 1
-            fi
-            if ! git push origin ${{ github.ref_name }}; then
-              echo "Error: Failed to push updated processed topics state to remote repository."
-              exit 1
-            fi
-            echo "Successfully persisted state to repository."
+            echo "No state changes to commit."
+            exit 0
           fi
+
+          BASE_SHA="$(git rev-parse HEAD)"
+          BASE_STATE="$(git show "${BASE_SHA}:data/processed_topics.json")"
+          LOCAL_STATE="$(cat data/processed_topics.json)"
+          export BASE_STATE LOCAL_STATE
+
+          for attempt in 1 2 3; do
+            git fetch origin "${GITHUB_REF_NAME}"
+            git reset --hard "origin/${GITHUB_REF_NAME}"
+            REMOTE_STATE="$(git show "origin/${GITHUB_REF_NAME}:data/processed_topics.json")"
+            export REMOTE_STATE
+
+            python - <<'PY'
+          import json, os
+          from src.state_store import merge_state_snapshots
+          base = json.loads(os.environ["BASE_STATE"])
+          local = json.loads(os.environ["LOCAL_STATE"])
+          remote = json.loads(os.environ["REMOTE_STATE"])
+          merged = merge_state_snapshots(base, local, remote)
+          with open("data/processed_topics.json", "w", encoding="utf-8") as handle:
+              json.dump(merged, handle, indent=2, ensure_ascii=False)
+              handle.write("\\n")
+          PY
+
+            git add data/processed_topics.json
+            if git diff --cached --quiet; then
+              echo "Remote state already contains this update."
+              exit 0
+            fi
+            git commit -m "chore(state): merge processed topic state [skip ci]"
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              echo "Successfully persisted merged topic state."
+              exit 0
+            fi
+            echo "State push raced with another update; refreshing and retrying (attempt ${attempt}/3)."
+          done
+
+          echo "Error: Could not persist topic state after three safe merge attempts."
+          exit 1
 
       # actions/upload-artifact@v4 pinned to reviewed commit SHA
       - name: Upload Run Artifacts and Execution Reports
