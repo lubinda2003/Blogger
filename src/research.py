@@ -544,7 +544,7 @@ class ResearchCollector:
     @staticmethod
     def _build_research_queries(topic_title: str) -> List[str]:
         """Create a small set of focused searches to avoid relying on one noisy result page."""
-        title = re.sub(r"\\s+", " ", (topic_title or "").strip()).strip(' \\"')
+        title = re.sub(r"\s+", " ", (topic_title or "").strip()).strip(' "')
         if not title:
             return []
         return [
