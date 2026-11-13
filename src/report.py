@@ -44,6 +44,15 @@ class PipelineReporter:
         self.source_count: int = 0
         self.research_sources: List[Dict[str, Any]] = []
         self.screenshot_captured: bool = False
+        self.accessibility_report: Dict[str, Any] = {
+            "available": False,
+            "target": "final article HTML in an isolated browser document; Blogger theme is not included",
+            "violations": [],
+            "passes": 0,
+            "incomplete": 0,
+            "error": "Accessibility scan has not run.",
+        }
+        self.visual_assets: Dict[str, Any] = {}
         self.overall_status: str = "IN_PROGRESS"
         self.next_action: str = ""
 
@@ -92,7 +101,9 @@ class PipelineReporter:
             "metrics": {
                 "source_count": self.source_count,
                 "screenshot_captured": self.screenshot_captured,
+                "visual_assets": self.visual_assets,
             },
+            "accessibility": self.accessibility_report,
             "research_sources": self.research_sources,
             "blogger": {
                 "post_id": self.post_id,
@@ -161,6 +172,32 @@ class PipelineReporter:
                 label = key.replace("_", " ").capitalize()
                 display_value = "Yes" if value is True else "No" if value is False else value
                 lines.append(f"- **{label}:** {display_value}")
+            lines.append("")
+
+        accessibility = report.get("accessibility") or {}
+        lines.extend([
+            "### ♿ Accessibility Diagnostics",
+            f"- **Scan status:** {'Available' if accessibility.get('available') else 'Unavailable'}",
+            f"- **Target:** {accessibility.get('target', 'Not recorded')}",
+            f"- **Violations:** {len(accessibility.get('violations', []))}",
+            f"- **Passed rules:** {accessibility.get('passes', 0)}",
+            f"- **Incomplete rules:** {accessibility.get('incomplete', 0)}",
+        ])
+        if accessibility.get("error"):
+            lines.append(f"- **Note:** {accessibility['error']}")
+        for violation in accessibility.get("violations", []):
+            lines.append(
+                f"- **{violation.get('impact') or 'Unrated'} — {violation.get('id') or 'Accessibility issue'}:** "
+                f"{violation.get('help') or violation.get('description') or 'No description'} "
+                f"({violation.get('nodes', 0)} affected element(s))"
+            )
+        lines.append("")
+
+        visual_assets = report.get("metrics", {}).get("visual_assets") or {}
+        if visual_assets:
+            lines.extend(["### 🖼️ Visual Asset Outcomes", ""])
+            for kind, outcome in visual_assets.items():
+                lines.append(f"- **{kind.replace('_', ' ').capitalize()}:** {outcome}")
             lines.append("")
 
         if report["qa"].get("warnings"):
