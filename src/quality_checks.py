@@ -45,6 +45,35 @@ GOOGLE_OFFICIAL_PRODUCT_DOMAINS = (
 GOOGLE_OFFICIAL_PRICING_DOMAINS = ("ai.google.dev", "cloud.google.com")
 
 
+CLAIM_STOP_WORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "been", "being", "by", "for", "from",
+    "has", "have", "how", "in", "into", "is", "it", "its", "of", "on", "or", "that",
+    "the", "their", "this", "to", "use", "used", "using", "was", "were", "what", "when",
+    "which", "with", "you", "your", "let", "lets", "allow", "allows",
+}
+CLAIM_NEGATIONS = {"no", "not", "never", "cannot", "can't", "doesn't", "don't", "without", "neither", "nor"}
+
+
+def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
+    """Conservatively match mapped claims to paraphrased article wording."""
+    claim_tokens = [t for t in re.findall(r"[a-z0-9]+", (claim or "").casefold()) if t not in CLAIM_STOP_WORDS]
+    article_tokens = set(re.findall(r"[a-z0-9]+", (article_text or "").casefold()))
+    unique_claim_tokens = set(claim_tokens)
+    if len(unique_claim_tokens) < 3:
+        return False
+    coverage = sum(1 for token in unique_claim_tokens if token in article_tokens) / len(unique_claim_tokens)
+    if coverage < 0.65:
+        return False
+    claim_numbers = set(re.findall(r"\\b\\d+(?:[.,]\\d+)?%?\\b", claim))
+    article_numbers = set(re.findall(r"\\b\\d+(?:[.,]\\d+)?%?\\b", article_text or ""))
+    if not claim_numbers.issubset(article_numbers):
+        return False
+    negation_pattern = r"\\b(?:no|not|never|cannot|can't|doesn't|don't|without|neither|nor)\\b"
+    return bool(re.search(negation_pattern, claim.casefold())) == bool(
+        re.search(negation_pattern, (article_text or "").casefold())
+    )
+
+
 def has_official_google_source(source_urls, pricing: bool = False) -> bool:
     """Return True only when a citation URL belongs to an official Google product source."""
     allowed = GOOGLE_OFFICIAL_PRICING_DOMAINS if pricing else GOOGLE_OFFICIAL_PRODUCT_DOMAINS
@@ -265,8 +294,11 @@ class QualityGate:
                     if not claim or not source_url or not quote:
                         failures.append(f"Evidence check failed: claim mapping #{index} is incomplete.")
                         continue
-                    if claim.casefold() not in normalized_article_text:
-                        failures.append(f"Evidence check failed: mapped claim #{index} is not present verbatim in the article.")
+                    if not claim_is_represented_in_article(claim, normalized_article_text):
+                        failures.append(
+                            f"Evidence check failed: mapped claim #{index} is not sufficiently represented in the article "
+                            "(key terms, numeric values, and negation must be preserved)."
+                        )
                         continue
                     normalized_url = normalize_url(source_url)
                     source = evidence_by_url.get(normalized_url)
