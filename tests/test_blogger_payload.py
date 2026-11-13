@@ -96,6 +96,47 @@ class TestBloggerPayload(unittest.TestCase):
         self.assertNotIn(local_path, injected)
 
 
+    def test_article_schema_uses_google_supported_blogposting_type(self):
+        import json
+        result = SEOMetadata.inject_seo_and_assets(
+            html_body="<p>Article text</p>",
+            title="A Practical Guide to Better Digital Work",
+            meta_description="Learn practical ways to improve your digital workflow with clear steps and useful tools.",
+        )
+        json_ld = result.split('<script type="application/ld+json">', 1)[1].split("</script>", 1)[0]
+        schema = json.loads(json_ld)
+        self.assertEqual(schema["@type"], "BlogPosting")
+        self.assertEqual(schema["inLanguage"], "en")
+        self.assertEqual(schema["author"]["@type"], "Organization")
+        self.assertEqual(schema["author"]["url"], "https://digitaltoolkitguide.blogspot.com/p/about-digital-toolkit.html")
+        self.assertEqual(schema["publisher"]["url"], "https://digitaltoolkitguide.blogspot.com/")
+
+    def test_article_schema_accepts_only_explicit_page_url_and_publication_date(self):
+        import json
+        result = SEOMetadata.inject_seo_and_assets(
+            html_body="<p>Article text</p>",
+            title="A Practical Guide to Better Digital Work",
+            meta_description="Learn practical ways to improve your digital workflow with clear steps and useful tools.",
+            schema_url="https://digitaltoolkitguide.blogspot.com/2026/11/example.html",
+            date_published="2026-11-13T10:00:00+02:00",
+        )
+        json_ld = result.split('<script type="application/ld+json">', 1)[1].split("</script>", 1)[0]
+        schema = json.loads(json_ld)
+        self.assertEqual(schema["mainEntityOfPage"], "https://digitaltoolkitguide.blogspot.com/2026/11/example.html")
+        self.assertEqual(schema["datePublished"], "2026-11-13T10:00:00+02:00")
+
+    def test_article_schema_does_not_accept_non_http_page_url(self):
+        import json
+        result = SEOMetadata.inject_seo_and_assets(
+            html_body="<p>Article text</p>",
+            title="A Practical Guide to Better Digital Work",
+            meta_description="Learn practical ways to improve your digital workflow with clear steps and useful tools.",
+            schema_url="javascript:alert(1)",
+        )
+        json_ld = result.split('<script type="application/ld+json">', 1)[1].split("</script>", 1)[0]
+        schema = json.loads(json_ld)
+        self.assertNotIn("mainEntityOfPage", schema)
+
     def test_featured_image_is_in_article_structured_data(self):
         """A public cover image should be represented in Article JSON-LD as well as visible HTML."""
         import json

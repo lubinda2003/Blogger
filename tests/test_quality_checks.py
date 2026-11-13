@@ -229,6 +229,17 @@ class TestQualityChecks(unittest.TestCase):
         self.assertIn('rel="noopener noreferrer"', result)
 
 
+    def test_seo_metadata_lengths_are_advisory_not_hard_blocks(self):
+        draft = self._create_valid_draft()
+        draft.title = "Useful digital guide"
+        draft.meta_description = "A short but valid description that explains the article topic clearly."
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("SEO title advisory" in warning for warning in report.warnings))
+        self.assertTrue(any("SEO description advisory" in warning for warning in report.warnings))
+        self.assertEqual(report.metrics["seo_title_characters"], len("Useful digital guide"))
+        self.assertEqual(report.metrics["seo_description_characters"], len("A short but valid description that explains the article topic clearly."))
+
     def test_preferred_word_count_is_warning_not_hard_block(self):
         """A useful article below the preferred target should pass with an advisory."""
         draft = self._create_valid_draft()
@@ -240,7 +251,7 @@ class TestQualityChecks(unittest.TestCase):
 
 class TestFinalBloggerHTMLValidation(unittest.TestCase):
     def _valid_html(self):
-        return '''<script type="application/ld+json">{"@type":"TechArticle"}</script>
+        return '''<script type="application/ld+json">{"@type":"BlogPosting","headline":"A valid article title","description":"A valid article description."}</script>
         <div class="dt-article-body"><h2 id="overview">Overview</h2>
         <p>Article content.</p><img src="https://cdn.example/image.jpg" alt="Product settings screen" />
         <a href="https://example.com/docs" target="_blank" rel="noopener noreferrer">Official docs</a>
@@ -248,6 +259,20 @@ class TestFinalBloggerHTMLValidation(unittest.TestCase):
 
     def test_valid_final_fragment_passes(self):
         self.assertEqual(validate_final_blogger_html(self._valid_html()), [])
+
+    def test_missing_blogposting_schema_fails(self):
+        bad = self._valid_html().replace(
+            '<script type="application/ld+json">{"@type":"BlogPosting","headline":"A valid article title","description":"A valid article description."}</script>',
+            "",
+        )
+        self.assertTrue(any("BlogPosting structured data is missing" in item for item in validate_final_blogger_html(bad)))
+
+    def test_invalid_blogposting_schema_fails(self):
+        bad = self._valid_html().replace(
+            '{"@type":"BlogPosting","headline":"A valid article title","description":"A valid article description."}',
+            '{"@type":"TechArticle"}',
+        )
+        self.assertTrue(any("Google-supported BlogPosting type" in item for item in validate_final_blogger_html(bad)))
 
     def test_missing_sources_section_fails(self):
         failures = validate_final_blogger_html(self._valid_html().replace("Sources &amp; References", "Further reading"))

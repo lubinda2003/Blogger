@@ -148,7 +148,11 @@ class TestWriterVoiceAndSimplify(unittest.TestCase):
 class TestHonestAuthor(unittest.TestCase):
     def test_default_author_is_the_publication_not_an_invented_person(self):
         data = json.loads(SEOMetadata.generate_schema_jsonld("T", "D").split("\n", 1)[1].rsplit("\n</script>", 1)[0])
-        self.assertEqual(data["author"], {"@type": "Organization", "name": "The Digital Toolkit"})
+        self.assertEqual(data["author"], {
+            "@type": "Organization",
+            "name": "The Digital Toolkit",
+            "url": "https://digitaltoolkitguide.blogspot.com/p/about-digital-toolkit.html",
+        })
 
     def test_a_real_configured_author_is_used_as_a_person(self):
         data = json.loads(SEOMetadata.generate_schema_jsonld("T", "D", author_name="Jane Doe").split("\n", 1)[1].rsplit("\n</script>", 1)[0])

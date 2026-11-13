@@ -1,6 +1,7 @@
 """Hard quality gate engine enforcing editorial, structural, safety, and plain-English standards."""
 
 import html
+import json
 import re
 from html.parser import HTMLParser
 from urllib.parse import urlparse
@@ -130,6 +131,23 @@ def validate_final_blogger_html(document: str) -> List[str]:
         inspector.close()
     except Exception as exc:
         return [f"Final HTML validation failed: parser could not read document ({exc})."]
+    schema_blocks = re.findall(
+        r"""<script\b[^>]*type=["']application/ld\+json["'][^>]*>(.*?)</script\s*>""",
+        document, flags=re.I | re.S,
+    )
+    if not schema_blocks:
+        failures.append("Final HTML validation failed: BlogPosting structured data is missing.")
+    else:
+        try:
+            schema = json.loads(schema_blocks[0])
+            if schema.get("@type") != "BlogPosting":
+                failures.append("Final HTML validation failed: structured data must use the Google-supported BlogPosting type.")
+            if not str(schema.get("headline", "")).strip():
+                failures.append("Final HTML validation failed: BlogPosting headline is missing.")
+            if not str(schema.get("description", "")).strip():
+                failures.append("Final HTML validation failed: BlogPosting description is missing.")
+        except (TypeError, ValueError):
+            failures.append("Final HTML validation failed: BlogPosting JSON-LD is not valid JSON.")
     if "dt-article-body" not in document:
         failures.append("Final HTML validation failed: styled article body wrapper is missing.")
     if "h2" not in inspector.tags:
@@ -239,11 +257,11 @@ class QualityGate:
                     "Every material factual claim must map to retrieved source text."
                 )
             else:
-                normalized_article_text = re.sub(r"\\s+", " ", html.unescape(clean_text)).strip().casefold()
+                normalized_article_text = re.sub(r"\s+", " ", html.unescape(clean_text)).strip().casefold()
                 for index, item in enumerate(draft.claim_evidence, start=1):
-                    claim = re.sub(r"\\s+", " ", str(item.get("claim", ""))).strip()
+                    claim = re.sub(r"\s+", " ", str(item.get("claim", ""))).strip()
                     source_url = str(item.get("source_url", "")).strip()
-                    quote = re.sub(r"\\s+", " ", str(item.get("evidence_quote", ""))).strip()
+                    quote = re.sub(r"\s+", " ", str(item.get("evidence_quote", ""))).strip()
                     if not claim or not source_url or not quote:
                         failures.append(f"Evidence check failed: claim mapping #{index} is incomplete.")
                         continue
@@ -256,7 +274,7 @@ class QualityGate:
                         failures.append(f"Evidence check failed: claim #{index} points to a source that was not verified.")
                         continue
                     source_text = re.sub(
-                        r"\\s+", " ",
+                        r"\s+", " ",
                         html.unescape(str(source.get("cleaned_text") or source.get("evidence_excerpt") or "")),
                     ).strip().casefold()
                     if quote.casefold() not in source_text:
@@ -271,6 +289,20 @@ class QualityGate:
                 failures.append("Live Guard failed: Dry-run test fixture cannot be published in live mode.")
             if screenshot_result and screenshot_result.is_mock:
                 failures.append("Live Guard failed: Mock screenshot cannot be published in live mode.")
+
+        # 1a. SEO metadata guidance. These are advisory, not ranking guarantees or hard gates.
+        title_length = len((draft.title or "").strip())
+        description_length = len((draft.meta_description or "").strip())
+        if title_length < 30 or title_length > 65:
+            warnings.append(
+                f"SEO title advisory: title is {title_length} characters; aim for a concise, descriptive title around 30–65 characters."
+            )
+        if description_length < 120 or description_length > 155:
+            warnings.append(
+                f"SEO description advisory: description is {description_length} characters; the editorial target is 120–155 characters."
+            )
+        if not (draft.meta_description or "").strip():
+            warnings.append("SEO description advisory: no meta description was generated; the opening paragraph should clearly summarise the answer.")
 
         # 1. Plain-English Style and Generic AI Cliché Check
         for pattern in self.GENERIC_AI_CLICHES:
@@ -464,6 +496,8 @@ class QualityGate:
                 "word_count": word_count,
                 "sources_count": len(draft.sources_used or []),
                 "labels_count": len(draft.labels or []),
+                "seo_title_characters": len((draft.title or "").strip()),
+                "seo_description_characters": len((draft.meta_description or "").strip()),
                 "screenshot_captured": bool(screenshot_result and screenshot_result.success),
                 "has_public_screenshot": bool(screenshot_result and screenshot_result.public_url),
             },
