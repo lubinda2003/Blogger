@@ -226,7 +226,46 @@ class QualityGate:
         clean_text = re.sub(r"<[^>]+>", " ", html_str)
         text_lower = clean_text.lower()
 
-        # 0. Mock & Test Fixture Guard for Live Mode
+        # 0. Claim-level evidence verification. URL reachability alone is not proof.
+        if self.is_live_mode:
+            evidence_by_url = {
+                normalize_url(item.get("url", "")): item
+                for item in (verified_source_evidence or [])
+                if item.get("verified") and item.get("url")
+            }
+            if not draft.claim_evidence:
+                failures.append(
+                    "Evidence check failed: live article has no claim_evidence mappings. "
+                    "Every material factual claim must map to retrieved source text."
+                )
+            else:
+                normalized_article_text = re.sub(r"\\s+", " ", html.unescape(clean_text)).strip().casefold()
+                for index, item in enumerate(draft.claim_evidence, start=1):
+                    claim = re.sub(r"\\s+", " ", str(item.get("claim", ""))).strip()
+                    source_url = str(item.get("source_url", "")).strip()
+                    quote = re.sub(r"\\s+", " ", str(item.get("evidence_quote", ""))).strip()
+                    if not claim or not source_url or not quote:
+                        failures.append(f"Evidence check failed: claim mapping #{index} is incomplete.")
+                        continue
+                    if claim.casefold() not in normalized_article_text:
+                        failures.append(f"Evidence check failed: mapped claim #{index} is not present verbatim in the article.")
+                        continue
+                    normalized_url = normalize_url(source_url)
+                    source = evidence_by_url.get(normalized_url)
+                    if not source:
+                        failures.append(f"Evidence check failed: claim #{index} points to a source that was not verified.")
+                        continue
+                    source_text = re.sub(
+                        r"\\s+", " ",
+                        html.unescape(str(source.get("cleaned_text") or source.get("evidence_excerpt") or "")),
+                    ).strip().casefold()
+                    if quote.casefold() not in source_text:
+                        failures.append(f"Evidence check failed: evidence quote for claim #{index} is not present in retrieved source text.")
+                        continue
+                    if not ResearchCollector._supports_numeric_markers(claim, quote):
+                        failures.append(f"Evidence check failed: numeric values in claim #{index} are not supported by its evidence quote.")
+
+        # 0b. Mock & Test Fixture Guard for Live Mode
         if self.is_live_mode:
             if draft.is_dry_run_fixture:
                 failures.append("Live Guard failed: Dry-run test fixture cannot be published in live mode.")
