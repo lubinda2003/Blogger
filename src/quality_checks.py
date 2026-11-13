@@ -132,7 +132,7 @@ def validate_final_blogger_html(document: str) -> List[str]:
     except Exception as exc:
         return [f"Final HTML validation failed: parser could not read document ({exc})."]
     schema_blocks = re.findall(
-        r'<script\b[^>]*type=["\\']application/ld\+json["\\'][^>]*>(.*?)</script\s*>',
+        r"""<script\b[^>]*type=["']application/ld\+json["'][^>]*>(.*?)</script\s*>""",
         document, flags=re.I | re.S,
     )
     if not schema_blocks:
