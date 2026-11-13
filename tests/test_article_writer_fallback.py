@@ -1,7 +1,8 @@
 """Regression tests for bounded LLM provider failover."""
 
+import json
 import unittest
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from src.article_writer import ArticleWriter, GROQ_MAX_COMPLETION_TOKENS, GROQ_MAX_PROMPT_CHARS
 
@@ -35,7 +36,23 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertEqual(writer._fit_groq_prompt(prompt), prompt)
 
     def test_groq_completion_budget_is_conservative(self):
-        self.assertEqual(GROQ_MAX_COMPLETION_TOKENS, 2500)
+        self.assertEqual(GROQ_MAX_COMPLETION_TOKENS, 8192)
+
+    def test_groq_request_uses_expanded_completion_budget_and_gpt_oss_low_effort(self):
+        writer = self.make_writer()
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = (
+            b'{"choices":[{"message":{"content":"{}"}}]}'
+        )
+
+        with patch("src.article_writer.urllib.request.urlopen", return_value=response) as urlopen:
+            self.assertEqual(writer._call_groq_rest("Return a JSON object."), "{}")
+
+        request = urlopen.call_args.args[0]
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(payload["max_completion_tokens"], 8192)
+        self.assertNotIn("max_tokens", payload)
+        self.assertEqual(payload["reasoning_effort"], "low")
 
     def test_secondary_gemini_rotates_keys_before_groq(self):
         writer = self.make_writer()
