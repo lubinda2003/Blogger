@@ -604,6 +604,7 @@ def run_pipeline(
             "violations": [], "passes": 0, "incomplete": 0, "error": str(exc),
         }
         logger.warning("Accessibility audit skipped without blocking publication: %s", exc)
+    previews = []
     try:
         previews = capture_article_previews(final_html, config.output_dir)
         logger.info("Saved responsive article previews: %s", ", ".join(previews))
