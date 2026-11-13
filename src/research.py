@@ -187,9 +187,14 @@ class ResearchCollector:
         self.max_retries = max_retries
         self.tavily_api_key = (tavily_api_key or os.getenv("TAVILY_API_KEY") or "").strip()
         self.domain_allowlist = [d.strip().lower() for d in (domain_allowlist or []) if d.strip()]
-        self.domain_blocklist = [
-            d.strip().lower() for d in (DEFAULT_DOMAIN_BLOCKLIST if domain_blocklist is None else domain_blocklist) if d.strip()
-        ]
+        # Always enforce the built-in low-evidence domains. An explicitly empty
+        # configuration list must not accidentally disable these safety exclusions.
+        configured_blocklist = domain_blocklist or []
+        self.domain_blocklist = list(dict.fromkeys(
+            d.strip().lower()
+            for d in (*DEFAULT_DOMAIN_BLOCKLIST, *configured_blocklist)
+            if d and d.strip()
+        ))
         self.last_fetched_content: str = ""
 
     def _search_tavily(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
@@ -536,6 +541,18 @@ class ResearchCollector:
                     return html.unescape(cleaned[:250])
         return ""
 
+    @staticmethod
+    def _build_research_queries(topic_title: str) -> List[str]:
+        """Create a small set of focused searches to avoid relying on one noisy result page."""
+        title = re.sub(r"\\s+", " ", (topic_title or "").strip()).strip(' \\"')
+        if not title:
+            return []
+        return [
+            f'"{title}" official documentation features',
+            f'"{title}" practical guide examples workflow',
+            f'"{title}" tutorial implementation use cases',
+        ]
+
     def conduct_research(
         self,
         topic_id: str,
@@ -600,17 +617,21 @@ class ResearchCollector:
         candidate_pool: List[Tuple[str, str, List[str], str]] = []
 
         if not dry_run:
-            tavily_results = self._search_tavily(f"{topic_title} official documentation features pricing", max_results=5)
-            for res in tavily_results:
-                t_url = res.get("url")
-                if not t_url or not (t_url.startswith("http://") or t_url.startswith("https://")):
-                    continue
-                if not self._is_domain_allowed(t_url):
-                    logger.info(f"Skipping Tavily candidate URL blocked by domain policy: {t_url}")
-                    continue
-                t_title = res.get("title") or f"{topic_title} Reference"
-                t_snippet = res.get("raw_content", "") or res.get("content", "")
-                candidate_pool.append((t_title, t_url, [topic_relevance_claim(topic_title, target_url)], t_snippet))
+            # Search the exact topic and two complementary intent angles. A single
+            # search page can be noisy or dominated by social/video results.
+            for query in self._build_research_queries(topic_title):
+                tavily_results = self._search_tavily(query, max_results=8)
+                logger.info("Research query returned %s candidate sources.", len(tavily_results))
+                for res in tavily_results:
+                    t_url = res.get("url")
+                    if not t_url or not (t_url.startswith("http://") or t_url.startswith("https://")):
+                        continue
+                    if not self._is_domain_allowed(t_url):
+                        logger.info("Skipping Tavily candidate URL blocked by domain policy: %s", t_url)
+                        continue
+                    t_title = res.get("title") or f"{topic_title} Reference"
+                    t_snippet = res.get("raw_content", "") or res.get("content", "")
+                    candidate_pool.append((t_title, t_url, [topic_relevance_claim(topic_title, target_url)], t_snippet))
 
         # Include topic candidate sources
         for title, url, claims in candidate_sources:
@@ -633,6 +654,9 @@ class ResearchCollector:
                 deduped_candidates.append((title, url, claims, tavily_snippet))
 
         brand = topic_brand(topic_title, target_url)
+
+        # Bound network work while retaining a wider pool than one search response.
+        deduped_candidates = deduped_candidates[:12]
 
         # Execute live verification for each candidate source
         for title, url, claims, tavily_snippet in deduped_candidates:
