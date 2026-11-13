@@ -505,7 +505,7 @@ class ArticleWriter:
         prompt = str(prompt or "")
         if len(prompt) <= max_chars:
             return prompt
-        marker = "\\n\\n[Research and supporting context shortened for fallback provider token budget.]\\n\\n"
+        marker = "\n\n[Research and supporting context shortened for fallback provider token budget.]\n\n"
         content_budget = max(0, max_chars - len(marker))
         head_chars = int(content_budget * 0.62)
         tail_chars = content_budget - head_chars
@@ -617,7 +617,7 @@ class ArticleWriter:
         def normalized(url: str) -> str:
             value = html.unescape(str(url or "")).strip()
             value = re.sub(r"^https?://", "", value, flags=re.IGNORECASE)
-            value = re.sub(r"^www\\.", "", value, flags=re.IGNORECASE)
+            value = re.sub(r"^www\.", "", value, flags=re.IGNORECASE)
             return value.rstrip("/").casefold()
 
         existing_urls = {
@@ -650,22 +650,22 @@ class ArticleWriter:
             closing_list = re.search(r"</ul\s*>", html_content[heading.end():], re.IGNORECASE)
             if closing_list:
                 insert_at = heading.end() + closing_list.start()
-                return html_content[:insert_at] + "\\n" + "\\n".join(missing_items) + "\\n" + html_content[insert_at:]
-            new_list = "<ul>\\n" + "\\n".join(missing_items) + "\\n</ul>"
-            return html_content[:heading.end()] + "\\n" + new_list + html_content[heading.end():]
+                return html_content[:insert_at] + "\n" + "\n".join(missing_items) + "\n" + html_content[insert_at:]
+            new_list = "<ul>\n" + "\n".join(missing_items) + "\n</ul>"
+            return html_content[:heading.end()] + "\n" + new_list + html_content[heading.end():]
 
         sources_block = (
-            '\\n\\n<div class="article-sources" style="margin-top:32px; padding:16px 20px; '
-            'background:#f8fafc; border-top:2px solid #e2e8f0; border-radius:6px;">\\n'
-            '  <h3 style="font-size:1.1rem; margin-top:0; margin-bottom:12px; color:#1e293b;">Sources &amp; References</h3>\\n'
-            '  <ul style="margin-bottom:0; padding-left:20px;">\\n'
-            + '\\n'.join(missing_items) + '\\n'
-            '  </ul>\\n'
+            '\n\n<div class="article-sources" style="margin-top:32px; padding:16px 20px; '
+            'background:#f8fafc; border-top:2px solid #e2e8f0; border-radius:6px;">\n'
+            '  <h3 style="font-size:1.1rem; margin-top:0; margin-bottom:12px; color:#1e293b;">Sources &amp; References</h3>\n'
+            '  <ul style="margin-bottom:0; padding-left:20px;">\n'
+            + '\n'.join(missing_items) + '\n'
+            '  </ul>\n'
             '</div>'
         )
         if html_content.rstrip().endswith("</div>"):
             idx = html_content.rfind("</div>")
-            return html_content[:idx].rstrip() + sources_block + "\\n</div>"
+            return html_content[:idx].rstrip() + sources_block + "\n</div>"
         return html_content.rstrip() + sources_block
 
     def _generate_dry_run_fixture(self, topic: TopicItem, brief: ResearchBrief) -> Dict[str, Any]:
