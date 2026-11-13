@@ -64,8 +64,8 @@ def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
     coverage = sum(1 for token in unique_claim_tokens if token in article_tokens) / len(unique_claim_tokens)
     if coverage < 0.65:
         return False
-    claim_numbers = set(re.findall(r"\b\\d+(?:[.,]\\d+)?%?\b", claim))
-    article_numbers = set(re.findall(r"\b\\d+(?:[.,]\\d+)?%?\b", article_text or ""))
+    claim_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", claim))
+    article_numbers = set(re.findall(r"\b\d+(?:[.,]\d+)?%?\b", article_text or ""))
     if not claim_numbers.issubset(article_numbers):
         return False
     negation_pattern = r"\b(?:no|not|never|cannot|can't|doesn't|don't|without|neither|nor)\b"
