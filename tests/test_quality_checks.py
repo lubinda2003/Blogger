@@ -251,7 +251,7 @@ class TestQualityChecks(unittest.TestCase):
 
 class TestFinalBloggerHTMLValidation(unittest.TestCase):
     def _valid_html(self):
-        return '''<script type="application/ld+json">{"@type":"TechArticle"}</script>
+        return '''<script type="application/ld+json">{"@type":"BlogPosting","headline":"A valid article title","description":"A valid article description."}</script>
         <div class="dt-article-body"><h2 id="overview">Overview</h2>
         <p>Article content.</p><img src="https://cdn.example/image.jpg" alt="Product settings screen" />
         <a href="https://example.com/docs" target="_blank" rel="noopener noreferrer">Official docs</a>
