@@ -60,6 +60,14 @@ Workflow: [Tests](.github/workflows/tests.yml)
 
 The test workflow runs through its configured GitHub Actions events. Check the Actions tab for the latest result and current test count rather than relying on a hard-coded count in this README.
 
+## SEO output and Blogger limitations
+
+- Article structured data uses Google's supported `BlogPosting` type, with the article headline, description, publisher, author identity, language, and a verified public cover image when available.
+- The final HTML validator checks that the JSON-LD is valid and contains a `BlogPosting` headline and description before Blogger draft insertion.
+- SEO title and description lengths are measured and reported as advisories; they do not guarantee rankings or a particular search snippet.
+- **Important Blogger API limitation:** Blogger API v3's documented post resource does not expose a per-post Search Description field. The generated description is therefore included in structured data and QA, but the pipeline does not claim it has populated Blogger's separate Search Description setting. Google may also choose a snippet from visible page text.
+- The live Blogger theme controls page-head metadata and canonical tags. Those must be checked on a public post URL after manual publication; the pipeline's article-body validator cannot inspect the theme's final page head.
+
 ## Publishing safety
 
 The pipeline has two execution modes, but only one Blogger delivery mode:
