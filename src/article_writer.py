@@ -48,6 +48,18 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
                 "required": ["title", "url"],
             },
         },
+        "claim_evidence": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "claim": {"type": "STRING"},
+                    "source_url": {"type": "STRING"},
+                    "evidence_quote": {"type": "STRING"},
+                },
+                "required": ["claim", "source_url", "evidence_quote"],
+            },
+        },
         "primary_intent": {"type": "STRING"},
         "last_checked_date": {"type": "STRING"},
         "affiliate_disclosure_required": {"type": "BOOLEAN"},
@@ -83,7 +95,7 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
             },
         },
     },
-    "required": ["title", "meta_description", "labels", "html_content", "sources_used"],
+    "required": ["title", "meta_description", "labels", "html_content", "sources_used", "claim_evidence"],
 }
 
 
