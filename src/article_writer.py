@@ -488,8 +488,10 @@ class ArticleWriter:
         prompt = str(prompt or "")
         if len(prompt) <= max_chars:
             return prompt
-        head_chars = int(max_chars * 0.62)
-        tail_chars = max_chars - head_chars
+        marker = "\\n\\n[Research and supporting context shortened for fallback provider token budget.]\\n\\n"
+        content_budget = max(0, max_chars - len(marker))
+        head_chars = int(content_budget * 0.62)
+        tail_chars = content_budget - head_chars
         logger.warning(
             "Reducing Groq fallback prompt from %s to %s characters to respect provider token limits.",
             len(prompt), max_chars,
@@ -863,7 +865,7 @@ against primary documentation."</code>
                             logger.warning(f"Gemini fallback key {key_index + 1}: rotating after quota/rate limit.")
                         res = self._call_gemini_rest(
                             prompt, model_name=fallback_model, max_tokens=max_tokens,
-                            max_attempts=2, api_key=key,
+                            api_key=key,
                         )
                         self.actual_provider = "gemini"
                         self.actual_model = fallback_model
