@@ -505,7 +505,7 @@ class ArticleWriter:
         prompt = str(prompt or "")
         if len(prompt) <= max_chars:
             return prompt
-        marker = "\n\n[Research and supporting context shortened for fallback provider token budget.]\n\n"
+        marker = "\\n\\n[Research and supporting context shortened for fallback provider token budget.]\\n\\n"
         content_budget = max(0, max_chars - len(marker))
         head_chars = int(content_budget * 0.62)
         tail_chars = content_budget - head_chars
