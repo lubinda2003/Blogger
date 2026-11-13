@@ -1,6 +1,7 @@
 """Hard quality gate engine enforcing editorial, structural, safety, and plain-English standards."""
 
 import html
+import json
 import re
 from html.parser import HTMLParser
 from urllib.parse import urlparse
@@ -130,6 +131,23 @@ def validate_final_blogger_html(document: str) -> List[str]:
         inspector.close()
     except Exception as exc:
         return [f"Final HTML validation failed: parser could not read document ({exc})."]
+    schema_blocks = re.findall(
+        r'<script\\b[^>]*type=["\\']application/ld\\+json["\\'][^>]*>(.*?)</script\\s*>',
+        document, flags=re.I | re.S,
+    )
+    if not schema_blocks:
+        failures.append("Final HTML validation failed: BlogPosting structured data is missing.")
+    else:
+        try:
+            schema = json.loads(schema_blocks[0])
+            if schema.get("@type") != "BlogPosting":
+                failures.append("Final HTML validation failed: structured data must use the Google-supported BlogPosting type.")
+            if not str(schema.get("headline", "")).strip():
+                failures.append("Final HTML validation failed: BlogPosting headline is missing.")
+            if not str(schema.get("description", "")).strip():
+                failures.append("Final HTML validation failed: BlogPosting description is missing.")
+        except (TypeError, ValueError):
+            failures.append("Final HTML validation failed: BlogPosting JSON-LD is not valid JSON.")
     if "dt-article-body" not in document:
         failures.append("Final HTML validation failed: styled article body wrapper is missing.")
     if "h2" not in inspector.tags:
