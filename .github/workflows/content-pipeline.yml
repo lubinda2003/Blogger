@@ -123,8 +123,8 @@ jobs:
           remote = json.loads(os.environ["REMOTE_STATE"])
           merged = merge_state_snapshots(base, local, remote)
           with open("data/processed_topics.json", "w", encoding="utf-8") as handle:
-              json.dump(merged, handle, indent=2, ensure_ascii=False)
-              handle.write("\\n")
+             json.dump(merged, handle, indent=2, ensure_ascii=False)
+             handle.write("\n")
           PY
 
             git add data/processed_topics.json
