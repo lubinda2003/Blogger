@@ -38,6 +38,35 @@ def normalize_fingerprint(text: str) -> str:
     return hashlib.sha256(normalized_str.encode("utf-8")).hexdigest()[:16]
 
 
+def merge_state_snapshots(base: Dict[str, Any], local: Dict[str, Any], remote: Dict[str, Any]) -> Dict[str, Any]:
+    """Three-way merge pipeline state without losing independent failure increments or completed posts."""
+    merged = dict(remote)
+    base_failures = base.get("failed_attempts", {}) or {}
+    local_failures = local.get("failed_attempts", {}) or {}
+    remote_failures = remote.get("failed_attempts", {}) or {}
+    failures = {}
+    for topic_id in set(base_failures) | set(local_failures) | set(remote_failures):
+        baseline = int(base_failures.get(topic_id, 0) or 0)
+        local_delta = max(0, int(local_failures.get(topic_id, 0) or 0) - baseline)
+        remote_delta = max(0, int(remote_failures.get(topic_id, 0) or 0) - baseline)
+        failures[topic_id] = baseline + local_delta + remote_delta
+    merged["failed_attempts"] = {key: value for key, value in failures.items() if value > 0}
+    records = {}
+    for record in (remote.get("processed", []) or []) + (local.get("processed", []) or []):
+        topic_id = record.get("topic_id")
+        if not topic_id:
+            continue
+        previous = records.get(topic_id)
+        if previous is None or str(record.get("timestamp", "")) >= str(previous.get("timestamp", "")):
+            records[topic_id] = record
+    merged["processed"] = sorted(records.values(), key=lambda item: str(item.get("timestamp", "")))
+    merged["total_runs"] = len(merged["processed"])
+    merged["last_updated"] = max(
+        str(value or "") for value in (base.get("last_updated"), local.get("last_updated"), remote.get("last_updated"))
+    ) or None
+    return merged
+
+
 class StateStore:
     """Manages processed topic persistence, deduplication checks, and run history via repository state."""
 
