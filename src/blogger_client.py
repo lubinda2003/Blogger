@@ -246,8 +246,17 @@ class BloggerClient:
         dry_run: bool = False,
         topic_id: Optional[str] = None,
     ) -> BloggerPostResult:
-        """Create a post on the Blogger blog. Default isDraft=True."""
+        """Create a Blogger draft. Public post creation is intentionally disabled."""
         payload = self.build_post_payload(title=title, html_content=html_content, labels=labels, topic_id=topic_id)
+
+        if not is_draft:
+            return BloggerPostResult(
+                success=False,
+                title=title,
+                is_draft=True,
+                error_message="Public Blogger publishing is disabled; only drafts may be created.",
+                raw_payload=payload,
+            )
 
         if dry_run:
             logger.info(f"[DRY RUN] Simulating Blogger draft insertion for: '{title}' (Labels: {payload['labels']})")
@@ -258,7 +267,7 @@ class BloggerClient:
                 post_id=dummy_id,
                 post_url=dummy_url,
                 title=title,
-                is_draft=is_draft,
+                is_draft=True,
                 raw_payload=payload,
             )
 
@@ -279,8 +288,9 @@ class BloggerClient:
         if not self._access_token:
             self.refresh_access_token()
 
-        draft_param = "true" if is_draft else "false"
-        url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts?isDraft={draft_param}"
+        # Keep the API request draft-only even if a future caller bypasses config validation.
+        draft_param = "true"
+        url = f"{self.BASE_URL}/blogs/{self.blog_id}/posts?isDraft=true"
 
         data_bytes = json.dumps(payload).encode("utf-8")
         req = urllib.request.Request(
@@ -306,7 +316,7 @@ class BloggerClient:
                     post_id=post_id,
                     post_url=post_url,
                     title=resp_data.get("title", title),
-                    is_draft=is_draft,
+                    is_draft=True,
                     raw_payload=resp_data,
                 )
         except urllib.error.HTTPError as e:
