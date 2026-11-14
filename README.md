@@ -52,7 +52,7 @@ The visual system is local-first and does not need a paid image-generation API:
 - **Accessibility:** axe-core checks the final article markup; findings are reported as diagnostics and do not pretend to certify full WCAG compliance.
 - **Review previews:** Playwright captures mobile and desktop previews for the run artifact.
 
-**Image generation is free/local by default.** The scheduled workflow sets `IMAGE_PROVIDER=local`, `GEMINI_IMAGE_GENERATION_ENABLED=false`, and `ALLOW_PAID_IMAGE_GENERATION=false`. The pipeline does not send the three article-writing Gemini keys to an image model.
+**Image generation is free/local by default.** The scheduled workflow sets `IMAGE_PROVIDER=local`, `GEMINI_IMAGE_GENERATION_ENABLED=false`, and `ALLOW_PAID_IMAGE_GENERATION=false`. The pipeline does not send the three article-writing Gemini keys to an image model. Article writing rotates across the three configured Gemini project keys before falling back to Groq; the image-generation helper cannot accept those keys.
 
 A future paid Gemini image integration would require all three explicit opt-ins (`IMAGE_PROVIDER=gemini`, `GEMINI_IMAGE_GENERATION_ENABLED=true`, and `ALLOW_PAID_IMAGE_GENERATION=true`) plus a separate `GEMINI_IMAGE_API_KEY`. Do not configure that key or enable those switches while all available Gemini projects are on the free tier. No paid image-generation fallback is automatic.
 
@@ -66,7 +66,7 @@ Workflow: [Blogger Content Pipeline](.github/workflows/content-pipeline.yml)
 - Scheduled runs execute the real content-generation pipeline (`DRY_RUN=false`).
 - Blogger delivery is permanently restricted to **drafts** in application code; public publishing is disabled.
 - Provider choice: `auto` (Gemini with Groq failover), `groq`, or `gemini`.
-- Optional input: a specific topic ID from the optional `data/topics.csv` editorial ideas file. Leave it empty for autonomous Tavily discovery.
+- Optional input: a specific topic ID from `data/topics.csv`. Leave it empty to use the prepared queue first, then autonomous Tavily discovery when the queue is exhausted.
 - Runs are serialized so concurrent executions do not race over topic state.
 - Reports and output artifacts are uploaded; the latest scrubbed report is also published to the `run-reports` branch.
 
@@ -167,7 +167,7 @@ Some live pipeline functions require valid API credentials and network access. K
 
 ## Topic state and run reports
 
-- `data/topics.csv` is an optional manual/editorial seed list. Normal runs use this prepared queue first; Tavily discovery is used only after no eligible queued topic remains.
+- `data/topics.csv` is the prepared evergreen topic queue. Normal runs select from this queue first; Tavily discovery is used only after no eligible queued topic remains.
 - `data/processed_topics.json` records processed-topic state and helps prevent duplicate work.
 - Live runs can commit updated topic state back to the branch.
 - The workflow uploads execution artifacts with a 14-day retention period.
