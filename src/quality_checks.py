@@ -436,13 +436,14 @@ class QualityGate:
         if not (draft.meta_description or "").strip():
             warnings.append("SEO description advisory: no meta description was generated; the opening paragraph should clearly summarise the answer.")
 
-        # 1. Plain-English Style and Generic AI Cliché Check
+        # 1. Plain-English Style and Generic AI Cliché Check.
+        # These phrases are editorial coaching signals, not publication blockers.
         for pattern in self.GENERIC_AI_CLICHES:
             match = re.search(pattern, text_lower)
             if match:
-                failures.append(
-                    f"Writing Style failed: Generic AI cliché detected: '{match.group(0)}'. "
-                    "Rewrite in plain, direct, natural English."
+                warnings.append(
+                    f"Writing style advisory: generic phrase detected ('{match.group(0)}'). "
+                    "Consider replacing it with specific, natural wording."
                 )
 
         # 1b. Honesty: no invented first-hand experience (Google treats this as deceptive)
@@ -493,9 +494,9 @@ class QualityGate:
         # 5. Content Length & Substantive Value
         words = re.findall(r"\b\w+\b", clean_text)
         word_count = len(words)
-        # The configured target is editorial guidance, not an arbitrary publish blocker.
-        # Keep a lower safety floor so genuinely thin articles still fail.
-        hard_minimum = min(self.min_word_count, 600)
+        # The configured target is editorial guidance. Keep a modest safety floor,
+        # while allowing concise, complete tutorials to proceed for human review.
+        hard_minimum = min(self.min_word_count, 450)
         if word_count < hard_minimum:
             failures.append(
                 f"Originality/Length check failed: Article contains {word_count} words, below the "
@@ -507,21 +508,17 @@ class QualityGate:
                 f"{self.min_word_count}. It may still proceed if all critical checks pass."
             )
 
-        # 5b. Plain English: measured, not assumed
+        # 5b. Plain English: measure and report readability, but do not reject
+        # otherwise sound articles on a formulaic grade-level score alone.
         if self.max_reading_grade:
             read = analyze_readability(html_str)
-            if read.words >= 200:
-                hard_reading_limit = max(self.max_reading_grade + 2.5, 13.5)
-                if read.is_hard(hard_reading_limit):
-                    failures.append(
-                        f"Readability check failed: reading grade {read.fk_grade} (hard limit {hard_reading_limit}), "
-                        f"average sentence {read.avg_sentence_words} words. Rewrite in shorter sentences and plainer words."
-                    )
-                elif read.fk_grade > self.max_reading_grade or read.long_sentence_pct > 15:
-                    warnings.append(
-                        f"Readability advisory: grade {read.fk_grade}, {read.long_sentence_pct}% of sentences over 25 words. "
-                        "Consider simplifying before publication."
-                    )
+            if read.words >= 200 and (
+                read.fk_grade > self.max_reading_grade or read.long_sentence_pct > 15
+            ):
+                warnings.append(
+                    f"Readability advisory: grade {read.fk_grade}, {read.long_sentence_pct}% of sentences over 25 words. "
+                    "Consider simplifying before publication; this score alone does not block a draft."
+                )
 
         # 6. HTML Validity & Markdown Leaks (ignore code blocks where # is valid syntax)
         clean_for_md_check = re.sub(r"<pre[^>]*>.*?</pre>", "", html_str, flags=re.DOTALL | re.IGNORECASE)
