@@ -430,11 +430,16 @@ def run_pipeline(
             )
     else:
         screenshot_res = None
+        # An article may suggest a screenshot even when the editorial topic has
+        # no trusted capture URL. Treat that suggestion as optional; never invent
+        # a destination or let an unavailable optional screenshot fail QA.
+        if not topic.requires_screenshot and not topic.screenshot_targets:
+            draft.screenshot_needed = False
         reporter.add_stage(
             stage_name="Screenshot Capture",
             status="SKIPPED",
             duration_seconds=0.0,
-            details="Neither the editorial topic nor the article requires an interface screenshot.",
+            details="No trusted screenshot target is configured; no synthetic interface image will be embedded.",
         )
 
     if stage_limit == "screenshot":
