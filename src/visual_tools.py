@@ -40,12 +40,12 @@ def generate_gemini_image(
     import os
 
     provider = os.getenv("IMAGE_PROVIDER", "local").strip().lower()
-    enabled = os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+    enabled = os.getenv("GEMINI_IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
     allow_paid = os.getenv("ALLOW_PAID_IMAGE_GENERATION", "false").strip().lower() in ("1", "true", "yes", "on")
     if provider != "gemini" or not enabled or not allow_paid:
         raise RuntimeError(
             "Gemini image generation is disabled. It requires IMAGE_PROVIDER=gemini, "
-            "IMAGE_GENERATION_ENABLED=true, and ALLOW_PAID_IMAGE_GENERATION=true."
+            "GEMINI_IMAGE_GENERATION_ENABLED=true, and ALLOW_PAID_IMAGE_GENERATION=true."
         )
 
     key = api_key or os.getenv("GEMINI_IMAGE_API_KEY")
