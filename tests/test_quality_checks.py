@@ -81,6 +81,30 @@ class TestQualityChecks(unittest.TestCase):
         self.assertFalse(report.passed)
         self.assertTrue(any("not present in retrieved source text" in item for item in report.failures))
 
+    def test_live_gate_accepts_quote_from_verified_evidence_excerpt_outside_cleaned_window(self):
+        """A verified source's extracted supporting excerpt remains valid when outside its compact text window."""
+        draft = self._create_valid_draft()
+        evidence_quote = "A supporting passage from later in the retrieved article is preserved here."
+        source_evidence = [{
+            "title": "Official Google Documentation",
+            "url": "https://ai.google.dev/docs",
+            "verified": True,
+            "cleaned_text": " ".join(["Unrelated introductory page text."] * 120),
+            "evidence_excerpt": evidence_quote,
+        }]
+        draft.claim_evidence[0]["evidence_quote"] = evidence_quote
+
+        report = self.live_gate.run_all_checks(
+            draft,
+            verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
+            verified_source_evidence=source_evidence,
+            check_duplicate=False,
+        )
+        self.assertTrue(
+            report.passed,
+            f"Expected verified evidence excerpt to pass, got failures: {report.failures}",
+        )
+
     def test_live_gate_rejects_unsupported_numeric_claim(self):
         draft = self._create_valid_draft()
         draft.claim_evidence[0]["claim"] = "Each step is short and easy to follow in 2026."
