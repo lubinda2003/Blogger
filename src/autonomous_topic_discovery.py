@@ -17,10 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 EDITORIAL_SEARCHES = (
-    ("Artificial Intelligence and AI Tools", "AI tools practical workflows new features problems people want to solve", "How-to"),
-    ("Software and Productivity", "software productivity workflows tutorials common problems and comparisons", "Tutorial"),
-    ("Digital Business Tools", "digital business tools for freelancers creators small businesses payments ecommerce", "Comparison"),
-    ("Tutorials and Practical Solutions", "step by step technology tutorials solve common computer and online work problems", "Tutorial"),
+    ("Productivity", "personal productivity digital organization time management workflows focus task planning", "How-to"),
+    ("Student Success", "study skills digital note taking online research exam preparation academic productivity", "Guide"),
+    ("Freelancing", "freelance skills client communication proposals portfolios project delivery remote work", "How-to"),
+    ("Digital Skills", "practical digital skills computer basics internet safety email spreadsheets cloud files online collaboration", "Tutorial"),
 )
 
 _BLOCKED_DOMAINS = (
@@ -46,7 +46,7 @@ def _intent(title: str, content: str) -> str:
 
 
 class AutonomousTopicDiscoverer:
-    """Find fresh article candidates by searching Tavily across the publication's four pillars."""
+    """Find fresh article candidates by searching Tavily across the publication's four practical digital-skills categories."""
 
     ENDPOINT = "https://api.tavily.com/search"
 
@@ -145,7 +145,7 @@ class AutonomousTopicDiscoverer:
                     priority=max(1, min(5, 5 - int(relevance * 4))),
                     requires_screenshot=False,
                     target_url="",
-                    target_audience="International students, freelancers, creators and digital workers",
+                    target_audience="International students, freelancers and everyday internet users",
                     screenshot_targets=[],
                 )
                 category_items.append((relevance, item))

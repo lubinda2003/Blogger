@@ -547,11 +547,9 @@ class ResearchCollector:
         title = re.sub(r"\s+", " ", (topic_title or "").strip()).strip(' "')
         if not title:
             return []
-        return [
-            f'"{title}" official documentation features',
-            f'"{title}" practical guide examples workflow',
-            f'"{title}" tutorial implementation use cases',
-        ]
+        # One focused discovery request keeps each article inexpensive. The
+        # returned source pool is still independently fetched and evidence-checked.
+        return [f'"{title}" practical guidance reliable sources official documentation']
 
     def conduct_research(
         self,
@@ -656,7 +654,7 @@ class ResearchCollector:
         brand = topic_brand(topic_title, target_url)
 
         # Bound network work while retaining a wider pool than one search response.
-        deduped_candidates = deduped_candidates[:12]
+        deduped_candidates = deduped_candidates[:8]
 
         # Execute live verification for each candidate source
         for title, url, claims, tavily_snippet in deduped_candidates:

@@ -120,7 +120,7 @@ class TestPipelineWiring(unittest.TestCase):
              patch.object(SEOMetadata, "inject_seo_and_assets", side_effect=spy):
             cfg = load_config({"dry_run": True, "output_dir": os.path.join(tmp, "out"),
                                "processed_json_path": os.path.join(tmp, "s.json"), **cfg_overrides})
-            code = pipeline.run_pipeline(cfg, target_topic_id="free-ai-research-tools-students")
+            code = pipeline.run_pipeline(cfg, target_topic_id="weekly-work-plan")
         return code, captured, prep
 
     def test_cover_url_reaches_the_published_html(self):

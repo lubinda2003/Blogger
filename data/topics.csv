@@ -1,10 +1,9 @@
 id,topic,category,primary_intent,priority,requires_screenshot,target_url,target_audience,screenshot_targets
-free-ai-research-tools-students,7 Best Free AI Research Tools for Students in 2026,Artificial Intelligence and AI Tools,Listicle,1,false,https://consensus.app,Students and academic researchers
-notion-project-management-setup,How to Build a Clean Project Management Dashboard in Notion,Software and Productivity,Tutorial,1,true,https://www.notion.com,Freelancers and project managers
-best-free-invoicing-tools-freelancers,Best Free Invoicing and Payment Tools for International Freelancers,Digital Business Tools,Comparison,1,false,https://waveapps.com,Freelancers and small agency owners
-claude-code-web-prototyping,How to Prototype Web Tools with Claude Artifacts Without Coding,Artificial Intelligence and AI Tools,Tutorial,2,true,https://claude.ai,Non-technical entrepreneurs and creators
-obsidian-vs-notion-note-taking,Obsidian vs Notion: Which Note-Taking Tool Fits Your Workflow?,Software and Productivity,Comparison,2,false,https://obsidian.md,Knowledge workers and writers,https://obsidian.md;https://www.notion.com
-minimal-ecommerce-setup-shopify-gumroad,Gumroad vs Shopify for Selling Digital Products: An Honest Comparison,Digital Business Tools,Guide,2,true,https://gumroad.com,Content creators and digital entrepreneurs,https://gumroad.com;https://www.shopify.com
-canva-brand-kit-design-walkthrough,How to Build a Unified Social Media Brand Kit in Canva,Tutorials and Practical Solutions,Tutorial,3,true,https://www.canva.com,Small business owners and social media managers
-gemini-long-document-analysis,How to Analyze 100-Page PDFs and Spreadsheets with Google Gemini,Artificial Intelligence and AI Tools,How-to,3,true,https://ai.google.dev,Researchers and data analysts
-browser-extensions-boost-focus,5 Lightweight Browser Extensions That Stop Distractions and Save Battery,Software and Productivity,Listicle,4,false,https://chromewebstore.google.com,Remote workers and students
+weekly-work-plan,How to Build a Weekly Work Plan You Can Actually Follow,Productivity,How-to,1,false,,Students and everyday internet users,
+organize-digital-files,How to Organize Digital Files So You Can Find Them Quickly,Productivity,Guide,1,false,,Students and everyday internet users,
+digital-study-notes,How to Take Better Digital Notes for Study,Student Success,How-to,1,false,,Students and lifelong learners,
+evaluate-online-sources,How to Research Online and Check Whether a Source Is Reliable,Student Success,Guide,1,false,,Students and everyday internet users,
+freelance-portfolio,How to Create a Clear Freelance Portfolio Without Building a Website,Freelancing,Guide,2,false,,New freelancers and independent workers,
+freelance-proposal,How to Write a Professional Freelance Proposal,Freelancing,How-to,2,false,,Freelancers and independent workers,
+spreadsheet-basics,Spreadsheet Skills: Formulas That Help With Everyday Tasks,Digital Skills,Tutorial,2,false,,Students and everyday internet users,
+online-account-safety,Simple Ways to Make Your Online Accounts Safer,Digital Skills,How-to,2,false,,Students and everyday internet users,

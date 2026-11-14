@@ -18,23 +18,23 @@ JPEG_MAGIC = b"\xff\xd8\xff"
 
 # Topic families deliberately use different art direction; no fixed brand palette.
 PALETTES = {
-    "ai": ("#101b36", "#6ee7f9", "#f59e0b", "#dbeafe"),
-    "software": ("#14251f", "#a7f3d0", "#fbbf24", "#ecfdf5"),
-    "business": ("#251638", "#c4b5fd", "#fb7185", "#f5f3ff"),
-    "tutorial": ("#202b38", "#fcd34d", "#38bdf8", "#f8fafc"),
+    "productivity": ("#14251f", "#a7f3d0", "#fbbf24", "#ecfdf5"),
+    "student": ("#101b36", "#6ee7f9", "#f59e0b", "#dbeafe"),
+    "freelancing": ("#251638", "#c4b5fd", "#fb7185", "#f5f3ff"),
+    "digital_skills": ("#202b38", "#fcd34d", "#38bdf8", "#f8fafc"),
     "default": ("#172033", "#93c5fd", "#f0abfc", "#f8fafc"),
 }
 
 def _topic_family(title: str, kicker: str = "") -> str:
     text = f"{title} {kicker}".lower()
-    if any(w in text for w in ("ai ", "artificial intelligence", "machine learning", "chatgpt", "claude", "gemini", "llm")):
-        return "ai"
-    if any(w in text for w in ("business", "freelance", "invoice", "marketing", "monetiz", "startup", "revenue")):
-        return "business"
-    if any(w in text for w in ("tutorial", "how to", "step-by-step", "setup", "guide", "fix", "troubleshoot")):
-        return "tutorial"
-    if any(w in text for w in ("software", "notion", "productivity", "workspace", "project management", "app", "tool")):
-        return "software"
+    if any(w in text for w in ("student", "study", "exam", "academic", "research", "learning", "notes")):
+        return "student"
+    if any(w in text for w in ("freelanc", "client", "proposal", "portfolio", "invoice", "independent worker")):
+        return "freelancing"
+    if any(w in text for w in ("productivity", "work plan", "time management", "focus", "task planning", "workflow", "organize")):
+        return "productivity"
+    if any(w in text for w in ("digital skills", "spreadsheet", "online safety", "email", "computer basics", "cloud files", "internet skills")):
+        return "digital_skills"
     return "default"
 
 

@@ -151,22 +151,30 @@ def run_pipeline(
 
     discovery = TopicDiscovery(csv_path=config.topics_csv_path, state_store=state_store)
     if target_topic_id:
-        # Explicit operator-selected topics remain available from the optional CSV.
+        # Explicit operator-selected topics remain available from the editorial ideas file.
         topic = discovery.select_next_topic(requested_id=target_topic_id)
-        opportunity_note = "Manual topic selection from the optional editorial ideas file."
+        opportunity_note = "Manual topic selection from the editorial ideas file."
     else:
-        # Normal operation is autonomous: Tavily supplies fresh candidates across all four
-        # publication pillars. The CSV is not required to keep the pipeline running.
-        discoverer = AutonomousTopicDiscoverer(api_key=config.tavily_api_key)
-        candidates = discoverer.discover(state_store)
-        if candidates:
-            topic = sorted(candidates, key=lambda item: (item.priority, item.id))[0]
-            opportunity_note = discoverer.last_note
-            logger.info("Autonomous discovery selected '%s' from %s candidates.", topic.topic, len(candidates))
+        # Use the prepared evergreen queue first. This avoids spending four Tavily
+        # discovery searches on every scheduled run. Autonomous discovery is the
+        # fallback only after all eligible prepared topics have been used.
+        topic = discovery.select_next_topic()
+        if topic:
+            opportunity_note = (
+                "Selected from the prepared evergreen topic queue. "
+                "Autonomous discovery is deferred until the queue is exhausted."
+            )
         else:
-            topic = None
-            opportunity_note = discoverer.last_note
-            logger.error(opportunity_note)
+            discoverer = AutonomousTopicDiscoverer(api_key=config.tavily_api_key)
+            candidates = discoverer.discover(state_store)
+            if candidates:
+                topic = sorted(candidates, key=lambda item: (item.priority, item.id))[0]
+                opportunity_note = discoverer.last_note
+                logger.info("Autonomous discovery selected '%s' from %s candidates.", topic.topic, len(candidates))
+            else:
+                topic = None
+                opportunity_note = discoverer.last_note
+                logger.error(opportunity_note)
 
     if not topic:
         logger.error("Topic discovery produced no eligible article topic.")
@@ -385,32 +393,21 @@ def run_pipeline(
                 for item in screenshot_results
             )
             failure_detail = f"All {len(screenshot_results)} trusted screenshot target(s) failed. {failures}"
-            image_generation_enabled = os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("true", "1", "yes", "on")
-            if image_generation_enabled:
-                logger.warning(
-                    "%s Continuing because custom visual generation is enabled; "
-                    "the article will rely on generated explanatory visuals instead of blocked screenshots.",
-                    failure_detail,
-                )
-                reporter.add_stage(
-                    stage_name="Screenshot Capture",
-                    status="WARNING",
-                    duration_seconds=time.time() - t0,
-                    details=f"{failure_detail} Custom visuals will be used as the fallback.",
-                )
-            else:
-                _record_failure(state_store, config, topic, failure_detail)
-                reporter.add_stage(
-                    stage_name="Screenshot Capture",
-                    status="FAILED",
-                    duration_seconds=time.time() - t0,
-                    details=failure_detail,
-                )
-                reporter.finalize(
-                    success=False,
-                    next_action="Enable custom visual generation or add an accessible official screenshot target.",
-                )
-                return 1
+            _record_failure(state_store, config, topic, failure_detail)
+            reporter.add_stage(
+                stage_name="Screenshot Capture",
+                status="FAILED",
+                duration_seconds=time.time() - t0,
+                details=failure_detail,
+            )
+            reporter.finalize(
+                success=False,
+                next_action=(
+                    "Add an accessible official screenshot target or mark this topic as not requiring "
+                    "a product-interface screenshot. Generated illustrations are not substitutes for real screenshots."
+                ),
+            )
+            return 1
         reporter.screenshot_captured = bool(screenshot_res)
         successes = sum(1 for item in screenshot_results if item.success)
         if successes:
@@ -433,11 +430,16 @@ def run_pipeline(
             )
     else:
         screenshot_res = None
+        # An article may suggest a screenshot even when the editorial topic has
+        # no trusted capture URL. Treat that suggestion as optional; never invent
+        # a destination or let an unavailable optional screenshot fail QA.
+        if not topic.requires_screenshot and not topic.screenshot_targets:
+            draft.screenshot_needed = False
         reporter.add_stage(
             stage_name="Screenshot Capture",
             status="SKIPPED",
             duration_seconds=0.0,
-            details="Neither the editorial topic nor the article requires an interface screenshot.",
+            details="No trusted screenshot target is configured; no synthetic interface image will be embedded.",
         )
 
     if stage_limit == "screenshot":

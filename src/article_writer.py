@@ -1035,8 +1035,10 @@ against primary documentation."</code>
             if schema_errors:
                 raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}")
 
+            # Expand only when the draft misses the hard minimum. Do not spend
+            # another provider call on a cosmetic readability rewrite: the quality
+            # gate measures readability and rejects genuinely difficult copy.
             parsed = self._expand_if_short(parsed, brief)
-            parsed = self._simplify_if_hard(parsed)
             parsed = self._drop_unverified_sources(parsed, brief)
 
             is_fixture = False
@@ -1072,7 +1074,7 @@ against primary documentation."</code>
             "description": image_desc,
             "alt_text": image_alt,
             "aspect_ratio": "16:9",
-            "note": "Editorial design specification for the optional image-generation stage.",
+            "note": "Editorial design specification for the local branded featured-cover renderer; no image API is called.",
         }
         visual_plan = []
         for item in parsed.get("visual_plan", [])[:2]:

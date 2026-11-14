@@ -28,7 +28,7 @@ class TestDraftBackup(unittest.TestCase):
         """main.py used json without importing it, so draft.json was empty and draft.html never written."""
         with tempfile.TemporaryDirectory() as tmp:
             cfg = _cfg(tmp)
-            self.assertEqual(pipeline.run_pipeline(cfg, target_topic_id="free-ai-research-tools-students"), 0)
+            self.assertEqual(pipeline.run_pipeline(cfg, target_topic_id="weekly-work-plan"), 0)
             with open(os.path.join(cfg.output_dir, "draft.json"), encoding="utf-8") as f:
                 self.assertIn("title", json.load(f))
             self.assertGreater(os.path.getsize(os.path.join(cfg.output_dir, "draft.html")), 100)
@@ -49,7 +49,7 @@ class TestOptionalScreenshot(unittest.TestCase):
              patch("src.main.ScreenshotCapture") as capturer:
             capturer.return_value.capture.return_value = failed
             # topic does not set requires_screenshot -> failure must be non-fatal
-            code = pipeline.run_pipeline(_cfg(tmp), target_topic_id="free-ai-research-tools-students")
+            code = pipeline.run_pipeline(_cfg(tmp), target_topic_id="weekly-work-plan")
         self.assertEqual(code, 0)
 
 
@@ -68,11 +68,11 @@ class TestFailureRecording(unittest.TestCase):
                 cfg = _cfg(tmp, dry_run=not live)
                 cfg.blogger_blog_id = cfg.blogger_client_id = "1"
                 cfg.blogger_client_secret = cfg.blogger_refresh_token = cfg.gemini_api_key = "x"
-                code = pipeline.run_pipeline(cfg, target_topic_id="free-ai-research-tools-students")
+                code = pipeline.run_pipeline(cfg, target_topic_id="weekly-work-plan")
                 self.assertEqual(code, 1)
                 with open(cfg.processed_json_path, encoding="utf-8") as f:
                     attempts = json.load(f).get("failed_attempts", {})
-                self.assertEqual(attempts.get("free-ai-research-tools-students", 0), 1 if live else 0)
+                self.assertEqual(attempts.get("weekly-work-plan", 0), 1 if live else 0)
 
 
 class TestBloggerReconcile(unittest.TestCase):
@@ -226,7 +226,7 @@ class TestLengthRequirementAndFailover(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, patch("src.main.ArticleWriter", wraps=ArticleWriter) as aw:
             cfg = _cfg(tmp)
             cfg.min_word_count = 950
-            pipeline.run_pipeline(cfg, target_topic_id="free-ai-research-tools-students")
+            pipeline.run_pipeline(cfg, target_topic_id="weekly-work-plan")
         self.assertEqual(aw.call_args.kwargs["min_word_count"], 950)
 
 

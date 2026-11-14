@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Publishing](https://img.shields.io/badge/Publishing-Draft_First-success)](https://www.blogger.com/)
 
-An automated research, writing, quality-checking, and Blogger publishing pipeline for **The Digital Toolkit**.
+An automated research, writing, visual-production, quality-checking, and Blogger draft pipeline for **The Digital Toolkit**.
 
 **Tagline:** *Discover smarter tools. Work better. Do more.*
 
@@ -15,30 +15,46 @@ The entire content pipeline runs through GitHub Actions. GitHub Actions handles 
 
 ## Publication scope
 
-The Digital Toolkit is an international English-language publication for students, freelancers, entrepreneurs, small-business owners, creators, digital marketers, and remote workers.
+The Digital Toolkit is an international English-language publication about practical digital skills and productivity for students, freelancers, and everyday internet users.
 
 | Editorial category | Target share |
 |---|---:|
-| Artificial Intelligence and AI Tools | 35% |
-| Software and Productivity | 30% |
-| Digital Business Tools | 20% |
-| Tutorials and Practical Solutions | 15% |
+| Productivity | 25% |
+| Student Success | 25% |
+| Freelancing | 25% |
+| Digital Skills | 25% |
 
 Articles should use plain English, practical examples, accurate sourcing, and honest descriptions of free plans, trials, limitations, and pricing. The pipeline must not invent testimonials, tests, earnings, or unsupported claims.
 
 ## How the pipeline works
 
 1. **Configuration and safety checks** — load settings and validate required credentials.
-2. **Autonomous topic discovery** — Tavily searches across the four editorial pillars, identifies fresh search-result opportunities, filters previously processed topics, and selects a candidate. The CSV is optional for manual topic selection, not a required queue.
+2. **Topic selection** — the prepared evergreen queue is used first, avoiding repeated discovery searches. When the queue is exhausted, Tavily searches the four practical digital-skills categories and filters previously processed topics.
 3. **Duplicate reconciliation** — in live mode, check Blogger for an existing post before generating another.
-4. **Research** — discover and verify sources; insufficient evidence stops the run.
+4. **Research** — run one focused Tavily discovery search, verify up to eight candidate sources, and require at least two verified sources; insufficient evidence stops the run.
 5. **Article generation** — generate structured article content using the configured language-model provider.
-6. **Visual assets** — capture required software screenshots and prepare a featured image when enabled.
+6. **Visual assets** — render branded featured covers and supporting illustrations locally, capture genuine product screenshots with Playwright, render Mermaid diagrams, optimize raster images with Sharp, and run an axe-core accessibility scan.
 7. **Quality checks** — validate article length, sources, style, safety, and duplication.
 8. **Blogger action** — create a draft only; public publishing is disabled in configuration validation and the Blogger client.
 9. **State and reports** — persist topic outcomes and upload run artifacts/reports.
 
-The pipeline is designed to fail closed when important checks fail rather than publish an article that has not passed them.
+The pipeline is designed to fail closed when important checks fail rather than publish an article that has not passed them. The normal output is a Blogger draft for manual review.
+
+## Visual generation and image-cost safety
+
+The visual system is local-first and does not need a paid image-generation API:
+
+- **Featured covers:** generated from local HTML/CSS/SVG and rendered with the existing Playwright Chromium installation.
+- **Supporting illustrations:** generated as original SVG artwork from the article's visual plan. These are explanatory illustrations, not fake product screenshots.
+- **Genuine screenshots:** captured from the real public product or official page with Playwright when a tutorial needs them.
+- **Diagrams:** authored Mermaid blocks are rendered to SVG.
+- **Image optimization:** Sharp converts supported raster images to WebP when the result is smaller.
+- **Accessibility:** axe-core checks the final article markup; findings are reported as diagnostics and do not pretend to certify full WCAG compliance.
+- **Review previews:** Playwright captures mobile and desktop previews for the run artifact.
+
+**Visual asset generation is free and local by default.** The scheduled workflow sets `IMAGE_PROVIDER=local`, `GEMINI_IMAGE_GENERATION_ENABLED=false`, and `ALLOW_PAID_IMAGE_GENERATION=false`. The pipeline does not send the three article-writing Gemini keys to an image model. Article writing rotates across the three configured Gemini project keys before falling back to Groq; the image-generation helper cannot accept those keys.
+
+A future paid Gemini image integration would require all three explicit opt-ins (`IMAGE_PROVIDER=gemini`, `GEMINI_IMAGE_GENERATION_ENABLED=true`, and `ALLOW_PAID_IMAGE_GENERATION=true`) plus a separate `GEMINI_IMAGE_API_KEY`. Do not configure that key or enable those switches while all available Gemini projects are on the free tier. No paid image-generation fallback is automatic.
 
 ## GitHub Actions
 
@@ -50,7 +66,7 @@ Workflow: [Blogger Content Pipeline](.github/workflows/content-pipeline.yml)
 - Scheduled runs execute the real content-generation pipeline (`DRY_RUN=false`).
 - Blogger delivery is permanently restricted to **drafts** in application code; public publishing is disabled.
 - Provider choice: `auto` (Gemini with Groq failover), `groq`, or `gemini`.
-- Optional input: a specific topic ID from the optional `data/topics.csv` editorial ideas file. Leave it empty for autonomous Tavily discovery.
+- Optional input: a specific topic ID from `data/topics.csv`. Leave it empty to use the prepared queue first, then autonomous Tavily discovery when the queue is exhausted.
 - Runs are serialized so concurrent executions do not race over topic state.
 - Reports and output artifacts are uploaded; the latest scrubbed report is also published to the `run-reports` branch.
 
@@ -110,7 +126,7 @@ Add secrets under **Repository → Settings → Secrets and variables → Action
 | `BLOGGER_CLIENT_SECRET` | Blogger OAuth client secret |
 | `BLOGGER_REFRESH_TOKEN` | Blogger API authorization |
 
-The Gemini/Groq provider and model can also be configured with repository variables or the supported workflow inputs. The workflow has defaults for the model and provider.
+The Gemini/Groq provider and model can also be configured with repository variables or the supported workflow inputs. The workflow has defaults for the model and provider. The three Gemini article-generation keys can be supplied from separate Google projects as fallback credentials; they are never passed to image generation.
 
 Do not place API keys, refresh tokens, passwords, or other credentials in source files, commits, issues, or workflow logs. Rotate any credential that is accidentally exposed.
 
@@ -151,7 +167,7 @@ Some live pipeline functions require valid API credentials and network access. K
 
 ## Topic state and run reports
 
-- `data/topics.csv` is an optional manual/editorial seed list. Normal runs discover topics through Tavily and do not depend on this file.
+- `data/topics.csv` is the prepared evergreen topic queue. Normal runs select from this queue first; Tavily discovery is used only after no eligible queued topic remains.
 - `data/processed_topics.json` records processed-topic state and helps prevent duplicate work.
 - Live runs can commit updated topic state back to the branch.
 - The workflow uploads execution artifacts with a 14-day retention period.
