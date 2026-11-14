@@ -61,9 +61,10 @@ class TestQualityGateVoice(unittest.TestCase):
     def _run(self, html):
         return self.gate.run_all_checks(_draft(html), check_duplicate=False)
 
-    def test_hard_to_read_article_is_rejected(self):
+    def test_hard_to_read_article_gets_advisory_not_rejection(self):
         report = self._run(DENSE * 8)
-        self.assertTrue(any("Readability check failed" in f for f in report.failures), report.failures)
+        self.assertFalse(any("Readability" in f for f in report.failures), report.failures)
+        self.assertTrue(any("Readability advisory" in warning for warning in report.warnings))
 
     def test_plain_article_has_no_readability_failure(self):
         report = self._run("<p>Open the app and click New page. Name it after your project. Add a table to track tasks.</p>" * 20)
@@ -83,9 +84,10 @@ class TestQualityGateVoice(unittest.TestCase):
         report = self._run("<p>According to the official docs, you can use the free plan. We recommend starting small.</p>")
         self.assertFalse(any("Honesty check" in f for f in report.failures), report.failures)
 
-    def test_new_hype_phrases_are_rejected(self):
+    def test_new_hype_phrases_are_flagged_without_rejection(self):
         report = self._run("<p>This ultimate guide will supercharge your workflow.</p>")
-        self.assertTrue(any("cliché" in f for f in report.failures))
+        self.assertFalse(any("cliché" in f for f in report.failures))
+        self.assertTrue(any("generic phrase" in warning for warning in report.warnings))
 
 
 class TestWriterVoiceAndSimplify(unittest.TestCase):
