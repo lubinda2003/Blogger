@@ -399,8 +399,14 @@ class QualityGate:
                     if not source:
                         failures.append(f"Evidence check failed: claim #{index} points to a source that was not verified.")
                         continue
+                    # The compact cleaned_text window may not include a relevant passage found
+                    # later in the page. evidence_excerpt is separately extracted from the
+                    # verified source and must remain eligible as direct supporting evidence.
                     source_text = _evidence_text_for_matching(
-                        source.get("cleaned_text") or source.get("evidence_excerpt") or ""
+                        " ".join(
+                            str(source.get(field) or "")
+                            for field in ("cleaned_text", "evidence_excerpt")
+                        )
                     )
                     normalized_quote = _evidence_text_for_matching(quote)
                     if normalized_quote not in source_text:
