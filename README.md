@@ -29,9 +29,9 @@ Articles should use plain English, practical examples, accurate sourcing, and ho
 ## How the pipeline works
 
 1. **Configuration and safety checks** — load settings and validate required credentials.
-2. **Autonomous topic discovery** — Tavily searches across the four practical digital-skills categories, identifies fresh search-result opportunities, filters previously processed topics, and selects a candidate. The CSV is optional for manual topic selection, not a required queue.
+2. **Topic selection** — the prepared evergreen queue is used first, avoiding repeated discovery searches. When the queue is exhausted, Tavily searches the four practical digital-skills categories and filters previously processed topics.
 3. **Duplicate reconciliation** — in live mode, check Blogger for an existing post before generating another.
-4. **Research** — discover and verify sources; insufficient evidence stops the run.
+4. **Research** — run one focused Tavily discovery search, verify up to eight candidate sources, and require at least two verified sources; insufficient evidence stops the run.
 5. **Article generation** — generate structured article content using the configured language-model provider.
 6. **Visual assets** — render branded featured covers and supporting illustrations locally, capture genuine product screenshots with Playwright, render Mermaid diagrams, optimize raster images with Sharp, and run an axe-core accessibility scan.
 7. **Quality checks** — validate article length, sources, style, safety, and duplication.
@@ -167,7 +167,7 @@ Some live pipeline functions require valid API credentials and network access. K
 
 ## Topic state and run reports
 
-- `data/topics.csv` is an optional manual/editorial seed list. Normal runs discover topics through Tavily and do not depend on this file.
+- `data/topics.csv` is an optional manual/editorial seed list. Normal runs use this prepared queue first; Tavily discovery is used only after no eligible queued topic remains.
 - `data/processed_topics.json` records processed-topic state and helps prevent duplicate work.
 - Live runs can commit updated topic state back to the branch.
 - The workflow uploads execution artifacts with a 14-day retention period.
