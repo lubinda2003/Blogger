@@ -10,7 +10,7 @@ from src.visual_tools import generate_gemini_image
 
 
 class TestGeminiImageGenerationSafety(unittest.TestCase):
-    def test_free_default_blocks_image_api_even_if_article_key_is_passed(self):
+    def test_free_default_blocks_image_api_even_when_article_keys_are_configured(self):
         env = {
             "IMAGE_PROVIDER": "local",
             "GEMINI_IMAGE_GENERATION_ENABLED": "false",
