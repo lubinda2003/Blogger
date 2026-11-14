@@ -405,7 +405,7 @@ def generate_supporting_visuals(
             public_url = publisher(path, f"supporting-{index}", digest) if publisher else None
             items.append({
                 "path": str(path),
-                "url": public_url if public_url and public_url.startswith("https://") else None,
+                "url": public_url if isinstance(public_url, str) and public_url.startswith("https://") else None,
                 "alt": alt_text[:240],
                 "caption": str(plan.get("caption", ""))[:300],
                 "section_heading": heading[:180],
@@ -419,8 +419,10 @@ def inject_visual_figures(article_html: str, visual_items: list[dict]) -> str:
     """Insert hosted custom visuals after the first explanatory paragraph of their target section."""
     updated = article_html
     for item in visual_items or []:
-        url = item.get("url", "")
-        if not url.startswith("https://") or any(token in url.lower() for token in ("localhost", "127.0.0.1")):
+        if not isinstance(item, dict):
+            continue
+        url = item.get("url")
+        if not isinstance(url, str) or not url.startswith("https://") or any(token in url.lower() for token in ("localhost", "127.0.0.1")):
             continue
         alt = html.escape(str(item.get("alt", "Editorial article visual")))
         caption = html.escape(str(item.get("caption", "")))

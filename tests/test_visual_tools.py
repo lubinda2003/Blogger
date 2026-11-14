@@ -106,6 +106,29 @@ class TestVisualHelpers(unittest.TestCase):
         out = inject_visual_figures(body, [{"url": "http://cdn.example/photo.jpg", "alt": "Photo"}])
         self.assertEqual(out, body)
 
+    def test_missing_or_none_visual_url_is_skipped(self):
+        body = "<p>Article</p>"
+        for item in (
+            {"url": None, "alt": "No hosted image"},
+            {"alt": "Missing URL"},
+            {"url": 123, "alt": "Invalid URL type"},
+            None,
+        ):
+            with self.subTest(item=item):
+                self.assertEqual(inject_visual_figures(body, [item]), body)
+
+    def test_supporting_visuals_without_public_url_are_kept_unembedded(self):
+        plan = [{"prompt": "A workflow", "alt_text": "Workflow", "caption": "",
+                 "section_heading": "How it works"}]
+        with tempfile.TemporaryDirectory() as tmp:
+            for publisher_result in (None, 123, "http://cdn.example/image.svg"):
+                items = generate_supporting_visuals(
+                    plan, tmp, publisher=lambda path, slug, digest: publisher_result
+                )
+                self.assertEqual(len(items), 1)
+                self.assertIsNone(items[0]["url"])
+
+
     def test_optimizer_keeps_original_when_sharp_is_unavailable(self):
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "image.jpg"
