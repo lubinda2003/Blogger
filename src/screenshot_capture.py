@@ -188,30 +188,31 @@ class ScreenshotCapture:
             # pipeline checkout cannot make git pull --rebase fail.
             with tempfile.TemporaryDirectory(prefix="digital-toolkit-assets-") as temp_dir:
                 checkout = Path(temp_dir) / "checkout"
-                git("fetch", "origin", ref)
-                git("worktree", "add", "--detach", str(checkout), f"origin/{ref}")
-                dest = checkout / assets_dir / dest_name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(publish_path, dest)
+                try:
+                    git("fetch", "origin", ref)
+                    git("worktree", "add", "--detach", str(checkout), f"origin/{ref}")
+                    dest = checkout / assets_dir / dest_name
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(publish_path, dest)
 
-                git("add", rel, cwd=checkout)
-                if git("status", "--porcelain", "--", rel, cwd=checkout).strip():
-                    git("commit", "-m", f"chore(assets): add screenshot {dest_name} [skip ci]", cwd=checkout)
-                    git("push", "origin", f"HEAD:refs/heads/{ref}", cwd=checkout)
+                    git("add", rel, cwd=checkout)
+                    if git("status", "--porcelain", "--", rel, cwd=checkout).strip():
+                        git("commit", "-m", f"chore(assets): add screenshot {dest_name} [skip ci]", cwd=checkout)
+                        git("push", "origin", f"HEAD:refs/heads/{ref}", cwd=checkout)
 
-                url = f"https://cdn.jsdelivr.net/gh/{repo}@{ref}/{rel}"
-                logger.info(f"Screenshot committed to repository and served via CDN: {url}")
-                return url
+                    url = f"https://cdn.jsdelivr.net/gh/{repo}@{ref}/{rel}"
+                    logger.info(f"Screenshot committed to repository and served via CDN: {url}")
+                    return url
+                finally:
+                    if checkout.exists():
+                        try:
+                            git("worktree", "remove", "--force", str(checkout))
+                        except Exception as cleanup_error:
+                            logger.debug(f"Temporary image worktree cleanup was skipped: {cleanup_error}")
         except Exception as e:
             detail = getattr(e, "stderr", "") or ""
             logger.warning(f"Repository image hosting failed ({e} {detail.strip()[:200]}); omitting image from HTML.")
             return None
-        finally:
-            if checkout is not None:
-                try:
-                    git("worktree", "remove", "--force", str(checkout))
-                except Exception as cleanup_error:
-                    logger.debug(f"Temporary image worktree cleanup was skipped: {cleanup_error}")
 
     def capture(
         self,
