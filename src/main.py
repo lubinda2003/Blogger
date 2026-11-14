@@ -151,22 +151,30 @@ def run_pipeline(
 
     discovery = TopicDiscovery(csv_path=config.topics_csv_path, state_store=state_store)
     if target_topic_id:
-        # Explicit operator-selected topics remain available from the optional CSV.
+        # Explicit operator-selected topics remain available from the editorial ideas file.
         topic = discovery.select_next_topic(requested_id=target_topic_id)
-        opportunity_note = "Manual topic selection from the optional editorial ideas file."
+        opportunity_note = "Manual topic selection from the editorial ideas file."
     else:
-        # Normal operation is autonomous: Tavily supplies fresh candidates across all four
-        # publication pillars. The CSV is not required to keep the pipeline running.
-        discoverer = AutonomousTopicDiscoverer(api_key=config.tavily_api_key)
-        candidates = discoverer.discover(state_store)
-        if candidates:
-            topic = sorted(candidates, key=lambda item: (item.priority, item.id))[0]
-            opportunity_note = discoverer.last_note
-            logger.info("Autonomous discovery selected '%s' from %s candidates.", topic.topic, len(candidates))
+        # Use the prepared evergreen queue first. This avoids spending four Tavily
+        # discovery searches on every scheduled run. Autonomous discovery is the
+        # fallback only after all eligible prepared topics have been used.
+        topic = discovery.select_next_topic()
+        if topic:
+            opportunity_note = (
+                "Selected from the prepared evergreen topic queue. "
+                "Autonomous discovery is deferred until the queue is exhausted."
+            )
         else:
-            topic = None
-            opportunity_note = discoverer.last_note
-            logger.error(opportunity_note)
+            discoverer = AutonomousTopicDiscoverer(api_key=config.tavily_api_key)
+            candidates = discoverer.discover(state_store)
+            if candidates:
+                topic = sorted(candidates, key=lambda item: (item.priority, item.id))[0]
+                opportunity_note = discoverer.last_note
+                logger.info("Autonomous discovery selected '%s' from %s candidates.", topic.topic, len(candidates))
+            else:
+                topic = None
+                opportunity_note = discoverer.last_note
+                logger.error(opportunity_note)
 
     if not topic:
         logger.error("Topic discovery produced no eligible article topic.")
