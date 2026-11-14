@@ -1,0 +1,63 @@
+08:32:50 [INFO] pipeline: =================================================================
+08:32:50 [INFO] pipeline: Starting Blogger Content Automation Pipeline
+08:32:50 [INFO] pipeline: Execution Mode: LIVE PRODUCTION
+08:32:50 [INFO] pipeline: Publish Target: DRAFT (Draft default enforced)
+08:32:50 [INFO] pipeline: =================================================================
+08:32:50 [INFO] src.report: [STAGE Validation] Status: SUCCESS (0.00s) - Environment and configuration validated successfully.
+08:32:51 [INFO] src.topic_discovery: Selected next eligible topic: weekly-work-plan ('How to Build a Weekly Work Plan You Can Actually Follow') [Priority 1]
+08:32:51 [INFO] src.report: [STAGE Topic Discovery] Status: SUCCESS (0.32s) - Selected 'How to Build a Weekly Work Plan You Can Actually Follow' from live search opportunities. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted.
+08:32:51 [INFO] src.report: [STAGE Topic Selection] Status: SUCCESS (0.32s) - Selected topic 'How to Build a Weekly Work Plan You Can Actually Follow' (Priority 1) [Repository state active]. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted.
+08:32:51 [INFO] src.blogger_client: Refreshing OAuth2 access token for client ID 5406....com...
+08:32:51 [INFO] src.blogger_client: Successfully refreshed short-lived Blogger access token.
+08:32:51 [INFO] src.research: Executing Tavily web research discovery for query: '"How to Build a Weekly Work Plan You Can Actually Follow" practical guidance rel...'
+08:32:53 [INFO] src.research: Tavily search discovered 8 candidate sources.
+08:32:53 [INFO] src.research: Research query returned 8 candidate sources.
+08:32:53 [INFO] src.research: URL 'https://www.youtube.com/watch?v=l44xofE_9jE' blocked: domain 'youtube.com' matches blocklist entry 'youtube.com'.
+08:32:53 [INFO] src.research: Skipping Tavily candidate URL blocked by domain policy: https://www.youtube.com/watch?v=l44xofE_9jE
+08:32:53 [INFO] src.research: URL 'https://www.youtube.com/watch?v=62YvHSRGUFc' blocked: domain 'youtube.com' matches blocklist entry 'youtube.com'.
+08:32:53 [INFO] src.research: Skipping Tavily candidate URL blocked by domain policy: https://www.youtube.com/watch?v=62YvHSRGUFc
+08:32:53 [INFO] src.research: Verifying live source: https://asana.com/resources/weekly-work-plan
+08:32:53 [INFO] src.research: Verifying live source: https://monday.com/blog/project-management/weekly-work-plan
+08:32:54 [INFO] src.research: Verifying live source: https://www.planningpme.com/weekly-planning-how-to-do-it.htm
+08:32:54 [INFO] src.research: Verifying live source: https://www.range.co/blog/weekly-work-plan-template-for-success
+08:32:54 [INFO] src.research: Verifying live source: https://www.jessicamassey.com/blog/weeklyplan
+08:32:55 [INFO] src.research: Verifying live source: https://www.indeed.com/career-advice/career-development/weekly-work-plan
+08:32:55 [INFO] src.report: [STAGE Research] Status: SUCCESS (3.94s) - [LIVE HTTP VERIFICATION] Verified 5 sources.
+08:32:55 [INFO] src.article_writer: Attempting article generation via primary Gemini model (gemini-3.8-flash)...
+08:32:55 [INFO] src.article_writer: Calling Gemini (gemini-3.8-flash), attempt 1/3 (tokens=8192)...
+08:34:25 [INFO] src.article_writer: Retrying Gemini call (gemini-3.8-flash) in 2.14s due to error: The read operation timed out...
+08:34:27 [INFO] src.article_writer: Calling Gemini (gemini-3.8-flash), attempt 2/3 (tokens=8192)...
+08:34:30 [WARNING] src.article_writer: Gemini API HTTP 503 (gemini-3.8-flash): {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+
+08:34:30 [INFO] src.article_writer: Retrying Gemini call (gemini-3.8-flash) in 4.38s (status 503)...
+08:34:35 [INFO] src.article_writer: Calling Gemini (gemini-3.8-flash), attempt 3/3 (tokens=8192)...
+08:34:39 [WARNING] src.article_writer: Gemini API HTTP 503 (gemini-3.8-flash): {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+
+08:34:39 [WARNING] src.article_writer: Primary Gemini model (gemini-3.8-flash) failed: Gemini API request failed with status 503: {
+  "error": {
+    "code": 503,
+    "message": "This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.",
+    "status": "UNAVAILABLE"
+  }
+}
+
+08:34:39 [INFO] src.article_writer: Attempting fallback Gemini model in chain (gemini-3.5-flash)...
+08:34:39 [INFO] src.article_writer: Calling Gemini (gemini-3.5-flash), attempt 1/5 (tokens=8192)...
+08:36:00 [INFO] src.article_writer: Article successfully produced by provider='gemini', model='gemini-3.5-flash'.
+08:36:00 [INFO] src.report: [STAGE Article Generation] Status: SUCCESS (185.28s) - Generated draft 'How to Build a Weekly Work Plan You Can Actually Follow' (1036 words, Live gemini (gemini-3.5-flash)).
+08:36:00 [INFO] src.report: [STAGE Screenshot Capture] Status: SKIPPED (0.00s) - No trusted screenshot target is configured; no synthetic interface image will be embedded.
+08:36:00 [ERROR] pipeline: Quality gate rejected article: ['Evidence check failed: evidence quote for claim #6 is not present in retrieved source text.']
+08:36:00 [WARNING] src.state_store: Recorded failure for topic 'weekly-work-plan' (Attempt 2/3): Evidence check failed: evidence quote for claim #6 is not present in retrieved source text.
+08:36:00 [INFO] src.report: [STAGE Quality Gate] Status: FAILED (0.04s) - Rejected on hard check: Evidence check failed: evidence quote for claim #6 is not present in retrieved source text.

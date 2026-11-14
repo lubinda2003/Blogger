@@ -1,0 +1,181 @@
+{
+  "run_id": "run-20261114-083250-6d4748",
+  "overall_status": "FAILED",
+  "timestamp": "2026-11-14T08:36:00.851588+00:00",
+  "total_duration_seconds": 190.08,
+  "dry_run": false,
+  "publish_mode": "draft",
+  "selected_topic_id": "weekly-work-plan",
+  "selected_topic": "How to Build a Weekly Work Plan You Can Actually Follow",
+  "qa": {
+    "passed": false,
+    "failures": [
+      "Evidence check failed: evidence quote for claim #6 is not present in retrieved source text."
+    ],
+    "warnings": [],
+    "metrics": {
+      "word_count": 1036,
+      "sources_count": 5,
+      "labels_count": 2,
+      "seo_title_characters": 55,
+      "seo_description_characters": 132,
+      "screenshot_captured": false,
+      "has_public_screenshot": false
+    }
+  },
+  "metrics": {
+    "source_count": 5,
+    "screenshot_captured": false,
+    "visual_assets": {}
+  },
+  "accessibility": {
+    "available": false,
+    "target": "final article HTML in an isolated browser document; Blogger theme is not included",
+    "violations": [],
+    "passes": 0,
+    "incomplete": 0,
+    "error": "Accessibility scan has not run."
+  },
+  "research_sources": [
+    {
+      "title": "4 Tips To Create the Best Weekly Work Plan [2026] \u2022 Asana",
+      "url": "https://asana.com/resources/weekly-work-plan",
+      "retrieval_date": "November 14, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "4 Tips To Create the Best Weekly Work Plan [2026] \u2022 Asana A weekly work plan is a tool that can help you break down what you need to complete based on your week",
+      "cleaned_text": "4 Tips To Create the Best Weekly Work Plan [2026] \u2022 Asana A weekly work plan is a tool that can help you break down what you need to complete based on your week. Learn how this strategy helps you stay organized. Products * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![Agentic Work Management icon](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) Agentic Work Management For cross-functional teams](/product/ai) * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![Asana Service Management](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) Asana Service Management For service teams](/product/service-management) * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![Asana Client Management](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) Asana Client Management For teams delivering client work](/product/client-management) * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![Command by Asana](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) Command by Asana For developer teams](/product/command) * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![StackAI](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) StackAI by Asana For every critical workflow](https://www.stackai.com/) AI Platform * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![AI Teammates](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) AI Teammates Ready-to-go AI agents for every team](/product/ai/ai-teammates) * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![AI Studio](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) AI Studio Powerful no-code automations](/product/ai/ai-studio) * [![](data:image/svg+xml,%3csvg%20xmlns=%27http://www.w3.org/2000/svg%27%20version=%271.1%27%20width=%2732%27%20height=%2732%27/%3e)![Asana Dash](data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7) Asana Dash Your AI Chief of Staff](/product/ai/dash) Asana Foundations * [Admin and security](/features/admin-security/) * [App integrations](/apps) * [Developer](/developers) * [Latest feature release](/whats-new) Company Type * [Enterprise](/enterprise) * [Small business](/small-business) * [Nonprofit](/industry/nonprofit) * [Agencies](/agencies) Teams * [Operations](/teams/operations) * [Marketing](/team",
+      "verified_claims": [
+        "build weekly work"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "Weekly Work Plan Guide: Structure, Priorities, And Examples",
+      "url": "https://monday.com/blog/project-management/weekly-work-plan/",
+      "retrieval_date": "November 14, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "Weekly Work Plan Guide: Structure, Priorities, And Examples  [Skip to footer](#footer)",
+      "cleaned_text": "Weekly Work Plan Guide: Structure, Priorities, And Examples [Skip to footer](#footer) [![monday.com Blog](https://monday.com/blog/wp-content/themes/monday/img/monday_blog.svg) ![monday.com Blog](https://monday.com/blog/wp-content/themes/monday/img/monday_blog.svg)](https://monday.com/blog) * [monday.com](https://monday.com/) * [Get started](https://auth.monday.com/users/sign_up_new) * [Topics](#submenu-mbmenu-1) + [Project management](https://monday.com/blog/project-management/) + [CRM and sales](https://monday.com/blog/crm-and-sales/) + [Product development life cycle](https://monday.com/blog/rnd/) + [Service management](https://monday.com/blog/service/) + [AI Agents](https://monday.com/blog/ai-agents/) + [Marketing](https://monday.com/blog/marketing/) + [Construction management](https://monday.com/blog/construction/) + [monday campaigns](https://monday.com/blog/monday-campaigns/) + [monday.com updates](https://monday.com/blog/product/) [Get started](https://auth.monday.com/users/sign_up_new) [Project management](https://monday.com/blog/project-management/) # 12 tips to create an actionable weekly work plan (2026) [![](https://res.cloudinary.com/monday-blogs/w_42,h_42,c_fit/fl_lossy,f_auto,q_auto/wp-blog/2026/04/ben-kazinik.webp) Ben Kazinik](https://monday.com/blog/author/ben-kazinik/)\u2022Mar 26, 2026 \u202218 min read [Get Started](https://auth.monday.com/users/sign_up_new) [Contact sales](https://monday.com/ap/mondayforenterprise?utm_campaign=contact-sales-button&utm_source=blog) ![12 tips to create an actionable weekly work plan 2026](https://res.cloudinary.com/monday-blogs/w_1024,h_585,c_fit/fl_lossy,f_auto,q_auto/wp-blog/2026/03/weekly-work-plan_s1_2026-03-08T10-35-13.png) Many professional teams struggle with a persistent \u201cproductivity paradox\u201d where individuals are constantly busy, yet collective strategic goals remain stagnant. This friction often stems from a lack of cohesion between daily tasks and long-term objectives, leading to a culture of reactive firefighting. Without a centralized roadmap, valuable resources are wasted on low-impact activities that do not move the needle. Bridging this gap requires moving beyond simple to-do lists and embracing a structured weekly work plan. This approach ensures that every team member understands their specific priorities and how their output impacts the broader organizational mission. When execution is planned with intention, teams can anticipate bottlenecks and coordinate handoffs before they become critical delays. To achieve this level of alignment, organizations must implement proven strategies that turn individual effort into measurable team progress. By focusing on resource balance and dependency mapping, managers can protect their teams from burnout while maintaining high velocity. This article explores twelve practical tips to help you master this essential planning process. ## Key takeaways * **Connect weekly activities to strategic goals:** Map every activity back to quarterly objectives so",
+      "verified_claims": [
+        "build weekly work"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "Weekly schedule | How do I make it?",
+      "url": "https://www.planningpme.com/weekly-planning-how-to-do-it.htm",
+      "retrieval_date": "November 14, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "A practical guide with templates, examples, and step-by-step methods to build efficient weekly schedules and streamline team management",
+      "cleaned_text": "Weekly schedule | How do I make it? Create your weekly schedule easily: download free templates (Excel or PlanningPME) and follow our 5-step method to organise your teams. [![Logo](img/logo.png) ![PlanningPME](img/brand.png)](https://www.planningpme.com \"Home\") # Weekly schedule: Why It matters and how to create one A practical guide with templates, examples, and step-by-step methods to build efficient weekly schedules and streamline team management. Team PlanningPME Updated on 06/10/2026 10 min reading ![Illustration of a weekly schedule organized with color-coded tasks from Monday to Sunday](img/weekly-planning-illustration.jpg) * [Home](https://www.planningpme.com) * [Resources](https://www.planningpme.com/resources.htm \"Resources\") * Weekly schedule: Why It matters and how to create one GO DIRECTLY TO A SECTION 1. [What is a weekly schedule?](#WEEK) 2. [Weekly schedule templates](#TEMPLATE) 3. [What are the advantages of weekly planning?](#ADVANTAGE) 4. [How can I make my weekly schedule in 5 steps?](#STEPS) 5. [What materials are needed to create a weekly schedule?](#SUPPORTS) 6. [FAQ](#FAQ) ![Scheduling solutions](img/img-hp.png) Looking for an online weekly scheduling tool? ### In a nutshell If your business needs frequent adjustments and efficient team organisation, a weekly schedule is the answer: a clear overview of your objectives, with multiple benefits, and simple to set up. In this article: why a weekly schedule changes daily life for many businesses, our 5-step method, and free templates (Excel or PlanningPME) to download right now. ## **What is a weekly schedule?** ### Definition Usually presented in the form of a clear, colourful table, the weekly planner is a kind of business calendar or weekly planner. Under its childish guise, it is a powerful solution for optimising time management. From Monday to Friday, Tuesday to Saturday, etc., it provides an exhaustive weekly snapshot and a precise view of the tasks to be carried out each day. So that the director, manager or employee can identify the actions to be taken and the priorities. ## **Weekly schedule templates** Tlchargez ou testez nos modles de planning hebdomadaire gratuits : un modle Excel simple et prt l'emploi, ou l'outil PlanningPME, performant et adaptable pour organiser efficacement les plannings de vos quipes. Slectionnez le modle qui correspond le mieux votre organisation. Download or try out our free weekly schedule templates: a simple, ready-to-use Excel template, or the PlanningPME tool, powerful and flexible for organising your teams' schedules efficiently. Select the template that best suits your organisation. ### **PlanningPME template** A dynamic, collaborative online schedule, updated in real time for the whole team. * Instant view of shifts, leave and availability * Customise colours and time slots to suit your needs * Accessible to the whole team, with no installation or file to manage * Scales as your organisation grows Use this template ### **Excel templa",
+      "verified_claims": [
+        "build weekly work"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "A weekly work plan template to improve your workflow | Range",
+      "url": "https://www.range.co/blog/weekly-work-plan-template-for-success",
+      "retrieval_date": "November 14, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "A weekly work plan template to improve your workflow | Range A complete guide on how to plan and optimize your workweek",
+      "cleaned_text": "How do you achieve your goals at work? How do you make sure you\u2019re on track with what needs to be done and adjusting when new priorities arise? There are hundreds of thousands of answers to these questions in different organizations around the world. But regardless of which school of productivity thought you belong to, chances are you use \u201cthe week\u201d as a unit of measure. Typical workweeks last Monday through Friday, and sprints are often defined in one-week or multi-week terms. Here at Range, we think a lot about the role of routines in driving team effectiveness over time. We even created a tool called Check-ins to help team members get into the habit of planning and sharing their work on a regular basis. In this article, we\u2019ll walk through the importance of weekly planning, and we\u2019ll share a template and best practices to help you plan your next week of work. The importance of a weekly work plan Across all kinds of industries and contexts, workers need a way to focus and organize what\u2019s getting done, when, and by whom. (If you can remind key stakeholders of goals and timelines, even better!) Establishing meaningful routines around planning and checking in can help work flow better and more efficiently over time. Days and weeks are the essential units of planning at work, and finding the right cadence can help you and your team stay productive while avoiding burnout. Just by having a routine focus on planning, you\u2019ll already be ahead of a lot of organizations, where \u201cplanning\u201d is haphazard and feels closer to a buzzword . What should your weekly work plan template look like? A few years ago, an email sent by a Google staffer went semi-viral around the idea of weekly planning. The employee broke down by day in terms of where people\u2019s energies should reside, and it\u2019s a helpful way of looking at a weekly schedule or work plan at the employee level. Here\u2019s some of what the full email shared. **Monday **\u2014 Energy levels increase as the week builds, so start the week with low-demand tasks on your to-do list, including: Scheduling Organizing Setting goals, objectives, and key metrics **Tuesday and Wednesday **\u2014 This is when you\u2019re most likely to have our peak energy levels, so you should tackle your most difficult problems, including: Writing and project planning Brainstorming Solving actual problems Scheduling your \u201cMake Time\u201d \u2014 This is when you do work, as opposed to talking about work; i.e., meetings and emails. Note: This is when you should have the fewest number of meetings in your weekly schedule. **Thursday **\u2014 By Thursday, energy begins to ebb (It\u2019s almost the weekend! \ud83d\ude4c\ud83c\udffe) So, you should schedule most of your meetings here with an eye towards: Consensus-building Planning sessions for what\u2019s on the docket next week **Friday **\u2014 This is your energy levels will be at their lowest, and many people barely take this seriously as a workday. With this in mind, when factoring Friday into your weekly work planning consider: Doing open-ended work Looking a",
+      "verified_claims": [
+        "build weekly work"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "How to Plan a Peacefully Productive Week in 5 Simple Steps \u2014 Hustle Sanely\u00ae by Jess Massey",
+      "url": "https://www.jessicamassey.com/blog/weeklyplan",
+      "retrieval_date": "November 14, 2026",
+      "verified": false,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "Keep reading this post to learn:      The 5-step process I\u2019ve used to plan my weeks for more than 6 years    How to create a weekly plan that prioritizes your responsibilities, goals, mental health, and relationships    Why I use both Google Calendar and a paper planner to organize my life",
+      "cleaned_text": null,
+      "verified_claims": [],
+      "unverified_claims": [
+        "build weekly work"
+      ],
+      "failure_reason": "HTTP 200 received from https://www.jessicamassey.com/blog/weeklyplan, content extraction succeeded, but retrieved content does not support required claims."
+    },
+    {
+      "title": "How To Create a Weekly Work Plan (With Template and Example)",
+      "url": "https://www.indeed.com/career-advice/career-development/weekly-work-plan",
+      "retrieval_date": "November 14, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 403,
+      "evidence_excerpt": "How To Create a Weekly Work Plan (With Template and Example) Creating a weekly work plan is an organizational strategy that can help individuals develop and schedule their tasks to meet their goals.",
+      "cleaned_text": "How To Create a Weekly Work Plan (With Template and Example) Creating a weekly work plan is an organizational strategy that can help individuals develop and schedule their tasks to meet their goals.",
+      "verified_claims": [
+        "build weekly work"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    }
+  ],
+  "blogger": {
+    "post_id": null,
+    "post_url": null,
+    "is_draft": true
+  },
+  "next_action": "Remediate QA failure: Evidence check failed: evidence quote for claim #6 is not present in retrieved source text. before publishing.",
+  "stages": [
+    {
+      "stage": "Validation",
+      "status": "SUCCESS",
+      "duration_seconds": 0.0,
+      "details": "Environment and configuration validated successfully."
+    },
+    {
+      "stage": "Topic Discovery",
+      "status": "SUCCESS",
+      "duration_seconds": 0.32,
+      "details": "Selected 'How to Build a Weekly Work Plan You Can Actually Follow' from live search opportunities. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted."
+    },
+    {
+      "stage": "Topic Selection",
+      "status": "SUCCESS",
+      "duration_seconds": 0.32,
+      "details": "Selected topic 'How to Build a Weekly Work Plan You Can Actually Follow' (Priority 1) [Repository state active]. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted."
+    },
+    {
+      "stage": "Research",
+      "status": "SUCCESS",
+      "duration_seconds": 3.94,
+      "details": "[LIVE HTTP VERIFICATION] Verified 5 sources."
+    },
+    {
+      "stage": "Article Generation",
+      "status": "SUCCESS",
+      "duration_seconds": 185.28,
+      "details": "Generated draft 'How to Build a Weekly Work Plan You Can Actually Follow' (1036 words, Live gemini (gemini-3.5-flash))."
+    },
+    {
+      "stage": "Screenshot Capture",
+      "status": "SKIPPED",
+      "duration_seconds": 0.0,
+      "details": "No trusted screenshot target is configured; no synthetic interface image will be embedded."
+    },
+    {
+      "stage": "Quality Gate",
+      "status": "FAILED",
+      "duration_seconds": 0.04,
+      "details": "Rejected on hard check: Evidence check failed: evidence quote for claim #6 is not present in retrieved source text."
+    }
+  ]
+}
