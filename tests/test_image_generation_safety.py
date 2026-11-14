@@ -13,7 +13,7 @@ class TestGeminiImageGenerationSafety(unittest.TestCase):
     def test_free_default_blocks_image_api_even_if_article_key_is_passed(self):
         env = {
             "IMAGE_PROVIDER": "local",
-            "IMAGE_GENERATION_ENABLED": "false",
+            "GEMINI_IMAGE_GENERATION_ENABLED": "false",
             "ALLOW_PAID_IMAGE_GENERATION": "false",
         }
         with patch.dict(os.environ, env, clear=False), \
@@ -30,7 +30,7 @@ class TestGeminiImageGenerationSafety(unittest.TestCase):
     def test_paid_generation_requires_dedicated_image_key(self):
         env = {
             "IMAGE_PROVIDER": "gemini",
-            "IMAGE_GENERATION_ENABLED": "true",
+            "GEMINI_IMAGE_GENERATION_ENABLED": "true",
             "ALLOW_PAID_IMAGE_GENERATION": "true",
         }
         with patch.dict(os.environ, env, clear=False), \
