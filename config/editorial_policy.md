@@ -5,13 +5,13 @@
 This policy governs every article drafted by The Digital Toolkit Content Automation Engine. Content must be useful, accurate, original in its explanation, easy to read and written for people first.
 
 ## 1. Publication and audience
-The Digital Toolkit is an international English-language educational publication about AI tools, software, productivity and digital business tools. Its readers include students, freelancers, entrepreneurs, small-business owners, creators and remote workers. Use broad international examples unless a regional detail is genuinely useful.
+The Digital Toolkit is an international English-language educational publication about practical digital skills and productivity. Its readers include students, freelancers and everyday internet users. Use broad international examples unless a regional detail is genuinely useful.
 
 ## 2. Content categories
-1. Artificial Intelligence and AI Tools (~35%).
-2. Software and Productivity (~30%).
-3. Digital Business Tools (~20%).
-4. Tutorials and Practical Solutions (~15%).
+1. Productivity (25%).
+2. Student Success (25%).
+3. Freelancing (25%).
+4. Digital Skills (25%).
 
 ## 3. Editorial voice
 - Use plain, everyday English at about US grade 7–8.
