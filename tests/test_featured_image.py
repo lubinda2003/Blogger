@@ -35,10 +35,10 @@ def _chromium_available():
 class TestBuildHtml(unittest.TestCase):
     def test_title_is_escaped_and_nothing_executable_is_added(self):
         tag = "scr" + "ipt"  # built in pieces so this file never contains a literal script tag
-        page = build_html(f"<{tag}>alert(1)</{tag}> Guide & Tips", "AI <b>Tools</b>", "seed")
+        page = build_html(f"<{tag}>alert(1)</{tag}> Guide & Tips", "Digital <b>Skills</b>", "seed")
         self.assertNotIn(f"<{tag}", page)
         self.assertIn("&lt;script&gt;alert(1)&lt;/script&gt; Guide &amp; Tips", page)
-        self.assertIn("AI &lt;B&gt;TOOLS&lt;/B&gt;", page)
+        self.assertIn("DIGITAL &lt;B&gt;SKILLS&lt;/B&gt;", page)
 
     def test_brand_is_present_and_there_are_no_external_assets(self):
         page = build_html("Notion Setup Guide", "Tutorial", "seed")
