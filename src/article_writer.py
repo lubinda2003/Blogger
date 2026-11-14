@@ -1035,8 +1035,10 @@ against primary documentation."</code>
             if schema_errors:
                 raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}")
 
+            # Expand only when the draft misses the hard minimum. Do not spend
+            # another provider call on a cosmetic readability rewrite: the quality
+            # gate measures readability and rejects genuinely difficult copy.
             parsed = self._expand_if_short(parsed, brief)
-            parsed = self._simplify_if_hard(parsed)
             parsed = self._drop_unverified_sources(parsed, brief)
 
             is_fixture = False
