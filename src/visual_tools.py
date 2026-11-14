@@ -31,12 +31,26 @@ def generate_gemini_image(
     model: Optional[str] = None,
     aspect_ratio: str = "16:9",
 ) -> Path:
-    """Generate a single image through the Gemini API using the existing API key."""
+    """Generate an image only after explicit paid-image opt-in.
+
+    The article-writing Gemini keys are deliberately not reused. Image generation
+    requires a dedicated GEMINI_IMAGE_API_KEY and three independent opt-ins so a
+    free-tier pipeline can never incur an image-generation charge by accident.
+    """
     import os
 
-    key = api_key or os.getenv("GEMINI_API_KEY")
+    provider = os.getenv("IMAGE_PROVIDER", "local").strip().lower()
+    enabled = os.getenv("IMAGE_GENERATION_ENABLED", "false").strip().lower() in ("1", "true", "yes", "on")
+    allow_paid = os.getenv("ALLOW_PAID_IMAGE_GENERATION", "false").strip().lower() in ("1", "true", "yes", "on")
+    if provider != "gemini" or not enabled or not allow_paid:
+        raise RuntimeError(
+            "Gemini image generation is disabled. It requires IMAGE_PROVIDER=gemini, "
+            "IMAGE_GENERATION_ENABLED=true, and ALLOW_PAID_IMAGE_GENERATION=true."
+        )
+
+    key = api_key or os.getenv("GEMINI_IMAGE_API_KEY")
     if not key:
-        raise RuntimeError("GEMINI_API_KEY is not configured for image generation.")
+        raise RuntimeError("GEMINI_IMAGE_API_KEY is not configured; article-writing Gemini keys are not used for images.")
     model_name = model or os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
     endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
     payload = {
