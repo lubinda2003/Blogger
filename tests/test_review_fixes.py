@@ -241,7 +241,7 @@ class TestRepoImageHosting(unittest.TestCase):
 
     def _capture(self, tmp):
         from src.screenshot_capture import ScreenshotCapture
-        return ScreenshotCapture(output_dir=os.path.join(tmp, "out"), repo_assets_dir=os.path.join(tmp, "assets/screenshots"))
+        return ScreenshotCapture(output_dir=os.path.join(tmp, "out"), repo_assets_dir="assets/screenshots")
 
     ENV = {"GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": "lubinda2003/Blogger", "GITHUB_REF_NAME": "main"}
 
@@ -250,6 +250,9 @@ class TestRepoImageHosting(unittest.TestCase):
 
         def fake_run(cmd, **kw):
             calls.append([c for c in cmd if not c.startswith(("user.", "-c"))])
+            if "worktree" in cmd and "add" in cmd:
+                from pathlib import Path
+                Path(cmd[cmd.index("--detach") + 1]).mkdir(parents=True, exist_ok=True)
             out = MagicMock()
             out.stdout = " A assets/x.png" if "status" in cmd else ""
             return out
@@ -259,12 +262,17 @@ class TestRepoImageHosting(unittest.TestCase):
         self.assertTrue(url.startswith("https://cdn.jsdelivr.net/gh/lubinda2003/Blogger@main/"))
         self.assertIn("notion-project-management-setup-aaaaaaaaaa.png", url)
         verbs = [c[1] for c in calls]
-        self.assertEqual(verbs, ["add", "status", "commit", "pull", "push"])
+        self.assertEqual(verbs, ["fetch", "worktree", "add", "status", "commit", "push", "worktree"])
+        self.assertNotIn("pull", verbs)
+        self.assertFalse(any("rebase" in c for c in calls))
 
     def test_push_failure_means_no_image_not_a_broken_link(self):
         import subprocess as sp
 
         def boom(cmd, **kw):
+            if "worktree" in cmd and "add" in cmd:
+                from pathlib import Path
+                Path(cmd[cmd.index("--detach") + 1]).mkdir(parents=True, exist_ok=True)
             if "push" in cmd:
                 raise sp.CalledProcessError(1, cmd, stderr="rejected")
             out = MagicMock()
@@ -285,6 +293,9 @@ class TestRepoImageHosting(unittest.TestCase):
 
         def fake_run(cmd, **kw):
             calls.append(cmd)
+            if "worktree" in cmd and "add" in cmd:
+                from pathlib import Path
+                Path(cmd[cmd.index("--detach") + 1]).mkdir(parents=True, exist_ok=True)
             out = MagicMock()
             out.stdout = ""  # git status clean: identical image already in repo
             return out
@@ -295,8 +306,15 @@ class TestRepoImageHosting(unittest.TestCase):
         self.assertFalse(any("commit" in c or "push" in c for c in calls))
 
     def test_slug_is_sanitised(self):
-        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("src.visual_tools.optimize_image", side_effect=lambda path: path), patch("subprocess.run") as run:
-            run.return_value.stdout = ""
+        def fake_run(cmd, **kw):
+            if "worktree" in cmd and "add" in cmd:
+                from pathlib import Path
+                Path(cmd[cmd.index("--detach") + 1]).mkdir(parents=True, exist_ok=True)
+            out = MagicMock()
+            out.stdout = ""
+            return out
+
+        with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, self.ENV), patch("src.visual_tools.optimize_image", side_effect=lambda path: path), patch("subprocess.run", fake_run):
             url = self._capture(tmp).publish_to_repo_assets(self._png(tmp), "../../etc/Pass wd", "e" * 64)
         self.assertNotIn("..", url)
         self.assertIn("etc-pass-wd-eeeeeeeeee.png", url)
