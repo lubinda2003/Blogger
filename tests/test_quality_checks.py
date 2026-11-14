@@ -127,13 +127,13 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(report.passed, f"Expected pass, got failures: {report.failures}")
         self.assertEqual(len(report.failures), 0)
 
-    def test_ai_cliche_fails_style_check(self):
-        """Test that generic AI cliches fail the plain-English style gate."""
+    def test_ai_cliche_is_a_warning_not_a_publication_blocker(self):
+        """Generic AI phrasing should be flagged for editing without blocking a useful draft."""
         draft = self._create_valid_draft()
         draft.html_content = "<p>In today's fast-paced digital world, let us delve into the depths of freelancing.</p>" + draft.html_content
         report = self.gate.run_all_checks(draft, check_duplicate=False)
-        self.assertFalse(report.passed)
-        self.assertTrue(any("Generic AI cliché detected" in f for f in report.failures))
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("Writing style advisory" in warning for warning in report.warnings))
 
     def test_local_screenshot_path_fails_html_check(self):
         """Test that runner-local screenshot paths leaked into HTML are rejected."""
@@ -153,13 +153,24 @@ class TestQualityChecks(unittest.TestCase):
         self.assertFalse(report.passed)
         self.assertTrue(any("Live Guard failed: Dry-run test fixture cannot be published" in f for f in report.failures))
 
-    def test_thin_content_fails_length_check(self):
-        """Test that articles below word count threshold fail."""
+    def test_thin_content_below_safety_floor_fails_length_check(self):
+        """Only genuinely thin articles below the 450-word safety floor are blocked."""
         draft = self._create_valid_draft()
         draft.html_content = "<h2>Short Article</h2><p>This is far too brief to be useful.</p>"
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertFalse(report.passed)
-        self.assertTrue(any("600-word minimum" in f for f in report.failures))
+        self.assertTrue(any("450-word minimum" in f for f in report.failures))
+
+    def test_concise_complete_article_above_safety_floor_can_pass(self):
+        """A 500+ word useful article may proceed with a length advisory."""
+        draft = self._create_valid_draft()
+        body = "<h2>Practical Steps</h2><p>" + "Useful guidance helps readers complete practical tasks. " * 90 + "</p>"
+        draft.html_content = ArticleWriter.append_sources_section(
+            body, draft.sources_used
+        )
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("Length advisory" in warning for warning in report.warnings))
 
     def test_insufficient_sources_fails(self):
         """Test that lack of credible sources fails the gate."""
