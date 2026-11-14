@@ -15,6 +15,9 @@ class TestGeminiImageGenerationSafety(unittest.TestCase):
             "IMAGE_PROVIDER": "local",
             "GEMINI_IMAGE_GENERATION_ENABLED": "false",
             "ALLOW_PAID_IMAGE_GENERATION": "false",
+            "GEMINI_API_KEY": "article-writing-key",
+            "GEMINI_API_KEY_2": "article-writing-key-2",
+            "GEMINI_API_KEY_3": "article-writing-key-3",
         }
         with patch.dict(os.environ, env, clear=False), \
              patch("urllib.request.urlopen") as urlopen, \
@@ -23,7 +26,6 @@ class TestGeminiImageGenerationSafety(unittest.TestCase):
                 generate_gemini_image(
                     "A simple editorial illustration",
                     Path(tmp) / "cover.png",
-                    api_key="article-writing-key",
                 )
             urlopen.assert_not_called()
 
@@ -32,6 +34,9 @@ class TestGeminiImageGenerationSafety(unittest.TestCase):
             "IMAGE_PROVIDER": "gemini",
             "GEMINI_IMAGE_GENERATION_ENABLED": "true",
             "ALLOW_PAID_IMAGE_GENERATION": "true",
+            "GEMINI_API_KEY": "article-writing-key",
+            "GEMINI_API_KEY_2": "article-writing-key-2",
+            "GEMINI_API_KEY_3": "article-writing-key-3",
         }
         with patch.dict(os.environ, env, clear=False), \
              patch("urllib.request.urlopen") as urlopen, \
@@ -41,7 +46,6 @@ class TestGeminiImageGenerationSafety(unittest.TestCase):
                     generate_gemini_image(
                         "A simple editorial illustration",
                         Path(tmp) / "cover.png",
-                        api_key=None,
                     )
             urlopen.assert_not_called()
 
