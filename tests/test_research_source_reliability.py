@@ -22,15 +22,14 @@ class ResearchSourceReliabilityTests(unittest.TestCase):
         self.assertFalse(collector._is_domain_allowed("https://www.instagram.com/example"))
         self.assertTrue(collector._is_domain_allowed("https://support.example.com/article"))
 
-    def test_research_queries_cover_distinct_intents_for_same_topic(self):
+    def test_research_uses_one_focused_query_for_each_topic(self):
         queries = ResearchCollector._build_research_queries(
-            "15 AI Tips and Workflows I Wish I Knew Sooner"
+            "How to organize digital files"
         )
 
-        self.assertEqual(len(queries), 3)
-        self.assertIn('"15 AI Tips and Workflows I Wish I Knew Sooner"', queries[0])
-        self.assertIn("practical guide examples workflow", queries[1])
-        self.assertIn("tutorial implementation use cases", queries[2])
+        self.assertEqual(len(queries), 1)
+        self.assertIn('"How to organize digital files"', queries[0])
+        self.assertIn("reliable sources", queries[0])
 
     def test_empty_topic_does_not_create_search_queries(self):
         self.assertEqual(ResearchCollector._build_research_queries("  "), [])
