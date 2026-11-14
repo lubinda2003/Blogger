@@ -27,7 +27,6 @@ SHARP_SCRIPT = Path("scripts/optimize-image.mjs")
 def generate_gemini_image(
     prompt: str,
     output_path: Path,
-    api_key: Optional[str] = None,
     model: Optional[str] = None,
     aspect_ratio: str = "16:9",
 ) -> Path:
@@ -48,7 +47,7 @@ def generate_gemini_image(
             "GEMINI_IMAGE_GENERATION_ENABLED=true, and ALLOW_PAID_IMAGE_GENERATION=true."
         )
 
-    key = api_key or os.getenv("GEMINI_IMAGE_API_KEY")
+    key = os.getenv("GEMINI_IMAGE_API_KEY")
     if not key:
         raise RuntimeError("GEMINI_IMAGE_API_KEY is not configured; article-writing Gemini keys are not used for images.")
     model_name = model or os.getenv("GEMINI_IMAGE_MODEL", "gemini-3.1-flash-image")
