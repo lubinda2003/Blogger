@@ -84,13 +84,13 @@ class TestQualityChecks(unittest.TestCase):
     def test_live_gate_accepts_quote_from_verified_evidence_excerpt_outside_cleaned_window(self):
         """A verified source's extracted supporting excerpt remains valid when outside its compact text window."""
         draft = self._create_valid_draft()
-        evidence_quote = "A supporting passage from later in the retrieved article is preserved here."
+        evidence_quote = "Each step is short and easy to follow."
         source_evidence = [{
             "title": "Official Google Documentation",
             "url": "https://ai.google.dev/docs",
             "verified": True,
             "cleaned_text": " ".join(["Unrelated introductory page text."] * 120),
-            "evidence_excerpt": evidence_quote,
+            "evidence_excerpt": evidence_quote + " Additional details appear later in the article.",
         }]
         draft.claim_evidence[0]["evidence_quote"] = evidence_quote
 
