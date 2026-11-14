@@ -52,7 +52,7 @@ The visual system is local-first and does not need a paid image-generation API:
 - **Accessibility:** axe-core checks the final article markup; findings are reported as diagnostics and do not pretend to certify full WCAG compliance.
 - **Review previews:** Playwright captures mobile and desktop previews for the run artifact.
 
-**Image generation is free/local by default.** The scheduled workflow sets `IMAGE_PROVIDER=local`, `GEMINI_IMAGE_GENERATION_ENABLED=false`, and `ALLOW_PAID_IMAGE_GENERATION=false`. The pipeline does not send the three article-writing Gemini keys to an image model. Article writing rotates across the three configured Gemini project keys before falling back to Groq; the image-generation helper cannot accept those keys.
+**Visual asset generation is free and local by default.** The scheduled workflow sets `IMAGE_PROVIDER=local`, `GEMINI_IMAGE_GENERATION_ENABLED=false`, and `ALLOW_PAID_IMAGE_GENERATION=false`. The pipeline does not send the three article-writing Gemini keys to an image model. Article writing rotates across the three configured Gemini project keys before falling back to Groq; the image-generation helper cannot accept those keys.
 
 A future paid Gemini image integration would require all three explicit opt-ins (`IMAGE_PROVIDER=gemini`, `GEMINI_IMAGE_GENERATION_ENABLED=true`, and `ALLOW_PAID_IMAGE_GENERATION=true`) plus a separate `GEMINI_IMAGE_API_KEY`. Do not configure that key or enable those switches while all available Gemini projects are on the free tier. No paid image-generation fallback is automatic.
 
