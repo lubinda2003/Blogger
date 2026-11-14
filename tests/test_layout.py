@@ -139,7 +139,7 @@ class TestWiring(unittest.TestCase):
     def test_dry_run_saves_the_finished_styled_post_for_review(self):
         cfg = load_config({"dry_run": True, "output_dir": os.path.join(self.tmp.name, "out"),
                            "processed_json_path": os.path.join(self.tmp.name, "s.json")})
-        self.assertEqual(pipeline.run_pipeline(cfg, target_topic_id="free-ai-research-tools-students"), 0)
+        self.assertEqual(pipeline.run_pipeline(cfg, target_topic_id="weekly-work-plan"), 0)
         final = Path(cfg.output_dir, "final.html").read_text(encoding="utf-8")
         draft = Path(cfg.output_dir, "draft.html").read_text(encoding="utf-8")
         self.assertIn('role="note"', final)  # components are styled in the published version
