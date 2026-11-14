@@ -67,6 +67,12 @@ class TestResearchAndSources(unittest.TestCase):
         ]
         self.assertEqual(len(brief.verified_sources()), 1)
 
+    def test_research_uses_one_focused_query_per_topic(self):
+        queries = self.collector._build_research_queries("How to organize digital files")
+        self.assertEqual(len(queries), 1)
+        self.assertIn("How to organize digital files", queries[0])
+        self.assertIn("reliable sources", queries[0])
+
     def test_prompt_format_includes_claim_to_source_mapping(self):
         """The rendered prompt text must include the verified source URLs and claim mappings."""
         brief = ResearchBrief(topic_id="test", topic_title="Test", target_url="https://example.com")
