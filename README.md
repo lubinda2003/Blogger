@@ -33,12 +33,28 @@ Articles should use plain English, practical examples, accurate sourcing, and ho
 3. **Duplicate reconciliation** — in live mode, check Blogger for an existing post before generating another.
 4. **Research** — discover and verify sources; insufficient evidence stops the run.
 5. **Article generation** — generate structured article content using the configured language-model provider.
-6. **Visual assets** — capture required software screenshots and prepare a featured image when enabled.
+6. **Visual assets** — render branded featured covers and supporting illustrations locally, capture genuine product screenshots with Playwright, render Mermaid diagrams, optimize raster images with Sharp, and run an axe-core accessibility scan.
 7. **Quality checks** — validate article length, sources, style, safety, and duplication.
 8. **Blogger action** — create a draft only; public publishing is disabled in configuration validation and the Blogger client.
 9. **State and reports** — persist topic outcomes and upload run artifacts/reports.
 
 The pipeline is designed to fail closed when important checks fail rather than publish an article that has not passed them.
+
+## Visual generation and image-cost safety
+
+The visual system is local-first and does not need a paid image-generation API:
+
+- **Featured covers:** generated from local HTML/CSS/SVG and rendered with the existing Playwright Chromium installation.
+- **Supporting illustrations:** generated as original SVG artwork from the article's visual plan. These are explanatory illustrations, not fake product screenshots.
+- **Genuine screenshots:** captured from the real public product or official page with Playwright when a tutorial needs them.
+- **Diagrams:** authored Mermaid blocks are rendered to SVG.
+- **Image optimization:** Sharp converts supported raster images to WebP when the result is smaller.
+- **Accessibility:** axe-core checks the final article markup; findings are reported as diagnostics and do not pretend to certify full WCAG compliance.
+- **Review previews:** Playwright captures mobile and desktop previews for the run artifact.
+
+**Image generation is free/local by default.** The scheduled workflow sets `IMAGE_PROVIDER=local`, `GEMINI_IMAGE_GENERATION_ENABLED=false`, and `ALLOW_PAID_IMAGE_GENERATION=false`. The pipeline does not send the three article-writing Gemini keys to an image model.
+
+A future paid Gemini image integration would require all three explicit opt-ins (`IMAGE_PROVIDER=gemini`, `GEMINI_IMAGE_GENERATION_ENABLED=true`, and `ALLOW_PAID_IMAGE_GENERATION=true`) plus a separate `GEMINI_IMAGE_API_KEY`. Do not configure that key or enable those switches while all available Gemini projects are on the free tier. No paid image-generation fallback is automatic.
 
 ## GitHub Actions
 
