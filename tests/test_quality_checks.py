@@ -161,6 +161,17 @@ class TestQualityChecks(unittest.TestCase):
         self.assertFalse(report.passed)
         self.assertTrue(any("450-word minimum" in f for f in report.failures))
 
+    def test_concise_complete_article_above_safety_floor_can_pass(self):
+        """A 500+ word useful article may proceed with a length advisory."""
+        draft = self._create_valid_draft()
+        body = "<h2>Practical Steps</h2><p>" + "Useful guidance helps readers complete practical tasks. " * 90 + "</p>"
+        draft.html_content = ArticleWriter.append_sources_section(
+            body, draft.sources_used
+        )
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("Length advisory" in warning for warning in report.warnings))
+
     def test_insufficient_sources_fails(self):
         """Test that lack of credible sources fails the gate."""
         draft = self._create_valid_draft()
