@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Publishing](https://img.shields.io/badge/Publishing-Draft_First-success)](https://www.blogger.com/)
 
-An automated research, writing, quality-checking, and Blogger publishing pipeline for **The Digital Toolkit**.
+An automated research, writing, visual-production, quality-checking, and Blogger draft pipeline for **The Digital Toolkit**.
 
 **Tagline:** *Discover smarter tools. Work better. Do more.*
 
@@ -15,21 +15,21 @@ The entire content pipeline runs through GitHub Actions. GitHub Actions handles 
 
 ## Publication scope
 
-The Digital Toolkit is an international English-language publication for students, freelancers, entrepreneurs, small-business owners, creators, digital marketers, and remote workers.
+The Digital Toolkit is an international English-language publication about practical digital skills and productivity for students, freelancers, and everyday internet users.
 
 | Editorial category | Target share |
 |---|---:|
-| Artificial Intelligence and AI Tools | 35% |
-| Software and Productivity | 30% |
-| Digital Business Tools | 20% |
-| Tutorials and Practical Solutions | 15% |
+| Productivity | 25% |
+| Student Success | 25% |
+| Freelancing | 25% |
+| Digital Skills | 25% |
 
 Articles should use plain English, practical examples, accurate sourcing, and honest descriptions of free plans, trials, limitations, and pricing. The pipeline must not invent testimonials, tests, earnings, or unsupported claims.
 
 ## How the pipeline works
 
 1. **Configuration and safety checks** — load settings and validate required credentials.
-2. **Autonomous topic discovery** — Tavily searches across the four editorial pillars, identifies fresh search-result opportunities, filters previously processed topics, and selects a candidate. The CSV is optional for manual topic selection, not a required queue.
+2. **Autonomous topic discovery** — Tavily searches across the four practical digital-skills categories, identifies fresh search-result opportunities, filters previously processed topics, and selects a candidate. The CSV is optional for manual topic selection, not a required queue.
 3. **Duplicate reconciliation** — in live mode, check Blogger for an existing post before generating another.
 4. **Research** — discover and verify sources; insufficient evidence stops the run.
 5. **Article generation** — generate structured article content using the configured language-model provider.
@@ -38,7 +38,7 @@ Articles should use plain English, practical examples, accurate sourcing, and ho
 8. **Blogger action** — create a draft only; public publishing is disabled in configuration validation and the Blogger client.
 9. **State and reports** — persist topic outcomes and upload run artifacts/reports.
 
-The pipeline is designed to fail closed when important checks fail rather than publish an article that has not passed them.
+The pipeline is designed to fail closed when important checks fail rather than publish an article that has not passed them. The normal output is a Blogger draft for manual review.
 
 ## Visual generation and image-cost safety
 
@@ -126,7 +126,7 @@ Add secrets under **Repository → Settings → Secrets and variables → Action
 | `BLOGGER_CLIENT_SECRET` | Blogger OAuth client secret |
 | `BLOGGER_REFRESH_TOKEN` | Blogger API authorization |
 
-The Gemini/Groq provider and model can also be configured with repository variables or the supported workflow inputs. The workflow has defaults for the model and provider.
+The Gemini/Groq provider and model can also be configured with repository variables or the supported workflow inputs. The workflow has defaults for the model and provider. The three Gemini article-generation keys can be supplied from separate Google projects as fallback credentials; they are never passed to image generation.
 
 Do not place API keys, refresh tokens, passwords, or other credentials in source files, commits, issues, or workflow logs. Rotate any credential that is accidentally exposed.
 
