@@ -48,19 +48,19 @@ class TestBuildHtml(unittest.TestCase):
             self.assertNotIn(external, page)
 
     def test_topic_families_have_distinct_visual_palettes(self):
-        self.assertEqual(_topic_family("Best AI Tools", "AI and AI Tools"), "ai")
-        self.assertEqual(_topic_family("Notion productivity workspace", "Software"), "software")
-        self.assertEqual(_topic_family("Freelance invoicing for business", "Business"), "business")
-        self.assertEqual(_topic_family("How to set up your account", "Tutorial"), "tutorial")
+        self.assertEqual(_topic_family("How to plan your week", "Productivity"), "productivity")
+        self.assertEqual(_topic_family("How to take better notes", "Student Success"), "student")
+        self.assertEqual(_topic_family("Write a freelance proposal", "Freelancing"), "freelancing")
+        self.assertEqual(_topic_family("Spreadsheet skills for daily tasks", "Digital Skills"), "digital_skills")
         self.assertEqual(len(set(PALETTES.values())), len(PALETTES))
 
     def test_thumbnail_contains_topic_palette_and_no_remote_assets(self):
-        ai = build_html("Best AI Tools", "AI Tools", "ai")
-        business = build_html("Freelance invoicing", "Digital Business", "biz")
-        self.assertIn(PALETTES["ai"][1], ai)
-        self.assertIn(PALETTES["business"][1], business)
-        self.assertNotEqual(ai, business)
-        for page in (ai, business):
+        productivity = build_html("Plan your week", "Productivity", "productivity")
+        student = build_html("Better digital notes", "Student Success", "student")
+        self.assertIn(PALETTES["productivity"][1], productivity)
+        self.assertIn(PALETTES["student"][1], student)
+        self.assertNotEqual(productivity, student)
+        for page in (productivity, student):
             self.assertNotIn("http://", page)
             self.assertNotIn("https://", page)
             self.assertNotIn("@import", page)
