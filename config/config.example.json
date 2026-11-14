@@ -13,17 +13,17 @@
   },
   "categories": {
     "weights": {
-      "Artificial Intelligence and AI Tools": 0.35,
-      "Software and Productivity": 0.30,
-      "Digital Business Tools": 0.20,
-      "Tutorials and Practical Solutions": 0.15
+      "Productivity": 0.25,
+      "Student Success": 0.25,
+      "Freelancing": 0.25,
+      "Digital Skills": 0.25
     }
   },
   "blogger": {
     "blog_id": "",
     "default_labels": [
       "Digital Toolkit",
-      "AI Tools",
+      "Digital Skills",
       "Productivity"
     ],
     "auto_reconcile": true
