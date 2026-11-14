@@ -1074,7 +1074,7 @@ against primary documentation."</code>
             "description": image_desc,
             "alt_text": image_alt,
             "aspect_ratio": "16:9",
-            "note": "Editorial design specification for the optional image-generation stage.",
+            "note": "Editorial design specification for the local branded featured-cover renderer; no image API is called.",
         }
         visual_plan = []
         for item in parsed.get("visual_plan", [])[:2]:
