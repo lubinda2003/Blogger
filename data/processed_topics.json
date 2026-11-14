@@ -214,21 +214,39 @@
         ],
         "word_count": 1563
       }
+    },
+    {
+      "topic_id": "weekly-work-plan",
+      "topic_title": "How to Build a Weekly Work Plan You Can Actually Follow",
+      "fingerprint": "fe8785056a6b9613",
+      "post_id": "978853501573382234",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-14T15:14:38.294272+00:00",
+      "metadata": {
+        "labels": [
+          "Productivity",
+          "Time Management",
+          "Workflows"
+        ],
+        "word_count": 1020
+      }
     }
   ],
-  "last_updated": "2026-11-14T08:36:00.850885+00:00",
-  "total_runs": 12,
+  "last_updated": "2026-11-14T15:14:38.294286+00:00",
+  "total_runs": 13,
   "failed_attempts": {
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "canva-brand-kit-design-walkthrough": 2,
+    "best-free-invoicing-tools-freelancers": 2,
+    "claude-code-web-prototyping": 1,
     "25-productivity-tools-for-freelancers-and-small-businesses": 1,
     "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
     "weekly-work-plan": 2,
-    "canva-brand-kit-design-walkthrough": 2,
-    "claude-code-web-prototyping": 1,
-    "best-free-invoicing-tools-freelancers": 2,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
     "best-e-commerce-software-for-small-business-novo": 1,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1
   }
 }
