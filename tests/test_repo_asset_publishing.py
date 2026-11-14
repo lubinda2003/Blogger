@@ -47,7 +47,7 @@ class TestRepositoryAssetPublishing(unittest.TestCase):
             self.assertFalse(any("pull" in command or "rebase" in command for command in commands))
             # Asset staging and commit happen in the temporary worktree, not the pipeline checkout.
             for command, kwargs in calls:
-                if any(part in command for part in ("add", "commit", "push")):
+                if "worktree" not in command and any(part in command for part in ("add", "commit", "push")):
                     self.assertIsNotNone(kwargs.get("cwd"))
 
 
