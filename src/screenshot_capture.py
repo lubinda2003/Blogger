@@ -9,6 +9,7 @@ import shutil
 import struct
 import subprocess
 import time
+import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -149,10 +150,11 @@ class ScreenshotCapture:
         return None
 
     def publish_to_repo_assets(self, local_path: Path, slug: str, sha256: str) -> Optional[str]:
-        """Commit the image to this repository (GitHub Actions only) and return a public jsDelivr CDN URL.
+        """Commit an image in an isolated Git worktree and return its public CDN URL.
 
-        Blogger's API cannot upload images, so the repository doubles as the image host. The URL is returned
-        ONLY after the push succeeds, so a failure means "no image" and never a broken link. Requires a public repo.
+        The pipeline may have unrelated generated files in its main checkout. Publishing
+        from a clean temporary worktree prevents those unstaged files from blocking Git
+        fetch/rebase operations or being accidentally included in the asset commit.
         """
         if not self.repo_assets_dir or os.getenv("GITHUB_ACTIONS") != "true":
             return None
@@ -160,36 +162,56 @@ class ScreenshotCapture:
         ref = os.getenv("GITHUB_REF_NAME", "")
         if not repo or not ref:
             return None
+
+        checkout: Optional[Path] = None
+
+        def git(*args: str, cwd: Optional[Path] = None) -> str:
+            return subprocess.run(
+                ["git", "-c", "user.name=github-actions[bot]",
+                 "-c", "user.email=github-actions[bot]@users.noreply.github.com", *args],
+                check=True, capture_output=True, text=True, timeout=90,
+                cwd=str(cwd) if cwd else None,
+            ).stdout
+
         try:
             safe_slug = re.sub(r"[^a-z0-9\\-]+", "-", slug.lower()).strip("-") or "image"
             from src.visual_tools import optimize_image
             publish_path = optimize_image(local_path)
-            dest_dir = Path(self.repo_assets_dir)
-            dest_dir.mkdir(parents=True, exist_ok=True)
-            # Content hash in the filename: URLs are immutable, so the CDN can never serve a stale image.
-            dest = dest_dir / f"{safe_slug}-{sha256[:10]}{publish_path.suffix.lower() or '.png'}"
-            shutil.copyfile(publish_path, dest)
-            rel = dest.as_posix()
 
-            def git(*args: str) -> str:
-                return subprocess.run(
-                    ["git", "-c", "user.name=github-actions[bot]",
-                     "-c", "user.email=github-actions[bot]@users.noreply.github.com", *args],
-                    check=True, capture_output=True, text=True, timeout=90,
-                ).stdout
+            assets_dir = Path(self.repo_assets_dir)
+            if assets_dir.is_absolute() or ".." in assets_dir.parts:
+                raise ValueError("Repository asset directory must be a safe relative path.")
+            dest_name = f"{safe_slug}-{sha256[:10]}{publish_path.suffix.lower() or '.png'}"
+            rel = (assets_dir / dest_name).as_posix()
 
-            git("add", rel)
-            if git("status", "--porcelain", "--", rel).strip():  # nothing to commit if this exact image is already in the repo
-                git("commit", "-m", f"chore(assets): add screenshot {dest.name} [skip ci]")
-                git("pull", "--rebase", "origin", ref)
-                git("push", "origin", f"HEAD:refs/heads/{ref}")
-            url = f"https://cdn.jsdelivr.net/gh/{repo}@{ref}/{rel}"
-            logger.info(f"Screenshot committed to repository and served via CDN: {url}")
-            return url
+            # Use a separate worktree so unrelated generated/untracked files in the
+            # pipeline checkout cannot make git pull --rebase fail.
+            with tempfile.TemporaryDirectory(prefix="digital-toolkit-assets-") as temp_dir:
+                checkout = Path(temp_dir) / "checkout"
+                git("fetch", "origin", ref)
+                git("worktree", "add", "--detach", str(checkout), f"origin/{ref}")
+                dest = checkout / assets_dir / dest_name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(publish_path, dest)
+
+                git("add", rel, cwd=checkout)
+                if git("status", "--porcelain", "--", rel, cwd=checkout).strip():
+                    git("commit", "-m", f"chore(assets): add screenshot {dest_name} [skip ci]", cwd=checkout)
+                    git("push", "origin", f"HEAD:refs/heads/{ref}", cwd=checkout)
+
+                url = f"https://cdn.jsdelivr.net/gh/{repo}@{ref}/{rel}"
+                logger.info(f"Screenshot committed to repository and served via CDN: {url}")
+                return url
         except Exception as e:
             detail = getattr(e, "stderr", "") or ""
             logger.warning(f"Repository image hosting failed ({e} {detail.strip()[:200]}); omitting image from HTML.")
             return None
+        finally:
+            if checkout is not None:
+                try:
+                    git("worktree", "remove", "--force", str(checkout))
+                except Exception as cleanup_error:
+                    logger.debug(f"Temporary image worktree cleanup was skipped: {cleanup_error}")
 
     def capture(
         self,
