@@ -234,20 +234,20 @@
       }
     }
   ],
-  "last_updated": "2026-11-15T15:33:50.373247+00:00",
+  "last_updated": "2026-11-16T05:38:41.800099+00:00",
   "total_runs": 13,
   "failed_attempts": {
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "organize-digital-files": 2,
+    "canva-brand-kit-design-walkthrough": 2,
+    "claude-code-web-prototyping": 1,
     "weekly-work-plan": 2,
     "best-free-invoicing-tools-freelancers": 2,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "organize-digital-files": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "best-e-commerce-software-for-small-business-novo": 1,
-    "claude-code-web-prototyping": 1,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
     "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "canva-brand-kit-design-walkthrough": 2
+    "best-e-commerce-software-for-small-business-novo": 1,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1
   }
 }
