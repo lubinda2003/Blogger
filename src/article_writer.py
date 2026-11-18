@@ -602,7 +602,7 @@ class ArticleWriter:
         if not isinstance(data, dict):
             return ["Article response must be a JSON object."]
         for name in ("title", "meta_description", "html_content", "labels", "sources_used"):
-            if name not in data or data[name] is None or data[name] == "":
+            if name not in data or not data[name]:
                 errors.append(f"Missing or empty required field: '{name}'")
         for name in ("title", "meta_description", "html_content"):
             if name in data and not isinstance(data[name], str):
