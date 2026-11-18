@@ -12,6 +12,8 @@ class TestWorkflowSafety(unittest.TestCase):
         self.assertIn("CONFIRM_LIVE_PUBLISH: false", workflow)
         self.assertIn("TOPIC_ID: ''", workflow)
         self.assertNotIn("SCHEDULED_LIVE", workflow)
+        self.assertIn('cron: "17 8 * * *"', workflow)
+        self.assertIn("PUBLISH_MODE: draft", workflow)
 
 
 if __name__ == "__main__":
