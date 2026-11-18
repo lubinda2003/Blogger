@@ -86,5 +86,54 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertEqual(writer.actual_model, "secondary-model")
 
 
+    def test_groq_metadata_recovery_uses_topic_and_article_without_changing_body(self):
+        writer = self.make_writer()
+        topic = MagicMock()
+        topic.topic = "How to Build a Weekly Work Plan"
+        topic.category = "Software and Productivity"
+        body = "<h2>Plan your week</h2><p>Start by listing your priorities and deadlines. " + ("Review your tasks and choose realistic work blocks. " * 8) + "</p>"
+        parsed = {"html_content": body, "sources_used": [{"title": "Official guide", "url": "https://example.com"}]}
+
+        completed = writer._complete_groq_metadata(parsed, topic)
+
+        self.assertEqual(completed["title"], topic.topic)
+        self.assertEqual(completed["labels"], [topic.category])
+        self.assertTrue(completed["meta_description"])
+        self.assertLessEqual(len(completed["meta_description"]), 160)
+        self.assertEqual(completed["html_content"], body)
+        self.assertEqual(completed["sources_used"], parsed["sources_used"])
+
+    def test_groq_metadata_recovery_preserves_valid_metadata(self):
+        writer = self.make_writer()
+        topic = MagicMock()
+        topic.topic = "Fallback topic"
+        topic.category = "Tutorials"
+        parsed = {
+            "title": "A supplied title",
+            "meta_description": "A supplied description.",
+            "labels": ["AI Tools", "Tutorial"],
+            "html_content": "<p>" + ("Useful article content. " * 20) + "</p>",
+            "sources_used": [{"title": "Official guide", "url": "https://example.com"}],
+        }
+
+        completed = writer._complete_groq_metadata(parsed, topic)
+
+        self.assertEqual(completed["title"], "A supplied title")
+        self.assertEqual(completed["meta_description"], "A supplied description.")
+        self.assertEqual(completed["labels"], ["AI Tools", "Tutorial"])
+
+    def test_groq_metadata_recovery_does_not_repair_missing_article_body_or_sources(self):
+        writer = self.make_writer()
+        topic = MagicMock()
+        topic.topic = "A real topic"
+        topic.category = "Tutorials"
+
+        completed = writer._complete_groq_metadata({"html_content": "", "sources_used": []}, topic)
+        errors = writer._validate_schema(completed)
+
+        self.assertTrue(any("html_content" in error for error in errors))
+        self.assertTrue(any("sources_used" in error for error in errors))
+
+
 if __name__ == "__main__":
     unittest.main()

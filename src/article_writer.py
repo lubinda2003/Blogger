@@ -982,6 +982,60 @@ against primary documentation."</code>
         # Final attempt to give descriptive standard JSON error
         return json.loads(text)
 
+    @staticmethod
+    def _complete_groq_metadata(parsed: Dict[str, Any], topic: TopicItem) -> Dict[str, Any]:
+        """Fill missing Blogger metadata from the selected topic and generated article.
+
+        This recovery is deliberately limited to metadata. It never fabricates article
+        body text, sources, or evidence, so the existing factual and editorial gates
+        remain responsible for deciding whether the article can become a draft.
+        """
+        if not isinstance(parsed, dict):
+            raise RuntimeError("Groq response must be a JSON object.")
+
+        completed = dict(parsed)
+        repaired = []
+
+        title = completed.get("title")
+        if not isinstance(title, str) or not title.strip():
+            completed["title"] = str(topic.topic or "").strip()
+            repaired.append("title")
+
+        description = completed.get("meta_description")
+        if not isinstance(description, str) or not description.strip():
+            source_text = completed.get("summary")
+            if not isinstance(source_text, str) or not source_text.strip():
+                source_text = re.sub(r"<[^>]+>", " ", str(completed.get("html_content") or ""))
+            source_text = html.unescape(re.sub(r"\s+", " ", source_text)).strip()
+            if not source_text:
+                source_text = f"A practical guide to {topic.topic}, with clear steps and useful tips."
+            if len(source_text) > 157:
+                shortened = source_text[:157].rsplit(" ", 1)[0].rstrip(" ,;:-")
+                source_text = (shortened or source_text[:157].rstrip()) + "…"
+            completed["meta_description"] = source_text
+            repaired.append("meta_description")
+
+        labels = completed.get("labels")
+        if isinstance(labels, str) and labels.strip():
+            labels = [labels.strip()]
+        elif isinstance(labels, list):
+            labels = [item.strip() for item in labels if isinstance(item, str) and item.strip()]
+        else:
+            labels = []
+        if not labels:
+            category = str(topic.category or "").strip()
+            labels = [category] if category else ["Digital Tools"]
+            repaired.append("labels")
+        completed["labels"] = labels
+
+        if repaired:
+            logger.warning(
+                "Groq omitted required Blogger metadata; safely reconstructed %s from the topic/article. "
+                "Article body, sources, and evidence were not modified.",
+                ", ".join(repaired),
+            )
+        return completed
+
     def write_article(self, topic: TopicItem, brief: ResearchBrief, dry_run: bool = False) -> ArticleDraft:
         """Generate structured article draft using Gemini or deterministic dry-run fixture.
 
@@ -1029,6 +1083,12 @@ against primary documentation."</code>
                         parsed = self._extract_json_from_response(repaired_raw)
                     except Exception as e2:
                         raise RuntimeError(f"LLM response could not be parsed as JSON: {e2}") from e2
+
+            # Groq occasionally returns a valid article body but omits Blogger metadata.
+            # Recover only title/description/labels from the topic and article itself; never
+            # invent body text, sources, or evidence, which remain subject to hard QA gates.
+            if self.actual_provider == "groq":
+                parsed = self._complete_groq_metadata(parsed, topic)
 
             # Schema validation
             schema_errors = self._validate_schema(parsed)
