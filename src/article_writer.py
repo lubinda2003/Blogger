@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 from src.readability import analyze as analyze_readability
 from src.research import ResearchBrief
@@ -1055,6 +1056,44 @@ against primary documentation."</code>
             )
         return completed
 
+    @staticmethod
+    def _normalize_groq_nested_fields(parsed: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize only unambiguous Groq variations; never invent evidence or source URLs."""
+        normalized = dict(parsed)
+        sources = normalized.get("sources_used")
+        if isinstance(sources, list):
+            safe_sources = []
+            for source in sources:
+                if isinstance(source, str):
+                    candidate = source.strip()
+                    parsed_url = urlparse(candidate)
+                    if parsed_url.scheme in ("http", "https") and parsed_url.netloc:
+                        host = parsed_url.netloc.lower()
+                        title = host[4:] if host.startswith("www.") else host
+                        safe_sources.append({"title": title, "url": candidate})
+                        continue
+                safe_sources.append(source)
+            normalized["sources_used"] = safe_sources
+
+        # These fields are optional presentation hints. Discard malformed hints and let
+        # the existing topic/default rendering take over; never fabricate article evidence.
+        if normalized.get("screenshot_spec") is not None and not isinstance(normalized["screenshot_spec"], dict):
+            logger.warning("Ignoring malformed optional Groq screenshot_spec.")
+            normalized.pop("screenshot_spec", None)
+        if normalized.get("featured_image_brief") is not None and not isinstance(normalized["featured_image_brief"], dict):
+            logger.warning("Ignoring malformed optional Groq featured_image_brief.")
+            normalized.pop("featured_image_brief", None)
+        visuals = normalized.get("visual_plan")
+        if visuals is not None and not isinstance(visuals, list):
+            logger.warning("Ignoring malformed optional Groq visual_plan.")
+            normalized["visual_plan"] = []
+        elif isinstance(visuals, list):
+            valid_visuals = [item for item in visuals if isinstance(item, dict)]
+            if len(valid_visuals) != len(visuals):
+                logger.warning("Discarded malformed optional Groq visual_plan item(s).")
+            normalized["visual_plan"] = valid_visuals[:2]
+        return normalized
+
     def write_article(self, topic: TopicItem, brief: ResearchBrief, dry_run: bool = False) -> ArticleDraft:
         """Generate structured article draft using Gemini or deterministic dry-run fixture.
 
@@ -1108,6 +1147,7 @@ against primary documentation."</code>
             # invent body text, sources, or evidence, which remain subject to hard QA gates.
             if self.actual_provider == "groq":
                 parsed = self._complete_groq_metadata(parsed, topic)
+                parsed = self._normalize_groq_nested_fields(parsed)
 
             # Schema validation
             schema_errors = self._validate_schema(parsed)
