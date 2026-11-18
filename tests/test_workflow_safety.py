@@ -9,7 +9,7 @@ class TestWorkflowSafety(unittest.TestCase):
         workflow = Path(".github/workflows/content-pipeline.yml").read_text(encoding="utf-8")
         self.assertIn("DRY_RUN: 'false'", workflow)
         self.assertIn("PUBLISH_MODE: draft", workflow)
-        self.assertIn("|| 'groq' }}", workflow)
+        self.assertIn("LLM_PROVIDER: groq", workflow)
         self.assertIn("CONFIRM_LIVE_PUBLISH: false", workflow)
         self.assertIn("TOPIC_ID: ''", workflow)
         self.assertNotIn("SCHEDULED_LIVE", workflow)
