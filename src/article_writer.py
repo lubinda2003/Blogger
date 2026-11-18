@@ -166,7 +166,7 @@ class ArticleWriter:
         temperature: float = 0.3,
         max_tokens: int = DEFAULT_MAX_TOKENS,
         prompt_template_path: str = "templates/article_prompt.md",
-        provider: str = "auto",
+        provider: str = "groq",
         groq_api_key: Optional[str] = None,
         groq_model: str = "openai/gpt-oss-120b",
         min_word_count: int = 800,
@@ -185,7 +185,7 @@ class ArticleWriter:
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.prompt_template_path = Path(prompt_template_path)
-        self.provider = (provider or os.getenv("LLM_PROVIDER", "auto")).strip().lower()
+        self.provider = (provider or os.getenv("LLM_PROVIDER", "groq")).strip().lower()
         self.groq_api_key = groq_api_key or os.getenv("GROQ_API_KEY")
         self.groq_model = groq_model or os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
         self.actual_provider: str = ""
@@ -596,20 +596,60 @@ class ArticleWriter:
         raise RuntimeError(f"Groq failed after {max_retries} attempts: {last_error}")
 
     def _validate_schema(self, data: Dict[str, Any]) -> List[str]:
-        """Validate Gemini output against required fields and structure."""
+        """Validate the full provider response shape before downstream code consumes it."""
         errors = []
-        for req_field in ("title", "meta_description", "html_content", "labels", "sources_used"):
-            if req_field not in data or not data[req_field]:
-                errors.append(f"Missing or empty required field: '{req_field}'")
-
-        if "claim_evidence" in data and not isinstance(data["claim_evidence"], list):
-            errors.append("Field 'claim_evidence' must be an array of claim/source/evidence mappings.")
-        # Older provider/test responses may omit this field; live QA still fails closed
-        # unless the generated draft contains verifiable claim mappings.
-
-        if "html_content" in data and len(str(data["html_content"]).strip()) < 200:
+        if not isinstance(data, dict):
+            return ["Article response must be a JSON object."]
+        for name in ("title", "meta_description", "html_content", "labels", "sources_used"):
+            if name not in data or data[name] is None or data[name] == "":
+                errors.append(f"Missing or empty required field: '{name}'")
+        for name in ("title", "meta_description", "html_content"):
+            if name in data and not isinstance(data[name], str):
+                errors.append(f"Field '{name}' must be a string.")
+        if isinstance(data.get("html_content"), str) and len(data["html_content"].strip()) < 200:
             errors.append("Article HTML content is too short (under 200 characters).")
-
+        labels = data.get("labels")
+        if labels is not None and (not isinstance(labels, list) or any(not isinstance(x, str) for x in labels)):
+            errors.append("Field 'labels' must be an array of strings.")
+        sources = data.get("sources_used")
+        if sources is not None:
+            if not isinstance(sources, list):
+                errors.append("Field 'sources_used' must be an array of source objects.")
+            else:
+                for i, source in enumerate(sources):
+                    if not isinstance(source, dict):
+                        errors.append(f"Field 'sources_used[{i}]' must be an object with title and url.")
+                        continue
+                    for key in ("title", "url"):
+                        if not isinstance(source.get(key), str) or not source.get(key, "").strip():
+                            errors.append(f"Field 'sources_used[{i}].{key}' must be a non-empty string.")
+        evidence = data.get("claim_evidence")
+        if evidence is not None:
+            if not isinstance(evidence, list):
+                errors.append("Field 'claim_evidence' must be an array of claim/source/evidence mappings.")
+            else:
+                for i, item in enumerate(evidence):
+                    if not isinstance(item, dict):
+                        errors.append(f"Field 'claim_evidence[{i}]' must be an object.")
+                        continue
+                    for key in ("claim", "source_url", "evidence_quote"):
+                        if not isinstance(item.get(key), str) or not item.get(key, "").strip():
+                            errors.append(f"Field 'claim_evidence[{i}].{key}' must be a non-empty string.")
+        for name in ("screenshot_spec", "featured_image_brief"):
+            if data.get(name) is not None and not isinstance(data[name], dict):
+                errors.append(f"Field '{name}' must be an object when provided.")
+        visuals = data.get("visual_plan")
+        if visuals is not None:
+            if not isinstance(visuals, list):
+                errors.append("Field 'visual_plan' must be an array of visual objects.")
+            else:
+                for i, item in enumerate(visuals):
+                    if not isinstance(item, dict):
+                        errors.append(f"Field 'visual_plan[{i}]' must be an object.")
+                        continue
+                    for key in ("prompt", "alt_text", "caption", "section_heading"):
+                        if key in item and not isinstance(item[key], str):
+                            errors.append(f"Field 'visual_plan[{i}].{key}' must be a string.")
         return errors
 
     @staticmethod
@@ -860,93 +900,72 @@ against primary documentation."</code>
         }
 
     def _call_llm_provider(self, prompt: str, max_tokens: Optional[int] = None) -> str:
-        """Route prompt to configured LLM provider with fallback model chain and provider logging."""
+        """Use Groq first by default, with Gemini as a provider fallback."""
         prov = self.provider
 
-        if prov == "groq" or (prov == "auto" and not self.api_key and self.groq_api_key):
-            logger.info(f"Generating article via Groq LLM provider ({self.groq_model})...")
-            res = self._call_groq_rest(prompt, max_tokens=max_tokens)
-            self.actual_provider = "groq"
-            self.actual_model = self.groq_model
-            logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-            return res
-
-        elif prov in ("gemini", "auto") and self.api_key:
-            # 1. Primary Gemini model
-            primary_model = self.model_name.strip()
-            logger.info(f"Attempting article generation via primary Gemini model ({primary_model})...")
-            try:
-                # 3 attempts on the primary when a fallback exists: fail over sooner during demand spikes.
-                last_key_error = None
-                res = None
-                for key_index, key in enumerate(self.gemini_api_keys):
+        def call_gemini_chain() -> str:
+            if not self.api_key:
+                raise RuntimeError("GEMINI_API_KEY is not configured for provider fallback.")
+            primary = self.model_name.strip()
+            fallback = (self.fallback_model or "").strip()
+            models = [primary] + ([fallback] if fallback and fallback != primary else [])
+            last_error = None
+            for model in models:
+                for index, key in enumerate(self.gemini_api_keys):
                     try:
-                        if key_index:
-                            logger.warning(f"Gemini key {key_index + 1}: rotating after quota/rate limit.")
-                        res = self._call_gemini_rest(prompt, model_name=primary_model, max_tokens=max_tokens, max_attempts=3, api_key=key)
-                        break
-                    except Exception as key_error:
-                        last_key_error = key_error
-                        message = str(key_error).lower()
-                        if not any(token in message for token in ("quota", "429", "resource_exhausted", "rate limit")):
-                            raise
-                        if key_index == len(self.gemini_api_keys) - 1:
-                            raise
-                if res is None:
-                    raise RuntimeError(f"All configured Gemini keys are rate-limited: {last_key_error}")
-                self.actual_provider = "gemini"
-                self.actual_model = primary_model
-                logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-                return res
-            except Exception as e_primary:
-                logger.warning(f"Primary Gemini model ({primary_model}) failed: {e_primary}")
-
-            # 2. Try the secondary Gemini model across configured keys before switching providers.
-            fallback_model = (self.fallback_model or "gemini-3.5-flash").strip()
-            if fallback_model != primary_model:
-                logger.info(f"Attempting fallback Gemini model in chain ({fallback_model})...")
-                fallback_errors = []
-                for key_index, key in enumerate(self.gemini_api_keys):
-                    try:
-                        if key_index:
-                            logger.warning(f"Gemini fallback key {key_index + 1}: rotating after quota/rate limit.")
-                        res = self._call_gemini_rest(
-                            prompt, model_name=fallback_model, max_tokens=max_tokens,
-                            api_key=key,
+                        if index:
+                            logger.warning("Rotating to Gemini key %s.", index + 1)
+                        result = self._call_gemini_rest(
+                            prompt, model_name=model, max_tokens=max_tokens,
+                            max_attempts=3 if model == primary else None, api_key=key,
                         )
                         self.actual_provider = "gemini"
-                        self.actual_model = fallback_model
-                        logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-                        return res
-                    except Exception as e_fallback:
-                        fallback_errors.append(str(e_fallback))
-                        message = str(e_fallback).lower()
+                        self.actual_model = model
+                        logger.info("Article produced by provider='%s', model='%s'.", self.actual_provider, self.actual_model)
+                        return result
+                    except Exception as exc:
+                        last_error = exc
+                        message = str(exc).lower()
                         if not any(token in message for token in ("quota", "429", "resource_exhausted", "rate limit")):
-                            logger.warning(f"Fallback Gemini model ({fallback_model}) failed: {e_fallback}")
+                            logger.warning("Gemini model %s failed: %s", model, exc)
                             break
-                if fallback_errors:
-                    logger.warning("Gemini fallback model exhausted configured keys: %s", fallback_errors[-1])
+            raise RuntimeError(f"Gemini fallback chain failed: {last_error}")
 
-            # 3. Switch to Groq only after all configured Gemini keys/models have been tried.
-            if self.groq_api_key:
-                logger.warning(f"Gemini model chain exhausted. Trying bounded Groq fallback ({self.groq_model})...")
-                res = self._call_groq_rest(prompt, max_tokens=max_tokens)
+        if prov in ("groq", "auto") and self.groq_api_key:
+            logger.info("Generating article via primary Groq provider (%s)...", self.groq_model)
+            try:
+                result = self._call_groq_rest(prompt, max_tokens=max_tokens)
                 self.actual_provider = "groq"
                 self.actual_model = self.groq_model
-                logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-                return res
+                logger.info("Article produced by provider='%s', model='%s'.", self.actual_provider, self.actual_model)
+                return result
+            except Exception as groq_error:
+                logger.warning("Primary Groq provider failed: %s", groq_error)
+                if self.api_key:
+                    logger.warning("Switching to Gemini fallback chain.")
+                    return call_gemini_chain()
+                raise
 
-            raise RuntimeError(f"All Gemini models in chain failed and no fallback provider is available.")
+        if prov == "gemini":
+            try:
+                return call_gemini_chain()
+            except Exception as gemini_error:
+                if self.groq_api_key:
+                    logger.warning("Gemini primary failed; trying Groq fallback: %s", gemini_error)
+                    result = self._call_groq_rest(prompt, max_tokens=max_tokens)
+                    self.actual_provider = "groq"
+                    self.actual_model = self.groq_model
+                    return result
+                raise
 
-        elif self.groq_api_key:
-            logger.info(f"Generating article via Groq LLM provider ({self.groq_model})...")
-            res = self._call_groq_rest(prompt, max_tokens=max_tokens)
+        if self.api_key:
+            return call_gemini_chain()
+        if self.groq_api_key:
+            result = self._call_groq_rest(prompt, max_tokens=max_tokens)
             self.actual_provider = "groq"
             self.actual_model = self.groq_model
-            logger.info(f"Article successfully produced by provider='{self.actual_provider}', model='{self.actual_model}'.")
-            return res
-        else:
-            raise ValueError("Neither GEMINI_API_KEY nor GROQ_API_KEY is configured in environment or GitHub Secrets.")
+            return result
+        raise ValueError("Neither GROQ_API_KEY nor GEMINI_API_KEY is configured in environment or GitHub Secrets.")
 
     def _extract_json_from_response(self, raw_text: str) -> Dict[str, Any]:
         """Extract and parse JSON object from LLM response reliably.
