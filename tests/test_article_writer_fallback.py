@@ -99,6 +99,32 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertTrue(any("screenshot_spec" in error for error in errors))
         self.assertTrue(any("visual_plan[0]" in error for error in errors))
 
+    def test_groq_normalizes_plain_url_sources_and_discards_malformed_optional_visual_hints(self):
+        writer = self.make_writer()
+        parsed = {
+            "sources_used": ["https://www.example.com/help"],
+            "screenshot_spec": "not-an-object",
+            "featured_image_brief": "not-an-object",
+            "visual_plan": ["not-an-object", {"prompt": "A useful illustration"}],
+            "claim_evidence": [{"claim": "A claim", "source_url": "https://example.com", "evidence_quote": "Exact evidence"}],
+        }
+        normalized = writer._normalize_groq_nested_fields(parsed)
+        self.assertEqual(normalized["sources_used"], [{"title": "example.com", "url": "https://www.example.com/help"}])
+        self.assertNotIn("screenshot_spec", normalized)
+        self.assertNotIn("featured_image_brief", normalized)
+        self.assertEqual(normalized["visual_plan"], [{"prompt": "A useful illustration"}])
+        self.assertEqual(normalized["claim_evidence"], parsed["claim_evidence"])
+
+    def test_groq_does_not_invent_or_repair_invalid_claim_evidence(self):
+        writer = self.make_writer()
+        normalized = writer._normalize_groq_nested_fields({"sources_used": [], "claim_evidence": ["unsupported"]})
+        errors = writer._validate_schema({
+            "title": "Title", "meta_description": "Description", "labels": ["Tutorial"],
+            "html_content": "<p>" + ("Article body. " * 30) + "</p>",
+            "sources_used": [], "claim_evidence": normalized["claim_evidence"],
+        })
+        self.assertTrue(any("claim_evidence[0]" in error for error in errors))
+
     def test_groq_metadata_recovery_uses_topic_and_article_without_changing_body(self):
         writer = self.make_writer()
         topic = MagicMock()
