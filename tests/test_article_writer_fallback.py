@@ -70,7 +70,7 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         calls = []
         def gemini(prompt, model_name=None, max_tokens=None, max_attempts=None, api_key=None):
             calls.append((model_name, api_key))
-            if model_name == "primary-model":
+            if model_name == "primary-model" or api_key == "gemini-key-one":
                 raise RuntimeError("Gemini quota exhausted")
             return '{"ok": true}'
         with patch.object(writer, "_call_groq_rest", side_effect=RuntimeError("Groq unavailable")), patch.object(writer, "_call_gemini_rest", side_effect=gemini):
