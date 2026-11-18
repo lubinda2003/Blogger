@@ -1006,7 +1006,7 @@ against primary documentation."</code>
             source_text = completed.get("summary")
             if not isinstance(source_text, str) or not source_text.strip():
                 source_text = re.sub(r"<[^>]+>", " ", str(completed.get("html_content") or ""))
-            source_text = html.unescape(re.sub(r"\\s+", " ", source_text)).strip()
+            source_text = html.unescape(re.sub(r"\s+", " ", source_text)).strip()
             if not source_text:
                 source_text = f"A practical guide to {topic.topic}, with clear steps and useful tips."
             if len(source_text) > 157:
