@@ -54,37 +54,50 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertNotIn("max_tokens", payload)
         self.assertEqual(payload["reasoning_effort"], "low")
 
-    def test_secondary_gemini_rotates_keys_before_groq(self):
+    def test_groq_is_primary_and_gemini_is_not_called_when_groq_succeeds(self):
+        writer = self.make_writer()
+        with patch.object(writer, "_call_groq_rest", return_value='{"ok": true}') as groq, patch.object(writer, "_call_gemini_rest") as gemini:
+            result = writer._call_llm_provider("prompt")
+        self.assertEqual(result, '{"ok": true}')
+        groq.assert_called_once()
+        gemini.assert_not_called()
+        self.assertEqual(writer.actual_provider, "groq")
+        self.assertEqual(writer.actual_model, writer.groq_model)
+
+    def test_gemini_fallback_runs_after_groq_failure(self):
         writer = self.make_writer()
         writer.gemini_api_keys = ["gemini-key-one", "gemini-key-two"]
         calls = []
-
         def gemini(prompt, model_name=None, max_tokens=None, max_attempts=None, api_key=None):
             calls.append((model_name, api_key))
             if model_name == "primary-model":
                 raise RuntimeError("Gemini quota exhausted")
-            if api_key == "gemini-key-one":
-                raise RuntimeError("Gemini quota exhausted")
             return '{"ok": true}'
-
-        with patch.object(writer, "_call_gemini_rest", side_effect=gemini), \
-             patch.object(writer, "_call_groq_rest") as groq:
+        with patch.object(writer, "_call_groq_rest", side_effect=RuntimeError("Groq unavailable")), patch.object(writer, "_call_gemini_rest", side_effect=gemini):
             result = writer._call_llm_provider("prompt")
-
         self.assertEqual(result, '{"ok": true}')
-        self.assertEqual(
-            calls,
-            [
-                ("primary-model", "gemini-key-one"),
-                ("primary-model", "gemini-key-two"),
-                ("secondary-model", "gemini-key-one"),
-                ("secondary-model", "gemini-key-two"),
-            ],
-        )
-        groq.assert_not_called()
+        self.assertEqual(calls[0], ("primary-model", "gemini-key-one"))
+        self.assertEqual(calls[-1], ("secondary-model", "gemini-key-two"))
         self.assertEqual(writer.actual_provider, "gemini")
         self.assertEqual(writer.actual_model, "secondary-model")
 
+    def test_nested_provider_string_fields_fail_with_clear_schema_errors(self):
+        writer = self.make_writer()
+        parsed = {
+            "title": "Valid title",
+            "meta_description": "Valid description",
+            "labels": ["Tutorial"],
+            "html_content": "<p>" + ("Useful content. " * 30) + "</p>",
+            "sources_used": ["https://example.com"],
+            "claim_evidence": ["unsupported string item"],
+            "screenshot_spec": "not-an-object",
+            "visual_plan": ["not-an-object"],
+        }
+        errors = writer._validate_schema(parsed)
+        self.assertTrue(any("sources_used[0]" in error for error in errors))
+        self.assertTrue(any("claim_evidence[0]" in error for error in errors))
+        self.assertTrue(any("screenshot_spec" in error for error in errors))
+        self.assertTrue(any("visual_plan[0]" in error for error in errors))
 
     def test_groq_metadata_recovery_uses_topic_and_article_without_changing_body(self):
         writer = self.make_writer()
