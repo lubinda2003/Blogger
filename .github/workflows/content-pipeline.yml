@@ -55,8 +55,9 @@ jobs:
         run: npm install --prefix tools/visuals --no-audit --no-fund
 
       - name: Install Playwright Chromium
-        run: |
-          playwright install --with-deps chromium
+        # Ubuntu GitHub-hosted runners already provide browser system libraries.
+        # Avoid --with-deps: it runs apt update/install and can stall on mirror timeouts.
+        run: playwright install chromium
 
       # Run the complete regression suite before any live generation or Blogger write.
       - name: Run automated tests
