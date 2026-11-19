@@ -36,7 +36,7 @@ class AppConfig:
     blogger_refresh_token: Optional[str] = field(default=None, repr=False)
 
     # LLM provider parameters
-    llm_provider: str = "auto"  # "auto", "gemini", or "groq"
+    llm_provider: str = "groq"  # "auto", "gemini", or "groq"
     gemini_model: str = "gemini-3.8-flash"
     gemini_fallback_model: str = "gemini-3.5-flash"
     groq_model: str = "openai/gpt-oss-120b"  # llama-3.3-70b-versatile was retired by Groq on 2026-08-16
@@ -236,7 +236,7 @@ def load_config(overrides: Optional[Dict[str, Any]] = None) -> AppConfig:
         topics_csv_path=os.getenv("TOPICS_CSV_PATH", "data/topics.csv"),
         processed_json_path=os.getenv("PROCESSED_JSON_PATH", "data/processed_topics.json"),
         output_dir=os.getenv("OUTPUT_DIR", "output"),
-        llm_provider=os.getenv("LLM_PROVIDER", "auto").strip().lower(),
+        llm_provider=os.getenv("LLM_PROVIDER", "groq").strip().lower(),
         gemini_api_key=os.getenv("GEMINI_API_KEY"),
         groq_api_key=os.getenv("GROQ_API_KEY"),
         tavily_api_key=os.getenv("TAVILY_API_KEY"),
