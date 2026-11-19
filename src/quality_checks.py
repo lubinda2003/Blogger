@@ -183,13 +183,13 @@ def is_heading_fragment_claim(claim: str, article_html: str) -> bool:
         return False
 
     headings = re.findall(
-        r"<h[1-6]\\b[^>]*>(.*?)</h[1-6]\\s*>",
+        r"<h[1-6]\b[^>]*>(.*?)</h[1-6]\s*>",
         article_html or "",
         flags=re.IGNORECASE | re.DOTALL,
     )
     for heading in headings:
         heading_text = html.unescape(re.sub(r"<[^>]+>", " ", heading)).casefold()
-        heading_text = re.sub(r"\\s+", " ", heading_text).strip()
+        heading_text = re.sub(r"\s+", " ", heading_text).strip()
         if re.search(
             rf"(?<![a-z0-9]){re.escape(normalized_claim)}(?![a-z0-9])",
             heading_text,
