@@ -371,9 +371,9 @@ class ResearchCollector:
         # "a day or two" and "one to two days" mean the same 24–48 hour
         # range. Keep this deliberately narrow; do not infer other quantities.
         patterns = (
-            (r"\\b(?:a|one)\\s+day\\s+or\\s+two(?:\\s+days)?\\b", "24 48 hours"),
-            (r"\\bone\\s+to\\s+two\\s+days\\b", "24 48 hours"),
-            (r"\\b1\\s*(?:-|–|—|to)\\s*2\\s+days\\b", "24 48 hours"),
+            (r"\b(?:a|one)\s+day\s+or\s+two(?:\s+days)?\b", "24 48 hours"),
+            (r"\bone\s+to\s+two\s+days\b", "24 48 hours"),
+            (r"\b1\s*(?:-|–|—|to)\s*2\s+days\b", "24 48 hours"),
         )
         for pattern, replacement in patterns:
             normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE)
