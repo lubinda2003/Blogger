@@ -10,7 +10,7 @@ from src import main as pipeline
 from src.article_writer import ArticleWriter
 from src.blogger_client import BloggerClient
 from src.config import load_config
-from src.research import ResearchCollector
+from src.research import ResearchCollector, SourceCitation
 from src.screenshot_capture import ScreenshotResult
 from src.seo_metadata import SEOMetadata
 
@@ -168,7 +168,24 @@ class TestLengthRequirementAndFailover(unittest.TestCase):
             self.topic.id, self.topic.topic, self.topic.category, self.topic.target_url, zambia_context=False, dry_run=True
         )
         self.writer = ArticleWriter(api_key="k", min_word_count=800)
+        self.brief.sources = [
+            SourceCitation(
+                "Official guide A", "https://example.com/guide-a", "2026-11-19",
+                verified=True, evidence_excerpt="Organize notes into folders.",
+                cleaned_text="Organize notes into folders.",
+            ),
+            SourceCitation(
+                "Official guide B", "https://example.org/guide-b", "2026-11-19",
+                verified=True, evidence_excerpt="Use tags to find notes.",
+                cleaned_text="Use tags to find notes.",
+            ),
+        ]
         fixture = self.writer._generate_dry_run_fixture(self.topic, self.brief)
+        fixture["claim_evidence"] = [{
+            "claim": "Using new digital tools should not feel confusing.",
+            "source_url": "https://example.com/guide-a",
+            "evidence_quote": "Organize notes into folders.",
+        }]
         self.long = fixture
         self.short = dict(fixture, html_content="<h2>Intro</h2><p>" + "word " * 100 + "</p>")
 
