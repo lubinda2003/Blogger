@@ -4,6 +4,22 @@ from src.research import ResearchCollector
 
 
 class ResearchSourceReliabilityTests(unittest.TestCase):
+    def test_written_day_or_two_supports_equivalent_24_to_48_hour_claim(self):
+        self.assertTrue(
+            ResearchCollector._supports_numeric_markers(
+                "Reviewing notes within 24-48 hours helps fill gaps.",
+                "Review notes after class, ideally within a day or two, to check clarity and fill missing pieces.",
+            )
+        )
+
+    def test_one_day_does_not_support_a_24_to_48_hour_range(self):
+        self.assertFalse(
+            ResearchCollector._supports_numeric_markers(
+                "Reviewing notes within 24-48 hours helps fill gaps.",
+                "Review notes within one day.",
+            )
+        )
+
     def test_default_low_evidence_domains_remain_blocked_with_empty_config(self):
         collector = ResearchCollector(tavily_api_key="test-key", domain_blocklist=[])
 
