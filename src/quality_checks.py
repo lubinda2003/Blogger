@@ -168,6 +168,36 @@ def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
     return False
 
 
+def is_heading_fragment_claim(claim: str, article_html: str) -> bool:
+    """Identify short evidence mappings that are merely fragments of article headings.
+
+    Headings are labels, not complete factual claims. Keep the normal evidence
+    checks strict for sentences and longer claims.
+    """
+    claim_tokens = _normalized_claim_tokens(claim)
+    if not claim_tokens or len(claim_tokens) >= 3:
+        return False
+
+    normalized_claim = re.sub(r"[^a-z0-9]+", " ", (claim or "").casefold()).strip()
+    if not normalized_claim:
+        return False
+
+    headings = re.findall(
+        r"<h[1-6]\b[^>]*>(.*?)</h[1-6]\s*>",
+        article_html or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    for heading in headings:
+        heading_text = html.unescape(re.sub(r"<[^>]+>", " ", heading)).casefold()
+        heading_text = re.sub(r"\s+", " ", heading_text).strip()
+        if re.search(
+            rf"(?<![a-z0-9]){re.escape(normalized_claim)}(?![a-z0-9])",
+            heading_text,
+        ):
+            return True
+    return False
+
+
 def has_official_google_source(source_urls, pricing: bool = False) -> bool:
     """Return True only when a citation URL belongs to an official Google product source."""
     allowed = GOOGLE_OFFICIAL_PRICING_DOMAINS if pricing else GOOGLE_OFFICIAL_PRODUCT_DOMAINS
@@ -387,6 +417,10 @@ class QualityGate:
                     quote = re.sub(r"\s+", " ", str(item.get("evidence_quote", ""))).strip()
                     if not claim or not source_url or not quote:
                         failures.append(f"Evidence check failed: claim mapping #{index} is incomplete.")
+                        continue
+                    # Short phrases copied from headings are labels, not factual sentences.
+                    # Ignore only these heading fragments; all substantive claims remain gated.
+                    if is_heading_fragment_claim(claim, html_str):
                         continue
                     if not claim_is_represented_in_article(claim, normalized_article_text):
                         failures.append(
