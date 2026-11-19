@@ -6,7 +6,7 @@ from unittest.mock import patch, MagicMock
 import urllib.error
 
 from src.article_writer import ArticleDraft, ArticleWriter
-from src.research import ResearchBrief
+from src.research import ResearchBrief, SourceCitation
 from src.topic_discovery import TopicItem
 
 
@@ -29,6 +29,18 @@ class TestStyleAndWriter(unittest.TestCase):
             topic_id="test-topic",
             topic_title="How to Use Gemini API",
             target_url="https://ai.google.dev",
+            sources=[
+                SourceCitation(
+                    "Official API guide", "https://example.com/api-guide", "2026-11-19",
+                    verified=True, evidence_excerpt="The API guide describes request setup.",
+                    cleaned_text="The API guide describes request setup.",
+                ),
+                SourceCitation(
+                    "Official API reference", "https://example.org/api-reference", "2026-11-19",
+                    verified=True, evidence_excerpt="The API reference documents response fields.",
+                    cleaned_text="The API reference documents response fields.",
+                ),
+            ],
         )
 
     def test_malformed_gemini_json_fails_closed_in_live_mode(self):
@@ -259,7 +271,15 @@ class TestStyleAndWriter(unittest.TestCase):
             "meta_description": "A clear, practical guide with detailed steps and real instructions.",
             "labels": ["AI Tools", "Tutorial"],
             "html_content": "<p>" + ("Valid substantive article body text exceeding 200 characters. " * 5) + "</p>",
-            "sources_used": [{"title": "Official Docs", "url": "https://example.com"}],
+            "sources_used": [
+                {"title": "Official API guide", "url": "https://example.com/api-guide"},
+                {"title": "Official API reference", "url": "https://example.org/api-reference"},
+            ],
+            "claim_evidence": [{
+                "claim": "The API guide describes request setup.",
+                "source_url": "https://example.com/api-guide",
+                "evidence_quote": "The API guide describes request setup.",
+            }],
         })
 
         with patch.object(writer, "_call_llm_provider") as mock_llm:
