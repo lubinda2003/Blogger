@@ -364,13 +364,29 @@ class ResearchCollector:
                 markers.append(value)
         return markers
 
+    @staticmethod
+    def _normalize_written_time_ranges(text: str) -> str:
+        """Normalize a few unambiguous written time ranges to their numeric equivalents."""
+        normalized = str(text or "")
+        # "a day or two" and "one to two days" mean the same 24–48 hour
+        # range. Keep this deliberately narrow; do not infer other quantities.
+        patterns = (
+            (r"\\b(?:a|one)\\s+day\\s+or\\s+two(?:\\s+days)?\\b", "24 48 hours"),
+            (r"\\bone\\s+to\\s+two\\s+days\\b", "24 48 hours"),
+            (r"\\b1\\s*(?:-|–|—|to)\\s*2\\s+days\\b", "24 48 hours"),
+        )
+        for pattern, replacement in patterns:
+            normalized = re.sub(pattern, replacement, normalized, flags=re.IGNORECASE)
+        return normalized
+
     @classmethod
     def _supports_numeric_markers(cls, claim: str, evidence: str) -> bool:
         """A passage cannot support a numeric claim unless every stated value appears in it."""
         required = cls._numeric_markers(claim)
         if not required:
             return True
-        available = cls._numeric_markers(evidence)
+        normalized_evidence = cls._normalize_written_time_ranges(evidence)
+        available = cls._numeric_markers(normalized_evidence)
         # Compare complete markers, not substrings: 10 must not match 100, and
         # 135 must not validate the stronger claim "135+".
         return all(marker in available for marker in required)
