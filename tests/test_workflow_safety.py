@@ -9,6 +9,11 @@ class TestWorkflowSafety(unittest.TestCase):
         workflow = Path(".github/workflows/content-pipeline.yml").read_text(encoding="utf-8")
         self.assertIn("DRY_RUN: 'false'", workflow)
         self.assertIn("PUBLISH_MODE: draft", workflow)
+
+    def test_content_workflow_avoids_slow_playwright_os_dependency_install(self):
+        workflow = Path(".github/workflows/content-pipeline.yml").read_text(encoding="utf-8")
+        self.assertIn("run: playwright install chromium", workflow)
+        self.assertNotIn("playwright install --with-deps", workflow)
         self.assertIn("LLM_PROVIDER: groq", workflow)
         self.assertIn("CONFIRM_LIVE_PUBLISH: false", workflow)
         self.assertIn("TOPIC_ID: ''", workflow)
