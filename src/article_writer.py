@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 USER_AGENT = "DigitalToolkitContentEngine/1.0"
 DEFAULT_MAX_TOKENS = 8192
 GROQ_MAX_COMPLETION_TOKENS = 8192
-GROQ_MAX_PROMPT_CHARS = 10000
+GROQ_MAX_PROMPT_CHARS = 32000
 
 # Structured output JSON schema for Gemini v1beta responseSchema
 ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
@@ -516,9 +516,42 @@ class ArticleWriter:
         )
         return (
             prompt[:head_chars]
-            + "\n\n[Research and supporting context shortened for fallback provider token budget.]\n\n"
+            + marker
             + prompt[-tail_chars:]
         )
+
+    @staticmethod
+    def _live_evidence_coverage_errors(parsed: Dict[str, Any], brief: ResearchBrief) -> List[str]:
+        """Reject live drafts that omit evidence or cite fewer than two verified sources."""
+        from src.quality_checks import normalize_url  # imported here to avoid a module cycle
+
+        verified_urls = {normalize_url(source.url) for source in brief.verified_sources()}
+        if len(verified_urls) < 2:
+            return [
+                "Evidence coverage failed: research produced fewer than two verified sources; "
+                "the article cannot meet the publication source minimum."
+            ]
+
+        evidence = parsed.get("claim_evidence")
+        if not isinstance(evidence, list) or not evidence:
+            return [
+                "Evidence coverage failed: the article has no claim_evidence mappings. "
+                "Regenerate with exact claims and supporting quotes from the verified research."
+            ]
+
+        sources = parsed.get("sources_used")
+        cited_urls = {
+            normalize_url(source.get("url", ""))
+            for source in (sources if isinstance(sources, list) else [])
+            if isinstance(source, dict) and source.get("url")
+        }
+        verified_citations = cited_urls & verified_urls
+        if len(verified_citations) < 2:
+            return [
+                "Evidence coverage failed: the article must cite at least two distinct verified sources; "
+                f"it currently cites {len(verified_citations)}."
+            ]
+        return []
 
     def _call_groq_rest(self, prompt: str, max_tokens: Optional[int] = None) -> str:
         """Call Groq REST API directly with custom User-Agent, exponential backoff, and jitter."""
@@ -1152,7 +1185,13 @@ against primary documentation."</code>
             # Schema validation
             schema_errors = self._validate_schema(parsed)
             if schema_errors:
-                raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}")
+                raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}')
+
+            # Stop before further provider calls or asset work if the model omitted
+            # auditable evidence or failed to use the minimum verified source count.
+            evidence_errors = self._live_evidence_coverage_errors(parsed, brief)
+            if evidence_errors:
+                raise RuntimeError("; ".join(evidence_errors))
 
             # Expand only when the draft misses the hard minimum. Do not spend
             # another provider call on a cosmetic readability rewrite: the quality
