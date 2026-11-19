@@ -1185,7 +1185,7 @@ against primary documentation."</code>
             # Schema validation
             schema_errors = self._validate_schema(parsed)
             if schema_errors:
-                raise RuntimeError(f"LLM output failed schema validation: {'; '.join(schema_errors)}')
+                raise RuntimeError("LLM output failed schema validation: " + "; ".join(schema_errors))
 
             # Stop before further provider calls or asset work if the model omitted
             # auditable evidence or failed to use the minimum verified source count.
