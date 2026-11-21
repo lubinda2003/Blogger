@@ -251,22 +251,23 @@
       }
     }
   ],
-  "last_updated": "2026-11-20T17:03:29.355091+00:00",
+  "last_updated": "2026-11-21T16:13:00.642154+00:00",
   "total_runs": 14,
   "failed_attempts": {
-    "best-free-invoicing-tools-freelancers": 2,
-    "weekly-work-plan": 2,
-    "organize-digital-files": 3,
-    "digital-study-notes": 3,
     "best-e-commerce-software-for-small-business-novo": 1,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "freelance-portfolio": 1,
+    "digital-study-notes": 3,
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
     "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "claude-code-web-prototyping": 1,
+    "organize-digital-files": 3,
     "canva-brand-kit-design-walkthrough": 2,
     "evaluate-online-sources": 1,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "best-free-invoicing-tools-freelancers": 2,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "weekly-work-plan": 2,
+    "claude-code-web-prototyping": 1,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1
   }
 }
