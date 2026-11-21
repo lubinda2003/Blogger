@@ -1,0 +1,35 @@
+16:12:48 [INFO] pipeline: =================================================================
+16:12:48 [INFO] pipeline: Starting Blogger Content Automation Pipeline
+16:12:48 [INFO] pipeline: Execution Mode: LIVE PRODUCTION
+16:12:48 [INFO] pipeline: Publish Target: DRAFT (Draft default enforced)
+16:12:48 [INFO] pipeline: =================================================================
+16:12:48 [INFO] src.report: [STAGE Validation] Status: SUCCESS (0.00s) - Environment and configuration validated successfully.
+16:12:48 [WARNING] src.topic_discovery: Skipping topic 'organize-digital-files' ('How to Organize Digital Files So You Can Find Them Quickly') due to max failure limit (>=3 attempts).
+16:12:48 [WARNING] src.topic_discovery: Skipping topic 'digital-study-notes' ('How to Take Better Digital Notes for Study') due to max failure limit (>=3 attempts).
+16:12:48 [INFO] src.topic_discovery: Selected next eligible topic: freelance-portfolio ('How to Create a Clear Freelance Portfolio Without Building a Website') [Priority 2]
+16:12:48 [INFO] src.report: [STAGE Topic Discovery] Status: SUCCESS (0.00s) - Selected 'How to Create a Clear Freelance Portfolio Without Building a Website' from live search opportunities. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted.
+16:12:48 [INFO] src.report: [STAGE Topic Selection] Status: SUCCESS (0.00s) - Selected topic 'How to Create a Clear Freelance Portfolio Without Building a Website' (Priority 2) [Repository state active]. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted.
+16:12:48 [INFO] src.blogger_client: Refreshing OAuth2 access token for client ID 5406....com...
+16:12:48 [INFO] src.blogger_client: Successfully refreshed short-lived Blogger access token.
+16:12:49 [INFO] src.research: Executing Tavily web research discovery for query: '"How to Create a Clear Freelance Portfolio Without Building a Website" practical...'
+16:12:52 [INFO] src.research: Tavily search discovered 8 candidate sources.
+16:12:52 [INFO] src.research: Research query returned 8 candidate sources.
+16:12:52 [INFO] src.research: URL 'https://www.youtube.com/watch?v=Kxb_g73doMI' blocked: domain 'youtube.com' matches blocklist entry 'youtube.com'.
+16:12:52 [INFO] src.research: Skipping Tavily candidate URL blocked by domain policy: https://www.youtube.com/watch?v=Kxb_g73doMI
+16:12:52 [INFO] src.research: URL 'https://www.youtube.com/watch?v=DnfftlGpS6w' blocked: domain 'youtube.com' matches blocklist entry 'youtube.com'.
+16:12:52 [INFO] src.research: Skipping Tavily candidate URL blocked by domain policy: https://www.youtube.com/watch?v=DnfftlGpS6w
+16:12:52 [INFO] src.research: Verifying live source: https://www.wix.com/blog/how-to-build-a-freelance-portfolio
+16:12:53 [INFO] src.research: Verifying live source: https://elnacain.com/blog/create-freelance-writer-portfolio
+16:12:54 [INFO] src.research: Verifying live source: https://www.upwork.com/resources/how-to-create-portfolio
+16:12:54 [INFO] src.research: Verifying live source: https://medium.com/@asifchotadon164/how-to-build-a-freelance-portfolio-without-clients-a-practical-2026-guide-subtitle-no-experience-26dba5f7a168
+16:12:54 [INFO] src.research: Verifying live source: https://www.linkedin.com/top-content/career/freelance-career-advice/building-a-freelance-portfolio-for-beginners
+16:12:55 [INFO] src.research: Verifying live source: https://www.forbes.com/sites/chelseatobin/2026/06/23/3-ways-to-build-a-freelance-portfolio-as-a-total-beginner
+16:12:55 [INFO] src.report: [STAGE Research] Status: SUCCESS (5.31s) - [LIVE HTTP VERIFICATION] Verified 5 sources.
+16:12:55 [INFO] src.article_writer: Generating article via primary Groq provider (openai/gpt-oss-120b)...
+16:12:55 [INFO] src.article_writer: Calling Groq API (openai/gpt-oss-120b), attempt 1/5 (tokens=8192)...
+16:13:00 [INFO] src.article_writer: Article produced by provider='groq', model='openai/gpt-oss-120b'.
+16:13:00 [INFO] src.report: [STAGE Article Generation] Status: SUCCESS (5.53s) - Generated draft 'How to Build a Clear Freelance Portfolio Without a Personal Website' (896 words, Live groq (openai/gpt-oss-120b)).
+16:13:00 [INFO] src.report: [STAGE Screenshot Capture] Status: SKIPPED (0.00s) - No trusted screenshot target is configured; no synthetic interface image will be embedded.
+16:13:00 [ERROR] pipeline: Quality gate rejected article: ['Evidence check failed: evidence quote for claim #1 is not present in retrieved source text.']
+16:13:00 [WARNING] src.state_store: Recorded failure for topic 'freelance-portfolio' (Attempt 1/3): Evidence check failed: evidence quote for claim #1 is not present in retrieved source text.
+16:13:00 [INFO] src.report: [STAGE Quality Gate] Status: FAILED (0.01s) - Rejected on hard check: Evidence check failed: evidence quote for claim #1 is not present in retrieved source text.

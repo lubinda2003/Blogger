@@ -1,0 +1,183 @@
+{
+  "run_id": "run-20261121-161248-8779ab",
+  "overall_status": "FAILED",
+  "timestamp": "2026-11-21T16:13:00.643303+00:00",
+  "total_duration_seconds": 11.86,
+  "dry_run": false,
+  "publish_mode": "draft",
+  "selected_topic_id": "freelance-portfolio",
+  "selected_topic": "How to Create a Clear Freelance Portfolio Without Building a Website",
+  "qa": {
+    "passed": false,
+    "failures": [
+      "Evidence check failed: evidence quote for claim #1 is not present in retrieved source text."
+    ],
+    "warnings": [
+      "SEO title advisory: title is 67 characters; aim for a concise, descriptive title around 30\u201365 characters."
+    ],
+    "metrics": {
+      "word_count": 896,
+      "sources_count": 2,
+      "labels_count": 2,
+      "seo_title_characters": 67,
+      "seo_description_characters": 127,
+      "screenshot_captured": false,
+      "has_public_screenshot": false
+    }
+  },
+  "metrics": {
+    "source_count": 5,
+    "screenshot_captured": false,
+    "visual_assets": {}
+  },
+  "accessibility": {
+    "available": false,
+    "target": "final article HTML in an isolated browser document; Blogger theme is not included",
+    "violations": [],
+    "passes": 0,
+    "incomplete": 0,
+    "error": "Accessibility scan has not run."
+  },
+  "research_sources": [
+    {
+      "title": "https://www.wix.com/blog/how-to-build-a-freelance-portfolio",
+      "url": "https://www.wix.com/blog/how-to-build-a-freelance-portfolio",
+      "retrieval_date": "November 21, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "To stand out, you need a clear plan for [how to create a freelance website](https://www.wix.com/blog/how-to-create-freelance-website-guide) that feels authentic to your style and goals",
+      "cleaned_text": "https://www.wix.com/blog/how-to-build-a-freelance-portfolio top of page [Try for free](https://users.wix.com/symphony/signin/signup/password?redirectTo=https%3A%2F%2Fusers.wix.com%2Fv1%2Foauth%2Fauthorize%3Fclient_id%3D8aa254a1-c039-4ce5-a6b4-9c901904e95e%26response_type%3Dcode%26redirect_uri%3Dhttps%253A%252F%252Fsymphony.wix.com%252Foauth2%252Fcallback%26scope%3Dsession_bound_access%26state%3DaHR0cHM6Ly9zeW1waG9ueS53aXguY29tLw) Grow your business with Symphony Launch your blog with our powerful AI [Portfolio Websites](https://www.wix.com/blog/explore/categories/portfolio-websites) # How to build a freelance portfolio the right way (+ inspiring examples) [Chaya Arbiv](https://www.wix.com/blog/profile/chaya-arbiv/author) July 20 Jul 20 9 min read Updated: Aug 21 **Ready to showcase your best work?** [**Start building your portfolio \u2192**](https://www.wix.com/portfolio-website/?utm_campaign=toplink-portfoliohomepage) Building a freelance portfolio can be an exciting step in your career. It\u2019s your opportunity to share your talent with the world and create a [portfolio website](https://www.wix.com/portfolio-website) that opens doors to new opportunities. The way you present your work can make all the difference, it\u2019s your story, your skills and your personality all wrapped into one. Not sure how to start? Tools like a [portfolio website maker](https://www.wix.com/portfolio-website) or even an [AI website builder](https://www.wix.com/ai-website-builder) can help you get up and running effortlessly. This blog will walk you through [how to make a portfolio](https://www.wix.com/blog/how-to-make-online-design-portfolio-guide) that shows your unique style and attracts your ideal clients. With a little creativity and the right tools, you\u2019ll be setting yourself up for freelancing success in no time. [Create your portfolio](https://www.wix.com/portfolio-website/?utm_campaign=content-portfoliohp) ## **What is a freelance portfolio?** Your freelance portfolio is more than just a collection of work, it\u2019s your secret weapon for attracting clients and landing jobs you\u2019re excited about. A top-notch portfolio combines creativity with strategy, showing exactly what you bring to the table. But [what is a professional portfolio](https://www.wix.com/blog/professional-portfolio), exactly? It\u2019s a carefully created space that serves as a mix of resume and sales pitch. By presenting real-world examples of your work, it gives potential clients tangible proof of what you can do. Your portfolio builds trust and gives people confidence in your ability to deliver. The magic of a freelance portfolio isn\u2019t limited to designers or writers, it\u2019s for all freelancers. Photographers, consultants, developers, marketers and professionals across industries can benefit from creating one. To stand out, you need a clear plan for [how to create a freelance website](https://www.wix.com/blog/how-to-create-freelance-website-guide) that feels authentic to your style and goals. Using one of the [be",
+      "verified_claims": [
+        "create clear freelance"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "How to Create a Freelance Writer Portfolio Without a Blog (And Still Look Legit) - Elna Cain",
+      "url": "https://elnacain.com/blog/create-freelance-writer-portfolio/",
+      "retrieval_date": "November 21, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "How to Create a Freelance Writer Portfolio Without a Blog (And Still Look Legit) - Elna Cain I\u2019ve got the ultimate freelance writing portfolio guide for you",
+      "cleaned_text": "How to Create a Freelance Writer Portfolio Without a Blog (And Still Look Legit) - Elna Cain I\u2019ve got the ultimate freelance writing portfolio guide for you! Look \u2013 when I started as a new freelance writer, I had no clue how to create a writing portfolio without a BLOG, website, clips or samples\u2026.with absolutely NOTHING to my name. I seriously was freaking out and was a bit scared that I didn\u2019t [\u2026] # How to Create a Freelance Writer Portfolio Without a Blog (And Still Look Legit) ![](https://secure.gravatar.com/avatar/1f0841a215772192fe66020dfc173a965d31837d9b8605490e77123b8cb3f838?s=40&d=https%3A%2F%2Felnacain.com%2Fwp-content%2Fthemes%2Felna-v5%2Fimages%2Fec-avatar-fb2377.png&r=g) [Elna Cain](https://elnacain.com/about/) | | [1 Comments](https://elnacain.com/blog/create-freelance-writer-portfolio/#respond) **I\u2019ve got the ultimate freelance writing portfolio guide for you!** Look \u2013 when I started as a new freelance writer, I had no clue how to create a writing portfolio without a BLOG, website, clips or samples\u2026.with absolutely NOTHING to my name. I seriously was freaking out and was a bit scared that I didn\u2019t know what to do. ![How to Create a Freelance Writer Portfolio Without a Blog (And Still Look Legit)](https://elnacain.com/wp-content/uploads/2025/07/create-freelance-writing-portfolio-1024x683.jpg) I mean, how DO you create a legit and credible freelance portfolio so that you can get clients? In my guide, I\u2019ll show you how you can get published so you can call yourself a true writer! Because, once you have that first bylined sample in your writing portfolio, then you can attract higher-paying clients. And the more higher-paying clients you have, the [more money you can make freelance writing](https://elnacain.com/blog/make-money-freelance-writing/)! So, bookmark this page (if that is even a thing still) and take notes if you need to! But, if you don\u2019t have time to read the entire guide, you can watch my YouTube video here (and make sure to subscribe to my channel! Thanks): ## What is a Freelance Writing Portfolio? A freelance writing portfolio shows your latest and best work as a writer. It\u2019s your proof. The thing that tells potential clients, \u201cYes, I know how to write.\u201d Without a portfolio\u2014even a simple one\u2014it\u2019s really hard to stand out or get taken seriously as a writer online. Clients want to *see* what you can do before they even think about hiring you. That\u2019s why, as a beginner, one of the first things you should focus on is creating your freelance writing portfolio. It doesn\u2019t need to be fancy or filled with [dozens of samples](https://elnacain.com/blog/what-to-write-about/). You just need a few solid pieces that show your skills and your voice. And you don\u2019t even need a website either! There are many places you can place your portfolio on, for free too! Having bylined work in your portfolio is also a huge plus because it does a few things: * **It proves you can actually write.** You\u2019re not just saying you\u2019re a writer, you\u2019re showing",
+      "verified_claims": [
+        "create clear freelance"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "How To Make a Freelance Portfolio on Upwork",
+      "url": "https://www.upwork.com/resources/how-to-create-portfolio",
+      "retrieval_date": "November 21, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 403,
+      "evidence_excerpt": "How To Make a Freelance Portfolio on Upwork [___](https://www.upwork.com/resources/how-to-create-portfolio#)",
+      "cleaned_text": "How To Make a Freelance Portfolio on Upwork [___](https://www.upwork.com/resources/how-to-create-portfolio#) [](https://www.upwork.com/) Hire talent Categories AI &Automation Development & IT Design& Creative Marketing Data & Analytics Admin & Support Writing & Content AI & Automation [AI Video Creators & Editors Generate and edit AI-powered video](https://www.upwork.com/hire/ai-generated-video-specialists/)[AI Integration Developers Connect AI to your existing tools](https://www.upwork.com/hire/ai-integration-developers/)[Chatbot Developers Build AI for support and sales](https://www.upwork.com/hire/chatbot-developers/)[Machine Learning Engineers Models that learn from your data](https://www.upwork.com/hire/machine-learning-experts/)[AI Developers Custom AI-powered apps and features](https://www.upwork.com/hire/ai-developers/)[Automation Experts Streamline your business processes](https://www.upwork.com/hire/automation-freelancers/)[N8N Experts No-code workflow automation](https://www.upwork.com/hire/n8n-experts/)[Vibe Coders Prototype and build rapidly with AI](https://www.upwork.com/hire/vibe-coding-developers/)[Claude Experts Build with Anthropic's Claude](https://www.upwork.com/hire/claude-specialists/)[AI Consultants Strategic AI guidance for business](https://www.upwork.com/hire/ai-consultants/) Development & IT [Full-Stack Developers Front and back end development](https://www.upwork.com/hire/full-stack-developers/)[WordPress Developers Build and maintain WordPress sites](https://www.upwork.com/hire/wordpress-developers/)[Web Developers Build and maintain websites/apps](https://www.upwork.com/hire/web-developers/)[Shopify Developers Launch and customize Shopify stores](https://www.upwork.com/hire/shopify-developers/)[Mobile App Developers Native and cross-platform apps](https://www.upwork.com/hire/mobile-app-developers/)[Webflow Developers Build in Webflow, no code](https://www.upwork.com/hire/webflow-freelancers/)[Front-End Developers Pixel-perfect interfaces and UX](https://www.upwork.com/hire/front-end-developers/)[Ecommerce Website Developers Build stores that convert and scale](https://www.upwork.com/hire/ecommerce-developers/)[React JS Developers Fast, dynamic front ends with React](https://www.upwork.com/hire/react-js-developers/)[Bubble.io Developers No-code apps built on Bubble](https://www.upwork.com/hire/bubble-io-developers/) Design & Creative [Logo Designers Marks and identities that stick](https://www.upwork.com/hire/logo-designers/)[Graphic Designers Visual assets for any format](https://www.upwork.com/hire/graphic-designers/)[Web Designers Conversion-focused web design](https://www.upwork.com/hire/web-designers/)[Video Editors Polished edits for any platform](https://www.upwork.com/hire/video-editors/)[Photo Editors Retouch, composite, and color work](https://www.upwork.com/hire/photo-editors/)[Adobe Photoshop Experts Advanced image editing](https://www.upwork.com/hire/adobe-photoshop-experts/)[UX/UI Designers Interfaces b",
+      "verified_claims": [
+        "create clear freelance"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "How to Build a Freelance Portfolio Without Clients: A Practical 2026 ...",
+      "url": "https://medium.com/@asifchotadon164/how-to-build-a-freelance-portfolio-without-clients-a-practical-2026-guide-subtitle-no-experience-26dba5f7a168",
+      "retrieval_date": "November 21, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 403,
+      "evidence_excerpt": "How to Build a Freelance Portfolio Without Clients: A Practical 2026 ..",
+      "cleaned_text": "How to Build a Freelance Portfolio Without Clients: A Practical 2026 ... Step 1: Choose One Service. Step 2: Create Three Strong Samples Quality is more important than quantity. Used clear headings, simple language,",
+      "verified_claims": [
+        "create clear freelance"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "Building a Freelance Portfolio for Beginners",
+      "url": "https://www.linkedin.com/top-content/career/freelance-career-advice/building-a-freelance-portfolio-for-beginners",
+      "retrieval_date": "November 21, 2026",
+      "verified": true,
+      "content_extraction_success": true,
+      "http_status": 200,
+      "evidence_excerpt": "The Dark Side of Portfolio Building & its a wake-up call for freelancers New freelancers are actually taught by experienced mentors to create a mock portfolio that they call a \"DEMO\"",
+      "cleaned_text": "Building a Freelance Portfolio for Beginners Explore top LinkedIn career content from experienced professionals. I need to address something troubling I'm seeing in the freelance world YES!! The Dark Side of Portfolio Building & its a wake-up call for freelancers New freelancers are actually taught by experienced mentors to create a mock portfolio that they call a \"DEMO\". This has to stop. Here's a real story: Years ago, I hired an intern whose portfolio looked incredible. Stunning social media designs, perfect layouts, and professional polish. But on day one, the truth emerged \u2013 every single design was a downloaded template he claimed as his own. The result? He couldn't deliver because he had zero real design experience. His career started and ended with deception. If you're starting your freelance journey in 2025, here's what you need to know: 1. Real experience beats fake portfolio pieces every time 2. Your personal brand can be your testing ground 3. Track actual results from real projects 4. Build genuine case studies, even if they're small 5. Focus on sustainable growth over quick wins In 2025, clients aren't just buying your designs \u2013 they're investing in your expertise. Build a career you're proud of, not one you have to hide. Instead of downloading templates, create original designs for your own social media. Document your growth. Share your learning process. Real clients appreciate authenticity over perfection. You're not just building a portfolio \u2013 you're building a reputation that will follow you throughout your career. The foundation you build today determines your success tomorrow. Choose integrity over shortcuts. #Freelancing #CareerAdvice #PortfolioBuilding #Authenticity #ProfessionalDevelopment",
+      "verified_claims": [
+        "create clear freelance"
+      ],
+      "unverified_claims": [],
+      "failure_reason": null
+    },
+    {
+      "title": "3 Ways To Build A Freelance Portfolio As A Beginner",
+      "url": "https://www.forbes.com/sites/chelseatobin/2026/06/23/3-ways-to-build-a-freelance-portfolio-as-a-total-beginner",
+      "retrieval_date": "November 21, 2026",
+      "verified": false,
+      "content_extraction_success": true,
+      "http_status": 403,
+      "evidence_excerpt": "Strategies include creating \"mock\" projects for dream or target clients, undertaking volunteer work in exchange for real-world examples and",
+      "cleaned_text": null,
+      "verified_claims": [],
+      "unverified_claims": [
+        "create clear freelance"
+      ],
+      "failure_reason": "Tavily content extracted but did not support claims: HTTP request failed with code 403"
+    }
+  ],
+  "blogger": {
+    "post_id": null,
+    "post_url": null,
+    "is_draft": true
+  },
+  "next_action": "Remediate QA failure: Evidence check failed: evidence quote for claim #1 is not present in retrieved source text. before publishing.",
+  "stages": [
+    {
+      "stage": "Validation",
+      "status": "SUCCESS",
+      "duration_seconds": 0.0,
+      "details": "Environment and configuration validated successfully."
+    },
+    {
+      "stage": "Topic Discovery",
+      "status": "SUCCESS",
+      "duration_seconds": 0.0,
+      "details": "Selected 'How to Create a Clear Freelance Portfolio Without Building a Website' from live search opportunities. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted."
+    },
+    {
+      "stage": "Topic Selection",
+      "status": "SUCCESS",
+      "duration_seconds": 0.0,
+      "details": "Selected topic 'How to Create a Clear Freelance Portfolio Without Building a Website' (Priority 2) [Repository state active]. Selected from the prepared evergreen topic queue. Autonomous discovery is deferred until the queue is exhausted."
+    },
+    {
+      "stage": "Research",
+      "status": "SUCCESS",
+      "duration_seconds": 5.31,
+      "details": "[LIVE HTTP VERIFICATION] Verified 5 sources."
+    },
+    {
+      "stage": "Article Generation",
+      "status": "SUCCESS",
+      "duration_seconds": 5.53,
+      "details": "Generated draft 'How to Build a Clear Freelance Portfolio Without a Personal Website' (896 words, Live groq (openai/gpt-oss-120b))."
+    },
+    {
+      "stage": "Screenshot Capture",
+      "status": "SKIPPED",
+      "duration_seconds": 0.0,
+      "details": "No trusted screenshot target is configured; no synthetic interface image will be embedded."
+    },
+    {
+      "stage": "Quality Gate",
+      "status": "FAILED",
+      "duration_seconds": 0.01,
+      "details": "Rejected on hard check: Evidence check failed: evidence quote for claim #1 is not present in retrieved source text."
+    }
+  ]
+}
