@@ -109,6 +109,13 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(report.passed, report.failures)
         self.assertTrue(any("Length advisory" in warning for warning in report.warnings))
 
+    def test_article_without_source_links_can_pass(self):
+        """An original article is not blocked when no external citations are needed."""
+        draft = self._create_valid_draft()
+        draft.sources_used = []
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, f"An uncited original article should pass: {report.failures}")
+
     def test_one_optional_source_does_not_fail_source_count_gate(self):
         """An article may include one useful source; no minimum source quota applies."""
         draft = self._create_valid_draft()
