@@ -121,7 +121,7 @@ class ResearchBrief:
             lines.append("⚠️ NOTE: This research brief was generated in DRY-RUN test fixture mode.\n")
 
         if self.key_facts:
-            lines.append("### Key Verified Facts:")
+            lines.append("### Editorial Context Notes:")
             for fact in self.key_facts:
                 lines.append(f"- {fact}")
 
@@ -712,7 +712,7 @@ class ResearchCollector:
                             url=canonical_url,
                             retrieval_date=today,
                             verified=is_verified,
-                            content_extraction_success=True,
+                            content_extraction_success=is_verified,
                             http_status=status,
                             evidence_excerpt=supporting_excerpt or excerpt,
                             cleaned_text=cleaned_corpus if is_verified else None,
@@ -745,8 +745,8 @@ class ResearchCollector:
                             evidence_excerpt=supporting_excerpt or tavily_snippet[:250],
                             cleaned_text=cleaned_corpus if is_verified else None,
                             verified_claims=verified_claims if is_verified else [],
-                            unverified_claims=[] if is_verified else (unverified_claims or claims),
-                            failure_reason=None if is_verified else f"Tavily content extracted but did not support claims: {err}",
+                            unverified_claims=[],
+                            failure_reason=None if is_verified else (err or "No readable source text was available from the search result."),
                         )
                     )
                 else:
