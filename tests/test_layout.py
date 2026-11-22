@@ -61,6 +61,21 @@ class TestStepsAndTables(unittest.TestCase):
         self.assertRegex(out, r"<td style=\"[^\"]*\">Research</td>")
         self.assertIn("overflow-x:auto", out)
         self.assertNotIn("| --- |", out)
+    def test_compare_table_wrapper_is_keyboard_accessible(self):
+        out = apply_layout('<table class="compare"><thead><tr><th>A</th></tr></thead><tbody><tr><td>x</td></tr></tbody></table>')
+        self.assertIn('tabindex="0"', out)
+        self.assertIn('role="region"', out)
+        self.assertIn('aria-label="Scrollable comparison table"', out)
+
+    def test_scrollable_code_examples_are_keyboard_accessible(self):
+        out = apply_layout('<pre style="overflow-x:auto;"><code>long code</code></pre>')
+        self.assertIn('tabindex="0"', out)
+        self.assertIn('aria-label="Scrollable code example"', out)
+
+    def test_non_scrollable_code_examples_do_not_gain_extra_tab_stops(self):
+        body = '<pre style="padding:8px;"><code>x = 1</code></pre>'
+        self.assertEqual(apply_layout(body), body)
+
     def test_other_tables_are_untouched(self):
         body = "<table><tr><td>x</td></tr></table>"
         self.assertEqual(apply_layout(body), body)
