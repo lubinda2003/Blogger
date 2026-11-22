@@ -241,14 +241,13 @@ def render_mermaid_blocks(
     as reader-facing article content.
     """
     pattern = re.compile(
-        r'<pre\\b[^>]*class=["\\'][^"\\']*\\bmermaid\\b[^"\\']*["\\'][^>]*>(.*?)</pre\\s*>',
+        r'<pre\b[^>]*class=["\'][^"\']*\bmermaid\b[^"\']*["\'][^>]*>(.*?)</pre\s*>',
         re.I | re.S,
     )
     matches = list(pattern.finditer(article_html or ""))
     updated = article_html or ""
     items: list[dict] = []
     render_limit = max(0, int(max_items))
-    attempted = 0
 
     for index, match in reversed(list(enumerate(matches, start=1))):
         source = html.unescape(re.sub(r"<[^>]+>", "", match.group(1))).strip()
@@ -257,8 +256,7 @@ def render_mermaid_blocks(
             "Use the written steps in this section to follow the process.</p>"
         )
         item = {"path": None, "url": None, "kind": "diagram", "status": "omitted"}
-        if source and len(source) <= 12000 and attempted < render_limit:
-            attempted += 1
+        if source and len(source) <= 12000 and index <= render_limit:
             try:
                 svg_path = Path(output_dir) / "visuals" / f"diagram-{index}.svg"
                 render_mermaid_svg(source, svg_path)
