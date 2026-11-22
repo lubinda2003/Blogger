@@ -133,13 +133,14 @@ def evaluate_formula(formula: str, cells: Dict[str, Any]) -> Any:
         row, col = _cell_parts(str(reference).upper())
         grid[(row, col)] = _coerce(value)
 
-    expression = formula.strip()[1:].upper()
+    expression = formula.strip()[1:]
     # Preserve quoted text while normalizing function names and references.
     quoted = []
     def stash(match):
         quoted.append(match.group(0))
         return f"__STRING_{len(quoted)-1}__"
     expression = re.sub(r'"(?:[^"]|"")*"', stash, expression)
+    expression = expression.upper()
 
     def range_value(match):
         first, last = match.group(1).upper(), match.group(2).upper()
@@ -150,7 +151,11 @@ def evaluate_formula(formula: str, cells: Dict[str, Any]) -> Any:
         values = []
         for row in range(r1, r2 + 1):
             for col in range(c1, c2 + 1):
-                values.append(grid.get((row, col), ""))
+                if (row, col) not in grid:
+                    raise FormulaValidationError(
+                        f"Range {first}:{last} is missing sample cell at row {row}, column {col}."
+                    )
+                values.append(grid[(row, col)])
         return repr(values)
 
     expression = re.sub(r"\b([A-Z]{1,3}[1-9][0-9]*):([A-Z]{1,3}[1-9][0-9]*)\b", range_value, expression)
