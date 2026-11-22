@@ -119,7 +119,7 @@ class TestQualityChecks(unittest.TestCase):
     def test_one_optional_source_does_not_fail_source_count_gate(self):
         """An article may include one useful source; no minimum source quota applies."""
         draft = self._create_valid_draft()
-        draft.sources_used = [{"title": "Only One Source", "url": "https://example.com"}]
+        draft.sources_used = [draft.sources_used[0]]
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertTrue(report.passed, f"Optional sources should not block a draft: {report.failures}")
 
