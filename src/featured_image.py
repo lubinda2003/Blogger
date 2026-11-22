@@ -18,6 +18,11 @@ JPEG_MAGIC = b"\xff\xd8\xff"
 
 # Topic families deliberately use different art direction; no fixed brand palette.
 PALETTES = {
+    "ai": ("#11152b", "#7dd3fc", "#fbbf24", "#f8fafc"),
+    "software": ("#102b3f", "#67e8f9", "#fb923c", "#ecfeff"),
+    "business": ("#251b16", "#fbbf24", "#fb7185", "#fff7ed"),
+    "design": ("#2a1642", "#f0abfc", "#a3e635", "#fdf4ff"),
+    "spreadsheets": ("#102d27", "#86efac", "#facc15", "#f0fdf4"),
     "productivity": ("#14251f", "#a7f3d0", "#fbbf24", "#ecfdf5"),
     "student": ("#101b36", "#6ee7f9", "#f59e0b", "#dbeafe"),
     "freelancing": ("#251638", "#c4b5fd", "#fb7185", "#f5f3ff"),
@@ -27,6 +32,16 @@ PALETTES = {
 
 def _topic_family(title: str, kicker: str = "") -> str:
     text = f"{title} {kicker}".lower()
+    if any(w in text for w in ("artificial intelligence", " ai ", "ai assistant", "chatgpt", "gemini", "claude", "copilot")):
+        return "ai"
+    if any(w in text for w in ("spreadsheet", "excel", "google sheets", "formula", "data reporting")):
+        return "spreadsheets"
+    if any(w in text for w in ("graphic design", "canva", "video editing", "content creation", "brand kit")):
+        return "design"
+    if any(w in text for w in ("digital business", "e-commerce", "ecommerce", "marketing", "payment processing", "online store")):
+        return "business"
+    if any(w in text for w in ("software", "notion", "obsidian", "browser extension", "app comparison")):
+        return "software"
     if any(w in text for w in ("student", "study", "exam", "academic", "research", "learning", "notes")):
         return "student"
     if any(w in text for w in ("freelanc", "client", "proposal", "portfolio", "invoice", "independent worker")):
