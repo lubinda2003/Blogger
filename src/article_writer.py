@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 USER_AGENT = "DigitalToolkitContentEngine/1.0"
 DEFAULT_MAX_TOKENS = 8192
-GROQ_MAX_COMPLETION_TOKENS = 8192
+GROQ_MAX_COMPLETION_TOKENS = 6000
 GROQ_MAX_PROMPT_CHARS = 32000
 
 # Structured output JSON schema for Gemini v1beta responseSchema
