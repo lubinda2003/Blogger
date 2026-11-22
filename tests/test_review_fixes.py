@@ -24,6 +24,23 @@ def _cfg(tmp, dry_run=True):
 
 
 class TestDraftBackup(unittest.TestCase):
+    def test_pipeline_normalizes_description_before_saving_and_qa(self):
+        original = ArticleWriter.write_article
+
+        def long_description(writer, topic, brief, dry_run=False):
+            draft = original(writer, topic, brief, dry_run)
+            draft.meta_description = "A useful practical guide with clear instructions and helpful examples. " * 4
+            return draft
+
+        with tempfile.TemporaryDirectory() as tmp, patch.object(
+            ArticleWriter, "write_article", long_description
+        ):
+            cfg = _cfg(tmp)
+            self.assertEqual(pipeline.run_pipeline(cfg, target_topic_id="weekly-work-plan"), 0)
+            with open(os.path.join(cfg.output_dir, "draft.json"), encoding="utf-8") as handle:
+                saved = json.load(handle)
+        self.assertLessEqual(len(saved["meta_description"]), 155)
+
     def test_draft_json_and_html_are_saved(self):
         """main.py used json without importing it, so draft.json was empty and draft.html never written."""
         with tempfile.TemporaryDirectory() as tmp:
