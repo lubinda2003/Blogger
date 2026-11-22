@@ -94,11 +94,26 @@ class TestTableOfContents(unittest.TestCase):
 
 class TestReferenceSections(unittest.TestCase):
 
+    def test_empty_reference_placeholder_is_removed_before_toc_generation(self):
+        body = (
+            "<h2>Introduction</h2><p>Start here.</p>"
+            "<h2>Steps</h2><p>Do the task.</p>"
+            "<h2>Examples</h2><p>Use this example.</p>"
+            "<h2>Next steps</h2><p>Continue.</p>"
+            "<h2>Sources &amp; References</h2>"
+            "<p>None required beyond general best practices.</p>"
+        )
+        out = apply_layout(body)
+        self.assertNotIn("Sources &amp; References", out)
+        self.assertNotIn("None required", out)
+        self.assertNotIn(">Sources &amp; References</a>", out)
+        self.assertIn('aria-label="Table of contents"', out)
+
     def test_duplicate_reference_sections_are_removed(self):
         body = (
             "<h2>Guide</h2><p>Useful article text.</p>"
-            "<h2>Sources &amp; References</h2><ul><li>Source A</li></ul>"
-            "<h2>References &amp; Resources</h2><ul><li>Source B</li></ul>"
+            '<h2>Sources &amp; References</h2><ul><li><a href="https://example.com/a">Source A</a></li></ul>'
+            '<h2>References &amp; Resources</h2><ul><li><a href="https://example.com/b">Source B</a></li></ul>'
         )
         out = apply_layout(body)
         self.assertEqual(len(re.findall(r"<h2[^>]*>[^<]*(?:Sources|References)", out)), 1)
