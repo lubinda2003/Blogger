@@ -68,6 +68,7 @@ class TestQualityChecks(unittest.TestCase):
         draft = self._create_valid_draft()
         draft.content_type = "Step-by-step tutorial"
         draft.html_content = "<h2>Overview</h2><p>" + "Useful guidance helps readers complete practical tasks. " * 100 + "</p>"
+        draft.sources_used = []
         report = self.gate.run_all_checks(draft, check_duplicate=False)
         self.assertTrue(report.passed, report.failures)
         self.assertEqual(report.metrics["content_type"], "Step-by-step tutorial")
