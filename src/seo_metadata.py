@@ -21,7 +21,7 @@ class SEOMetadata:
         """
         text = html.unescape(str(description or ""))
         text = re.sub(r"<[^>]+>", " ", text)
-        text = re.sub(r"\\s+", " ", text).strip()
+        text = re.sub(r"\s+", " ", text).strip()
         limit = max(1, int(max_characters))
         if len(text) <= limit:
             return text
