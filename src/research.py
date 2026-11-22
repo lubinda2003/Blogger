@@ -567,7 +567,7 @@ class ResearchCollector:
             return []
         # One focused discovery request keeps each article inexpensive. The
         # returned source pool is still independently fetched and evidence-checked.
-        return [f'"{title}" official documentation product features pricing plan limits integrations help center']
+        return [f'"{title}" official documentation reliable sources product features pricing plan limits integrations help center']
 
     def conduct_research(
         self,
