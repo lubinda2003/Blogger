@@ -1,0 +1,208 @@
+{
+  "version": "1.0",
+  "publication": "The Digital Toolkit",
+  "categories": [
+    {
+      "name": "AI and AI Tools",
+      "clusters": [
+        "AI fundamentals and beginner guides",
+        "AI assistants and chatbot tutorials",
+        "Prompt engineering and effective prompting",
+        "AI for writing and communication",
+        "AI for students, learning and research",
+        "AI for freelancers and entrepreneurs",
+        "AI image, video and design tools",
+        "AI automation and workflows",
+        "AI tool comparisons, reviews and alternatives",
+        "AI accuracy, privacy and responsible use"
+      ]
+    },
+    {
+      "name": "Office Software and Everyday Productivity",
+      "clusters": [
+        "Word processing and document creation",
+        "Presentations and slide design",
+        "Email and digital communication",
+        "Cloud storage and file management",
+        "Meetings and collaboration",
+        "PDF tools and document conversion",
+        "Calendars, planning and task management",
+        "Office software tips and shortcuts",
+        "Productivity workflows and digital organization",
+        "Software comparisons and practical reviews"
+      ]
+    },
+    {
+      "name": "Spreadsheets, Data and Reporting",
+      "clusters": [
+        "Spreadsheet fundamentals",
+        "Basic formulas and functions",
+        "Logical and conditional formulas",
+        "Lookup and reference formulas",
+        "Data management and cleaning",
+        "Personal finance spreadsheets",
+        "Business spreadsheets",
+        "Data analysis and pivot tables",
+        "Charts, dashboards and reporting",
+        "Spreadsheet automation and platform comparisons"
+      ]
+    },
+    {
+      "name": "Graphic Design, Video and Content Creation",
+      "clusters": [
+        "Graphic design fundamentals",
+        "Canva and design software tutorials",
+        "Branding and visual identity",
+        "Social media design",
+        "Video editing fundamentals",
+        "Short-form video production",
+        "Content planning and creation",
+        "AI-assisted design and media",
+        "Creative resources and licensing",
+        "Design and editing tool comparisons"
+      ]
+    },
+    {
+      "name": "Freelancing and Remote Work",
+      "clusters": [
+        "Getting started with freelancing",
+        "Finding work and clients",
+        "Professional profiles and positioning",
+        "Portfolios and sample projects",
+        "Proposals and applications",
+        "Pricing, quotations and invoices",
+        "Client communication and management",
+        "Remote work tools and collaboration",
+        "Freelance business operations",
+        "Remote work productivity"
+      ]
+    },
+    {
+      "name": "Digital Business, Marketing and E-commerce",
+      "clusters": [
+        "Starting and planning an online business",
+        "Digital products and online selling",
+        "E-commerce platforms and operations",
+        "Affiliate marketing",
+        "Blogging and digital publishing",
+        "Search engine optimization",
+        "Social media marketing",
+        "Email marketing and automation",
+        "Business software and customer management",
+        "Analytics and performance reporting"
+      ]
+    },
+    {
+      "name": "Digital Learning, Research and Study Skills",
+      "clusters": [
+        "Digital note-taking systems",
+        "Study planning and organization",
+        "Online research skills",
+        "Research and citation tools",
+        "AI-assisted learning",
+        "Flashcards, memory and revision",
+        "Online courses and learning platforms",
+        "Academic productivity",
+        "Information and media literacy",
+        "Digital learning tool comparisons"
+      ]
+    },
+    {
+      "name": "Digital Foundations, Online Safety and Troubleshooting",
+      "clusters": [
+        "Computer and smartphone fundamentals",
+        "Internet and browser skills",
+        "Email fundamentals",
+        "Password and account security",
+        "Online safety and scam awareness",
+        "Privacy and data protection",
+        "Cloud storage troubleshooting",
+        "Software and device troubleshooting",
+        "Backup and recovery",
+        "Accessibility and inclusive digital skills"
+      ]
+    }
+  ],
+  "content_types": [
+    {
+      "name": "Beginner guide",
+      "purpose": "Explain a subject from the ground up and define essential terms."
+    },
+    {
+      "name": "Step-by-step tutorial",
+      "purpose": "Show a reproducible sequence, what the reader should see, and how to confirm success."
+    },
+    {
+      "name": "Practical project",
+      "purpose": "Help the reader build or complete a concrete deliverable with inputs, steps, and an example result."
+    },
+    {
+      "name": "Formula or calculation tutorial",
+      "purpose": "Show exact inputs, formulas, cell references, calculated outputs, and an independent check."
+    },
+    {
+      "name": "Troubleshooting guide",
+      "purpose": "Identify symptoms, likely causes, safe diagnostic steps, and a verifiable resolution."
+    },
+    {
+      "name": "Comparison",
+      "purpose": "Compare options using consistent criteria, current evidence, limitations, and reader-fit recommendations."
+    },
+    {
+      "name": "Review or evaluation",
+      "purpose": "Assess a product or service transparently without pretending to have performed hands-on testing."
+    },
+    {
+      "name": "Explainer",
+      "purpose": "Explain how something works, why it matters, and its limitations."
+    },
+    {
+      "name": "Checklist or template",
+      "purpose": "Provide the complete promised checklist or usable template, not merely describe one."
+    }
+  ],
+  "category_accuracy_rules": {
+    "AI and AI Tools": [
+      "Distinguish model capabilities from app features and account-plan limits.",
+      "Do not present generated answers as verified facts; include a practical fact-checking step.",
+      "Check current privacy, data-use, regional availability, and free-versus-paid details when relevant."
+    ],
+    "Office Software and Everyday Productivity": [
+      "Name the specific application, platform, and interface path when giving instructions.",
+      "Do not assume Word, Google Docs, PowerPoint, and Google Slides have identical features.",
+      "For tutorials, state the expected result and an easy way to verify it."
+    ],
+    "Spreadsheets, Data and Reporting": [
+      "For formula tutorials, provide a small, complete sample dataset with cell locations.",
+      "Show the exact formula, the cell where it belongs, and the expected calculated result.",
+      "Recalculate examples independently; check references, ranges, criteria, blanks, and edge cases.",
+      "Distinguish Excel-specific features from Google Sheets features and note version or locale differences where relevant.",
+      "Never leave a formula as an unevaluated result when the article promises a worked example."
+    ],
+    "Graphic Design, Video and Content Creation": [
+      "Distinguish genuine product screenshots from illustrative artwork.",
+      "State relevant export dimensions, aspect ratios, file formats, and platform constraints accurately.",
+      "Explain licensing and usage rights for fonts, stock assets, music, and generated media when relevant."
+    ],
+    "Freelancing and Remote Work": [
+      "Label invented client examples as hypothetical and keep scope, deliverables, timelines, and figures consistent.",
+      "Treat rates, deposits, milestones, and payment arrangements as negotiable rather than universal.",
+      "Verify country support and withdrawal conditions before recommending a payment service."
+    ],
+    "Digital Business, Marketing and E-commerce": [
+      "Distinguish platform capabilities, plan limits, fees, and eligibility requirements.",
+      "Explain affiliate disclosures and avoid guaranteed income, traffic, or conversion claims.",
+      "Verify payment, checkout, and payout availability for the reader's country before making regional claims."
+    ],
+    "Digital Learning, Research and Study Skills": [
+      "Distinguish learning support from doing assessed work dishonestly.",
+      "Show readers how to evaluate source credibility and verify AI-generated research.",
+      "Do not invent citations, academic references, quotations, or research findings."
+    ],
+    "Digital Foundations, Online Safety and Troubleshooting": [
+      "Give safe, reversible diagnostic steps before destructive actions such as resets or deletion.",
+      "Describe symptoms, likely causes, exact steps, and the expected result.",
+      "Never ask readers to expose passwords, recovery codes, private keys, or sensitive account details."
+    ]
+  }
+}

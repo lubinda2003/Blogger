@@ -1,6 +1,7 @@
 """Autonomous editorial topic discovery from live Tavily search results.
 
-The static CSV remains an optional fallback/manual source, not the normal topic supply.
+The static CSV remains the prepared queue; autonomous discovery searches all eight
+approved editorial categories only after that queue has no eligible topics.
 """
 import json
 import logging
@@ -17,10 +18,14 @@ logger = logging.getLogger(__name__)
 
 
 EDITORIAL_SEARCHES = (
-    ("Productivity", "personal productivity digital organization time management workflows focus task planning", "How-to"),
-    ("Student Success", "study skills digital note taking online research exam preparation academic productivity", "Guide"),
-    ("Freelancing", "freelance skills client communication proposals portfolios project delivery remote work", "How-to"),
-    ("Digital Skills", "practical digital skills computer basics internet safety email spreadsheets cloud files online collaboration", "Tutorial"),
+    ("AI and AI Tools", "practical AI tools tutorials AI assistants prompting AI workflows for work students freelancers", "How-to"),
+    ("Office Software and Everyday Productivity", "Microsoft Office Google Workspace email documents presentations cloud storage productivity tutorials", "Tutorial"),
+    ("Spreadsheets, Data and Reporting", "Excel Google Sheets formulas spreadsheet examples budgets data analysis dashboards reporting tutorials", "Tutorial"),
+    ("Graphic Design, Video and Content Creation", "Canva graphic design video editing short form video content creation tutorials", "How-to"),
+    ("Freelancing and Remote Work", "freelancing portfolio proposals client communication remote work tools practical guides", "Guide"),
+    ("Digital Business, Marketing and E-commerce", "digital products ecommerce affiliate marketing blogging SEO email marketing small business tools", "How-to"),
+    ("Digital Learning, Research and Study Skills", "digital note taking study skills online research information literacy learning tools", "Guide"),
+    ("Digital Foundations, Online Safety and Troubleshooting", "computer basics online safety phishing account security cloud storage troubleshooting practical guides", "Tutorial"),
 )
 
 _BLOCKED_DOMAINS = (
@@ -38,6 +43,8 @@ def _intent(title: str, content: str) -> str:
     text = f"{title} {content}".lower()
     if any(term in text for term in (" vs ", " versus ", " compared", "comparison", "alternative")):
         return "Comparison"
+    if any(term in text for term in ("troubleshoot", "fix ", "error", "not working", "problem")):
+        return "Troubleshooting"
     if any(term in text for term in ("how to", "step-by-step", "step by step", "tutorial", "setup", "guide")):
         return "Tutorial"
     if any(term in text for term in ("best ", "top ", "alternatives", "tools for")):
@@ -46,11 +53,11 @@ def _intent(title: str, content: str) -> str:
 
 
 class AutonomousTopicDiscoverer:
-    """Find fresh article candidates by searching Tavily across the publication's four practical digital-skills categories."""
+    """Find fresh article candidates by searching Tavily across all eight editorial categories."""
 
     ENDPOINT = "https://api.tavily.com/search"
 
-    def __init__(self, api_key: Optional[str], timeout: int = 18, max_per_category: int = 5):
+    def __init__(self, api_key: Optional[str], timeout: int = 18, max_per_category: int = 3):
         self.api_key = (api_key or "").strip()
         self.timeout = timeout
         self.max_per_category = max(1, min(max_per_category, 8))
@@ -97,7 +104,7 @@ class AutonomousTopicDiscoverer:
             return False
 
     def discover(self, state_store) -> List[TopicItem]:
-        """Search each editorial pillar and return the strongest unseen, usable candidates."""
+        """Search each editorial category and return the strongest unseen candidates."""
         self.last_candidates = []
         self.last_search_count = 0
         if not self.api_key:
@@ -117,7 +124,6 @@ class AutonomousTopicDiscoverer:
                 content = str(result.get("content") or result.get("snippet") or "").strip()
                 if len(title) < 24 or len(title) > 150 or not self._allowed_url(url):
                     continue
-                # Avoid social/forum pages and generic navigation pages; require a useful topical signal.
                 if len(content) < 40:
                     continue
                 topic_id = _slug(title)
@@ -136,7 +142,7 @@ class AutonomousTopicDiscoverer:
                     relevance = float(result.get("score", 0.0) or 0.0)
                 except (TypeError, ValueError):
                     relevance = 0.0
-                # Tavily's relevance score is a search-result signal, not keyword volume.
+                # Tavily relevance is a result-ordering signal, not search volume or demand.
                 item = TopicItem(
                     id=topic_id,
                     topic=title,
@@ -145,7 +151,7 @@ class AutonomousTopicDiscoverer:
                     priority=max(1, min(5, 5 - int(relevance * 4))),
                     requires_screenshot=False,
                     target_url="",
-                    target_audience="International students, freelancers and everyday internet users",
+                    target_audience="International students, freelancers, entrepreneurs, creators and everyday internet users",
                     screenshot_targets=[],
                 )
                 category_items.append((relevance, item))
@@ -157,13 +163,13 @@ class AutonomousTopicDiscoverer:
         self.last_candidates = candidates
         if candidates:
             self.last_note = (
-                f"Tavily searched {self.last_search_count} editorial areas and found "
+                f"Tavily searched {self.last_search_count} editorial categories and found "
                 f"{len(candidates)} unseen topic candidates. Ranking uses Tavily result relevance, "
                 "not verified search volume."
             )
         else:
             self.last_note = (
-                f"Tavily searched {self.last_search_count} editorial areas but found no eligible new candidates. "
+                f"Tavily searched {self.last_search_count} editorial categories but found no eligible new candidates. "
                 "No article was generated."
             )
         return candidates
