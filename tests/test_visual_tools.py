@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from src.visual_tools import (
-    AXE_JS, MERMAID_JS, audit_html_accessibility,
+    AXE_JS, MERMAID_JS, ARTICLE_FRAGMENT_EXCLUDED_AXE_RULES, audit_html_accessibility,
     generate_supporting_visuals,
     inject_visual_figures,
     optimize_image,
@@ -141,6 +141,9 @@ class TestVisualHelpers(unittest.TestCase):
             result = audit_html_accessibility("<p>Article</p>")
         self.assertFalse(result["available"])
         self.assertIn("error", result)
+        self.assertIn("document-title", result["excluded_rules"])
+        self.assertIn("html-has-lang", result["excluded_rules"])
+        self.assertIn("page-has-heading-one", ARTICLE_FRAGMENT_EXCLUDED_AXE_RULES)
 
 
 if __name__ == "__main__":

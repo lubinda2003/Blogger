@@ -65,6 +65,34 @@ def deduplicate_reference_sections(body: str) -> str:
     return body
 
 
+
+def remove_empty_reference_sections(body: str) -> str:
+    """Remove source/reference headings that contain no actual linked references.
+
+    A references heading is useful only when it points readers to real resources.
+    Placeholder copy such as "None required" should not become a published section
+    or an entry in the generated table of contents.
+    """
+    headings = list(_REFERENCE_HEADING.finditer(body or ""))
+    removals = []
+    for match in headings:
+        label = re.sub(r"<[^>]+>", " ", html.unescape(match.group(2)))
+        if not (_REFERENCE_WORDS.search(label) and len(label.split()) <= 5):
+            continue
+        next_section = next(
+            (heading for heading in headings
+             if heading.start() > match.start() and heading.group(1) == "2"),
+            None,
+        )
+        end = next_section.start() if next_section else len(body)
+        section = body[match.end():end]
+        if not re.search(r"""<a\b[^>]*\bhref=["'][^"']+["']""", section, re.I):
+            removals.append((match.start(), end))
+
+    for start, end in reversed(removals):
+        body = body[:start] + body[end:]
+    return body
+
 def _slug(text: str) -> str:
     plain = re.sub(r"<[^>]+>", "", html.unescape(text)).lower()
     return re.sub(r"[^a-z0-9]+", "-", plain).strip("-") or "section"
@@ -168,6 +196,7 @@ def apply_layout(body: str) -> str:
     body = convert_markdown_tables(body)
     body = sanitize_html(body)
     body = deduplicate_reference_sections(body)
+    body = remove_empty_reference_sections(body)
     body = add_table_of_contents(body)
     body = _style_callouts(body)
     body = _style_steps(body)

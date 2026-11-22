@@ -266,13 +266,28 @@ def render_mermaid_blocks(
     return updated, items
 
 
+ARTICLE_FRAGMENT_EXCLUDED_AXE_RULES = (
+    "document-title",
+    "html-has-lang",
+    "landmark-one-main",
+    "page-has-heading-one",
+    "region",
+)
+
+
 def audit_html_accessibility(article_html: str, output_path: Optional[str] = None) -> dict:
-    """Run axe-core against article markup. Findings are reported, not used as a false-positive hard gate."""
-    scan_target = "final article HTML in an isolated browser document; live Blogger theme and surrounding page are not included"
+    """Scan article-body accessibility without misreporting page-shell requirements.
+
+    Blogger supplies the document title, language, post-title heading and page
+    landmarks through its theme. An isolated article fragment cannot be expected
+    to provide those full-page elements, so those axe rules are excluded here.
+    """
+    scan_target = "article-body fragment in an isolated browser document; Blogger theme/page-shell checks are excluded"
     if not AXE_JS.is_file():
         result = {
             "available": False, "target": scan_target, "violations": [],
             "passes": 0, "incomplete": 0, "error": "axe-core is not installed",
+            "excluded_rules": list(ARTICLE_FRAGMENT_EXCLUDED_AXE_RULES),
         }
         if output_path:
             path = Path(output_path)
@@ -284,6 +299,7 @@ def audit_html_accessibility(article_html: str, output_path: Optional[str] = Non
     result = {
         "available": True, "target": scan_target, "violations": [],
         "passes": 0, "incomplete": 0, "error": None,
+        "excluded_rules": list(ARTICLE_FRAGMENT_EXCLUDED_AXE_RULES),
     }
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -291,7 +307,10 @@ def audit_html_accessibility(article_html: str, output_path: Optional[str] = Non
             page = browser.new_page(viewport={"width": 390, "height": 844})
             page.set_content(article_html, wait_until="domcontentloaded")
             page.add_script_tag(path=str(AXE_JS.resolve()))
-            report = page.evaluate("async () => await axe.run(document)")
+            report = page.evaluate("""async (excludedRules) => {
+                const rules = Object.fromEntries(excludedRules.map((id) => [id, { enabled: false }]));
+                return await axe.run(document, { rules });
+            }""", list(ARTICLE_FRAGMENT_EXCLUDED_AXE_RULES))
             result["violations"] = [
                 {
                     "id": item.get("id"),
