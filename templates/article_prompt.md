@@ -12,7 +12,7 @@ Your task is to produce a useful, accurate article that answers a real reader ne
 - Primary search intent: {{PRIMARY_INTENT}}
 - Target URL: {{TARGET_URL}}
 - Screenshot requested: {{REQUIRES_SCREENSHOT}}
-- Verified research brief:
+- Research background:
 {{RESEARCH_BRIEF}}
 
 ## Editorial priorities — follow in this order
@@ -90,9 +90,7 @@ Return only one valid JSON object. Do not wrap it in Markdown fences.
     "alt_text": "Accurate descriptive alt text",
     "aspect_ratio": "16:9"
   },
-  "sources_used": [
-    {"title": "Source title", "url": "https://example.com"}
-  ],
+  "sources_used": [],
   "screenshot_spec": {
     "needed": false,
     "target_url": "",
@@ -103,4 +101,4 @@ Return only one valid JSON object. Do not wrap it in Markdown fences.
   "last_checked_date": "Month Year"
 }
 
-Keep the JSON schema complete. If screenshots are not useful, set screenshot_spec.needed to false.
+Include sources_used only when a useful reference link is genuinely needed; otherwise use an empty array. Keep the JSON schema complete. If screenshots are not useful, set screenshot_spec.needed to false.
