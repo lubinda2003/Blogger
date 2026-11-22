@@ -13,6 +13,25 @@ class SEOMetadata:
     KNOWN_ACRONYMS = {"ai", "api", "ui", "ux", "seo", "pdf", "nrc", "zmw", "usd", "kyc", "html", "css", "js", "sql", "pwa", "llm", "id", "faq", "url"}
 
     @staticmethod
+    def normalize_description(description: str, max_characters: int = 155) -> str:
+        """Clean a generated search description and cap it at the editorial character limit.
+
+        This only shortens overlong text. It never pads a short description with
+        invented wording or claims, and it does not guarantee how Google displays snippets.
+        """
+        text = html.unescape(str(description or ""))
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        limit = max(1, int(max_characters))
+        if len(text) <= limit:
+            return text
+        candidate = text[: max(1, limit - 1)]
+        boundary = candidate.rfind(" ")
+        if boundary >= max(1, int(limit * 0.6)):
+            candidate = candidate[:boundary]
+        return candidate.rstrip(" ,;:-") + "…"
+
+    @staticmethod
     def normalize_labels(labels: List[str]) -> List[str]:
         """Clean and normalize Blogger labels (tags).
 

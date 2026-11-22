@@ -82,6 +82,20 @@ class TestBloggerPayload(unittest.TestCase):
             empty_client.refresh_access_token()
         self.assertIn("Missing OAuth credentials", str(cm.exception))
 
+    def test_seo_description_is_shortened_to_155_characters(self):
+        description = "A practical description with enough useful detail for readers. " * 4
+        normalized = SEOMetadata.normalize_description(description, max_characters=155)
+        self.assertLessEqual(len(normalized), 155)
+        self.assertTrue(normalized.endswith("…"))
+
+    def test_seo_description_is_not_padded_when_it_is_short(self):
+        description = "A short but accurate description."
+        self.assertEqual(SEOMetadata.normalize_description(description), description)
+
+    def test_seo_description_normalizes_whitespace_and_markup(self):
+        description = "<b>Useful</b>  practical\n description"
+        self.assertEqual(SEOMetadata.normalize_description(description), "Useful practical description")
+
     def test_seo_metadata_forbids_local_paths(self):
         """SEOMetadata.inject_seo_and_assets must reject runner-local paths and omit them."""
         html_input = "<p>Article text</p>"

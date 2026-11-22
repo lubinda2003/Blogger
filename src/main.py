@@ -321,6 +321,13 @@ def run_pipeline(
 
     try:
         draft = writer.write_article(topic, brief, dry_run=config.dry_run)
+        original_description = draft.meta_description
+        draft.meta_description = SEOMetadata.normalize_description(original_description, max_characters=155)
+        if draft.meta_description != original_description:
+            logger.info(
+                "Shortened SEO description from %s to %s characters to meet the editorial maximum.",
+                len(original_description or ""), len(draft.meta_description),
+            )
     except Exception as e:
         logger.error(f"Article generation failed closed: {e}")
         reporter.add_stage(
