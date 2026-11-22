@@ -24,15 +24,15 @@ The Digital Toolkit is an international English-language publication about pract
 | Freelancing | 25% |
 | Digital Skills | 25% |
 
-Articles should use plain English, practical examples, accurate sourcing, and honest descriptions of free plans, trials, limitations, and pricing. The pipeline must not invent testimonials, tests, earnings, or unsupported claims.
+Articles should use plain English, practical instructions, original examples, and honest descriptions of free plans, trials, limitations, permissions, and pricing. Research informs the writing but does not impose a minimum citation count or sentence-by-sentence source matching. The pipeline must not copy source wording or invent testimonials, tests, earnings, or product claims.
 
 ## How the pipeline works
 
 1. **Configuration and safety checks** — load settings and validate required credentials.
 2. **Topic selection** — the prepared evergreen queue is used first, avoiding repeated discovery searches. When the queue is exhausted, Tavily searches the four practical digital-skills categories and filters previously processed topics.
 3. **Duplicate reconciliation** — in live mode, check Blogger for an existing post before generating another.
-4. **Research** — run one focused Tavily discovery search, verify up to eight candidate sources, and require at least two verified sources; insufficient evidence stops the run.
-5. **Article generation** — generate structured article content using the configured language-model provider.
+4. **Research** — use focused research as background context and check changing details when needed. References are optional; there is no minimum source count or sentence-by-sentence evidence matching.
+5. **Article generation** — write original explanations, instructions and examples using the configured language-model provider.
 6. **Visual assets** — render branded featured covers and supporting illustrations locally, capture genuine product screenshots with Playwright, render Mermaid diagrams, optimize raster images with Sharp, and run an axe-core accessibility scan.
 7. **Quality checks** — validate article length, sources, style, safety, and duplication.
 8. **Blogger action** — create a draft only; public publishing is disabled in configuration validation and the Blogger client.
@@ -178,7 +178,7 @@ Some live pipeline functions require valid API credentials and network access. K
 - The content workflow declares `contents: write` because successful live runs persist topic-state changes.
 - Workflow concurrency is configured to queue runs rather than cancel an active run.
 - Third-party GitHub Actions are pinned to reviewed commit SHAs in the content workflow.
-- Blogger lookup failures and insufficient research evidence stop the pipeline to reduce duplicate or unsupported posts.
+- Blogger lookup failures stop the pipeline to reduce duplicate posts. Research links are optional; changing product details should be checked or qualified, but a missing source list alone does not block an article.
 - Local screenshot paths are not intended to be embedded in published HTML; only suitable public HTTPS image URLs should be used.
 - The content workflow runs daily at 10:00 AM Zambia time and can also be started manually.
 - The Blogger API OAuth permission may be broader than draft creation; application code restricts its own write operation to drafts.
