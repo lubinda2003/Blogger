@@ -11,6 +11,7 @@ from src.article_writer import ArticleDraft
 from src.readability import analyze as analyze_readability
 from src.screenshot_capture import ScreenshotResult
 from src.state_store import StateStore
+from src.spreadsheet_validation import validate_spreadsheet_examples
 
 
 @dataclass
@@ -308,6 +309,36 @@ class QualityGate:
                 f"Length advisory: article contains {word_count} words; the preferred target is "
                 f"{self.min_word_count}. It may still proceed if all critical checks pass."
             )
+
+        # 5a. Spreadsheet formula examples are independently recalculated when present.
+        spreadsheet_category = (draft.category or "").strip() == "Spreadsheets, Data and Reporting"
+        supported_formula_pattern = re.compile(
+            r"=\s*(?:SUM|AVERAGE|COUNT|COUNTA|MIN|MAX|COUNTIF|AVERAGEIF|IF)\s*\(",
+            re.IGNORECASE,
+        )
+        if spreadsheet_category and supported_formula_pattern.search(html.unescape(html_str)):
+            examples = draft.spreadsheet_examples or []
+            if not examples:
+                failures.append(
+                    "Spreadsheet accuracy check failed: a supported formula appears in the article, "
+                    "but no structured sample cells and expected result were supplied for independent calculation."
+                )
+            else:
+                failures.extend(validate_spreadsheet_examples(examples))
+                body_text = html.unescape(re.sub(r"<[^>]+>", " ", html_str))
+                for index, example in enumerate(examples, start=1):
+                    formula = str(example.get("formula") or "").strip()
+                    expected = str(example.get("expected_result", "")).strip()
+                    if formula and formula not in body_text:
+                        failures.append(
+                            f"Spreadsheet example {index} check failed: the formula in the structured example "
+                            "does not appear in the article body."
+                        )
+                    if expected and expected not in body_text:
+                        failures.append(
+                            f"Spreadsheet example {index} check failed: the expected calculated result "
+                            "does not appear in the article body."
+                        )
 
         # 5b. Plain English: measure and report readability, but do not reject
         # otherwise sound articles on a formulaic grade-level score alone.
