@@ -807,9 +807,12 @@ class ResearchCollector:
 
         # Verified facts assembly
         verified_count = len(brief.verified_sources())
-        if verified_count < 2:
+        if verified_count == 0:
             brief.insufficient_evidence = True
-            brief.notes = f"Only {verified_count} sources could be verified. Minimum of 2 verified sources required."
+            brief.notes = "No external sources were verified. Avoid exact claims about changing details unless they can be confirmed independently."
+        else:
+            brief.insufficient_evidence = False
+            brief.notes = f"{verified_count} background source(s) were verified; no minimum source count applies."
 
         # Compile factual notes based strictly on retrieved verified sources
         brief.key_facts = [
