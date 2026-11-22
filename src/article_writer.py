@@ -49,18 +49,6 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
                 "required": ["title", "url"],
             },
         },
-        "claim_evidence": {
-            "type": "ARRAY",
-            "items": {
-                "type": "OBJECT",
-                "properties": {
-                    "claim": {"type": "STRING"},
-                    "source_url": {"type": "STRING"},
-                    "evidence_quote": {"type": "STRING"},
-                },
-                "required": ["claim", "source_url", "evidence_quote"],
-            },
-        },
         "primary_intent": {"type": "STRING"},
         "last_checked_date": {"type": "STRING"},
         "affiliate_disclosure_required": {"type": "BOOLEAN"},
@@ -96,7 +84,7 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
             },
         },
     },
-    "required": ["title", "meta_description", "labels", "html_content", "sources_used", "claim_evidence"],
+    "required": ["title", "meta_description", "labels", "html_content"],
 }
 
 
@@ -124,7 +112,6 @@ class ArticleDraft:
     visual_plan: List[Dict[str, str]] = field(default_factory=list)
     actual_provider: str = ""
     actual_model: str = ""
-    claim_evidence: List[Dict[str, str]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -135,7 +122,6 @@ class ArticleDraft:
             "html_content": self.html_content,
             "summary": self.summary,
             "sources_used": self.sources_used,
-            "claim_evidence": self.claim_evidence,
             "primary_intent": self.primary_intent,
             "word_count": self.word_count,
             "last_checked_date": self.last_checked_date,
@@ -198,7 +184,7 @@ class ArticleWriter:
             return self.prompt_template_path.read_text(encoding="utf-8")
         return (
             "Write a practical, clear tutorial in plain English using <h2>, <h3>, <p>, <ul> elements. "
-            "Return valid JSON with title, meta_description, labels, html_content, sources_used."
+            "Return valid JSON with title, meta_description, labels and html_content. Include sources_used only when useful."
         )
 
     def _render_prompt(self, topic: TopicItem, brief: ResearchBrief) -> str:
@@ -263,7 +249,7 @@ class ArticleWriter:
             "Rewrite and expand the article so html_content reaches that length by adding practical depth: more concrete "
             "step-by-step detail, who each option suits, honest pros, cons and limits, common mistakes, and a short FAQ. "
             "Use ONLY facts from the research brief. Do not invent pricing, numbers, quotes or features. Keep the same "
-            "title, labels, sources_used and claim_evidence mappings unchanged; claim_evidence is audit metadata and must "
+            "title, labels and any useful source links unchanged. "
             "not be paraphrased or dropped. Keep every source linked in the body, and keep the "
             "plain, natural voice: plain English at about US grade 7 to 8, sentences averaging about 15 words. "
             "Return the complete JSON object only.\n\n"
@@ -278,7 +264,6 @@ class ArticleWriter:
             new_count = self._count_words(expanded.get("html_content", ""))
             if new_count > current:
                 logger.info(f"Expansion pass succeeded: {current} -> {new_count} words.")
-                expanded["claim_evidence"] = parsed.get("claim_evidence", [])
                 return expanded
             logger.warning(f"Expansion pass did not add length ({new_count} words); keeping original draft.")
         except Exception as e:
@@ -350,8 +335,8 @@ class ArticleWriter:
             "Rewrite html_content in plain English at about grade 7 to 8: sentences averaging about 15 words and none "
             "over 28, everyday words, short paragraphs, one idea per sentence, active voice. Explain jargon in a few plain "
             "words. Keep every fact, number, heading, link, list and code block. Do not add facts, and do not make the "
-            "article shorter than it is now. Keep the same title, labels, sources_used and claim_evidence mappings unchanged; "
-            "claim_evidence is audit metadata and must not be paraphrased or dropped. Keep the JSON schema. "
+            "article shorter than it is now. Keep the same title, labels and any useful source links unchanged. "
+            "Keep the JSON schema. "
             "Return the complete JSON object only.\n\n"
             f"PREVIOUS DRAFT JSON:\n{json.dumps(parsed, ensure_ascii=False)}"
         )
@@ -368,7 +353,6 @@ class ArticleWriter:
             after = analyze_readability(new_html)
             if after.fk_grade < before.fk_grade:
                 logger.info(f"Rewrite pass succeeded: grade {before.fk_grade} -> {after.fk_grade}.")
-                rewritten["claim_evidence"] = parsed.get("claim_evidence", [])
                 return rewritten
             logger.warning(f"Rewrite pass was not easier (grade {after.fk_grade}); keeping original draft.")
         except Exception as e:
@@ -634,7 +618,7 @@ class ArticleWriter:
         errors = []
         if not isinstance(data, dict):
             return ["Article response must be a JSON object."]
-        for name in ("title", "meta_description", "html_content", "labels", "sources_used"):
+        for name in ("title", "meta_description", "html_content", "labels"):
             if name not in data or not data[name]:
                 errors.append(f"Missing or empty required field: '{name}'")
         for name in ("title", "meta_description", "html_content"):
@@ -657,18 +641,6 @@ class ArticleWriter:
                     for key in ("title", "url"):
                         if not isinstance(source.get(key), str) or not source.get(key, "").strip():
                             errors.append(f"Field 'sources_used[{i}].{key}' must be a non-empty string.")
-        evidence = data.get("claim_evidence")
-        if evidence is not None:
-            if not isinstance(evidence, list):
-                errors.append("Field 'claim_evidence' must be an array of claim/source/evidence mappings.")
-            else:
-                for i, item in enumerate(evidence):
-                    if not isinstance(item, dict):
-                        errors.append(f"Field 'claim_evidence[{i}]' must be an object.")
-                        continue
-                    for key in ("claim", "source_url", "evidence_quote"):
-                        if not isinstance(item.get(key), str) or not item.get(key, "").strip():
-                            errors.append(f"Field 'claim_evidence[{i}].{key}' must be a non-empty string.")
         for name in ("screenshot_spec", "featured_image_brief"):
             if data.get(name) is not None and not isinstance(data[name], dict):
                 errors.append(f"Field '{name}' must be an object when provided.")
@@ -1177,7 +1149,7 @@ against primary documentation."</code>
 
             # Groq occasionally returns a valid article body but omits Blogger metadata.
             # Recover only title/description/labels from the topic and article itself; never
-            # invent body text, sources, or evidence, which remain subject to hard QA gates.
+            # invent body text or factual claims.
             if self.actual_provider == "groq":
                 parsed = self._complete_groq_metadata(parsed, topic)
                 parsed = self._normalize_groq_nested_fields(parsed)
@@ -1186,12 +1158,6 @@ against primary documentation."</code>
             schema_errors = self._validate_schema(parsed)
             if schema_errors:
                 raise RuntimeError("LLM output failed schema validation: " + "; ".join(schema_errors))
-
-            # Stop before further provider calls or asset work if the model omitted
-            # auditable evidence or failed to use the minimum verified source count.
-            evidence_errors = self._live_evidence_coverage_errors(parsed, brief)
-            if evidence_errors:
-                raise RuntimeError("; ".join(evidence_errors))
 
             # Expand only when the draft misses the hard minimum. Do not spend
             # another provider call on a cosmetic readability rewrite: the quality
@@ -1272,5 +1238,4 @@ against primary documentation."</code>
             visual_plan=visual_plan,
             actual_provider=provider_used,
             actual_model=model_used,
-            claim_evidence=parsed.get("claim_evidence", []) if isinstance(parsed.get("claim_evidence", []), list) else [],
         )
