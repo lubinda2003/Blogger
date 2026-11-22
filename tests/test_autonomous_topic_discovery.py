@@ -1,5 +1,4 @@
 import unittest
-from types import SimpleNamespace
 from unittest.mock import patch
 
 from src.autonomous_topic_discovery import AutonomousTopicDiscoverer
@@ -24,7 +23,7 @@ class AutonomousTopicDiscoveryTests(unittest.TestCase):
         self.assertIn("TAVILY_API_KEY", discoverer.last_note)
 
     @patch.object(AutonomousTopicDiscoverer, "_search")
-    def test_discovers_candidates_across_four_editorial_pillars(self, search):
+    def test_discovers_candidates_across_eight_editorial_categories(self, search):
         search.return_value = [{
             "title": "How to automate client onboarding for freelance businesses",
             "content": "A practical guide explaining onboarding forms, client communication, project setup and repeatable workflows.",
@@ -33,9 +32,9 @@ class AutonomousTopicDiscoveryTests(unittest.TestCase):
         }]
         discoverer = AutonomousTopicDiscoverer("test-key")
         found = discoverer.discover(FakeState())
-        self.assertEqual(search.call_count, 4)
+        self.assertEqual(search.call_count, 8)
         self.assertEqual(len(found), 1)
-        self.assertEqual(found[0].category, "Productivity")
+        self.assertEqual(found[0].category, "AI and AI Tools")
         self.assertEqual(found[0].primary_intent, "Tutorial")
         self.assertFalse(found[0].requires_screenshot)
         self.assertEqual(found[0].target_url, "")
@@ -74,13 +73,13 @@ class AutonomousTopicDiscoveryTests(unittest.TestCase):
             "url": "https://another.example/second",
             "score": 0.95,
         }
-        search.side_effect = [[first], [duplicate], [], []]
+        search.side_effect = [[first], [duplicate], [], [], [], [], [], []]
 
         found = AutonomousTopicDiscoverer("test-key").discover(FakeState())
 
         self.assertEqual(len(found), 1)
         self.assertEqual(found[0].topic, first["title"])
-        self.assertEqual(found[0].category, "Productivity")
+        self.assertEqual(found[0].category, "AI and AI Tools")
 
     @patch.object(AutonomousTopicDiscoverer, "_search", return_value=[])
     def test_empty_search_is_not_reported_as_successful_discovery(self, _search):
