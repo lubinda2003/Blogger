@@ -169,7 +169,7 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(any("is not linked in the article body" in f for f in report.failures))
 
     def test_qa_normalizes_urls_when_matching_verified_sources(self):
-        """Quality gate must match verified sources even with http/https, www, or trailing slash differences."""
+        """Optional citations must match verified URLs despite protocol, www, or trailing-slash differences."""
         draft = self._create_valid_draft()
         # Verified URL has https and trailing slash, draft cited source has http without trailing slash
         verified_urls = {
@@ -179,7 +179,6 @@ class TestQualityChecks(unittest.TestCase):
         report = self.live_gate.run_all_checks(
             draft,
             verified_source_urls=verified_urls,
-            verified_source_evidence=self._verified_evidence(),
             check_duplicate=False,
         )
         self.assertTrue(report.passed, f"Expected pass with normalized URLs, got: {report.failures}")
