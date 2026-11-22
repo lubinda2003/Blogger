@@ -153,7 +153,7 @@ def evaluate_formula(formula: str, cells: Dict[str, Any]) -> Any:
             for col in range(c1, c2 + 1):
                 if (row, col) not in grid:
                     raise FormulaValidationError(
-                        f"Range {first}:{last} is missing sample cell at row {row}, column {col}."
+                        f"Range {first}:{last} is missing cell {chr(64 + col) if col <= 26 else col}{row} in the sample data."
                     )
                 values.append(grid[(row, col)])
         return repr(values)
