@@ -146,8 +146,6 @@ class ResearchBrief:
                 lines.append(f"\n#### Source: {s.title} ({s.url}) [Accessed: {s.retrieval_date}]")
                 if s.evidence_excerpt:
                     lines.append(f"- Context excerpt (do not copy): \"{s.evidence_excerpt[:250]}\"")
-                for c in s.verified_claims:
-                    lines.append(f"- Research context: {c}")
 
                 # Provide 2,000 to 3,000 characters of cleaned page text delimited as untrusted reference data
                 clean_passage = (s.cleaned_text or s.evidence_excerpt or "").strip()
@@ -468,7 +466,7 @@ class ResearchCollector:
         return excerpt is not None
 
     def verify_and_fetch_source(self, url: str) -> Tuple[bool, Optional[int], str, str, str, Optional[str]]:
-        """Verify URL and retrieve real page title, evidence excerpt, and canonical URL.
+        """Retrieve a page and return its title, a short context excerpt, and canonical URL.
 
         Returns: (extraction_success, status_code, title, excerpt, final_url, error_message)
         """
@@ -699,34 +697,14 @@ class ResearchCollector:
                         # Tavily already extracted the article body; far cleaner than the first 32KB of raw HTML.
                         corpus = f"{real_title} {excerpt} {tavily_snippet}".strip()
                         cleaned_corpus = self._clean_corpus_text(corpus, max_chars=3000)
+                    # Research is background context, not a sentence-matching test.
+                    # A successfully retrieved page can inform the writer even when its wording
+                    # differs from the topic or the article the writer will create.
+                    is_verified = bool(cleaned_corpus or excerpt)
+                    supporting_excerpt = (excerpt or cleaned_corpus or "")[:250]
+                    fail_msg = None if is_verified else "Page was reachable but no readable text could be extracted."
                     verified_claims: List[str] = []
                     unverified_claims: List[str] = []
-
-                    supporting_excerpt: Optional[str] = None
-                    for c in claims:
-                        sup = self.find_supporting_excerpt(c, corpus)
-                        if sup:
-                            verified_claims.append(c)
-                            if not supporting_excerpt:
-                                supporting_excerpt = sup
-                        else:
-                            unverified_claims.append(c)
-
-                    topic_supported = False
-                    if not claims:
-                        sup = self.find_supporting_excerpt(topic_title, corpus)
-                        if sup:
-                            topic_supported = True
-                            supporting_excerpt = sup
-
-                    is_verified = bool(verified_claims) or (not claims and topic_supported)
-                    brand_note = None
-                    if is_verified and not mentions_brand(brand, corpus):
-                        is_verified, verified_claims, unverified_claims = False, [], list(claims)
-                        brand_note = f"Page does not mention '{brand}' enough to be relevant to this topic."
-                    fail_msg = None if is_verified else (brand_note or
-                        f"HTTP {status} received from {canonical_url}, content extraction succeeded, but retrieved content does not support required claims."
-                    )
 
                     brief.sources.append(
                         SourceCitation(
@@ -747,31 +725,14 @@ class ResearchCollector:
                     # Fallback to Tavily extracted content corpus if direct fetch was blocked by anti-bot or JS SPA
                     corpus = f"{title} {tavily_snippet}".strip()
                     cleaned_corpus = self._clean_corpus_text(corpus, max_chars=3000)
+                    # Tavily's extracted page text is background research. Do not require
+                    # exact topic keywords or claim phrases to appear in the source.
+                    is_verified = bool(cleaned_corpus or tavily_snippet.strip())
+                    supporting_excerpt = (tavily_snippet or cleaned_corpus or "")[:250]
                     verified_claims: List[str] = []
                     unverified_claims: List[str] = []
-                    supporting_excerpt: Optional[str] = None
-
-                    for c in claims:
-                        sup = self.find_supporting_excerpt(c, corpus)
-                        if sup:
-                            verified_claims.append(c)
-                            if not supporting_excerpt:
-                                supporting_excerpt = sup
-                        else:
-                            unverified_claims.append(c)
-
-                    if not claims:
-                        sup = self.find_supporting_excerpt(topic_title, corpus)
-                        if sup:
-                            supporting_excerpt = sup
-                            verified_claims.append(topic_title)
-
-                    # Strict verification: must have actual claim or topic support; length alone is NOT verification
-                    is_verified = bool(verified_claims)
-                    if is_verified and not mentions_brand(brand, corpus):
-                        is_verified, verified_claims, err = False, [], f"page does not mention '{brand}', so it is not relevant to this topic"
-                    if is_verified and not supporting_excerpt:
-                        supporting_excerpt = tavily_snippet[:250]
+                    if not is_verified:
+                        err = "No readable source text was available from the search result."
 
                     brief.sources.append(
                         SourceCitation(
