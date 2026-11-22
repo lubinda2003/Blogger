@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 from src.readability import analyze as analyze_readability
 from src.research import ResearchBrief
 from src.topic_discovery import TopicItem
+from src.content_type_checks import normalize_content_type
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +139,7 @@ class ArticleDraft:
     actual_model: str = ""
     category: str = ""
     spreadsheet_examples: List[Dict[str, Any]] = field(default_factory=list)
+    content_type: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -164,6 +166,7 @@ class ArticleDraft:
             "actual_model": self.actual_model,
             "category": self.category,
             "spreadsheet_examples": self.spreadsheet_examples,
+            "content_type": self.content_type,
         }
 
 
@@ -222,6 +225,7 @@ class ArticleWriter:
         prompt = prompt.replace("{{CATEGORY}}", topic.category)
         prompt = prompt.replace("{{TARGET_AUDIENCE}}", topic.target_audience)
         prompt = prompt.replace("{{PRIMARY_INTENT}}", topic.primary_intent)
+        prompt = prompt.replace("{{CONTENT_TYPE}}", normalize_content_type(topic.primary_intent) or "Beginner guide")
         prompt = prompt.replace("{{TARGET_URL}}", topic.target_url)
         prompt = prompt.replace("{{REQUIRES_SCREENSHOT}}", str(topic.requires_screenshot))
         prompt = prompt.replace("{{RESEARCH_BRIEF}}", brief.format_for_prompt())
@@ -1235,4 +1239,5 @@ against primary documentation."</code>
             actual_model=model_used,
             category=topic.category,
             spreadsheet_examples=parsed.get("spreadsheet_examples", []) or [],
+            content_type=normalize_content_type(topic.primary_intent),
         )
