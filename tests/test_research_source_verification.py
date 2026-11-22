@@ -34,7 +34,7 @@ class TestResearchSourceVerification(unittest.TestCase):
             }
         ],
     )
-    def test_topic_mention_does_not_replace_an_unsupported_required_claim(
+    def test_readable_tavily_context_is_not_rejected_for_missing_exact_claim_phrases(
         self, _search, _fetch, _claim
     ):
         collector = ResearchCollector(tavily_api_key="test-key")
@@ -47,8 +47,9 @@ class TestResearchSourceVerification(unittest.TestCase):
         )
 
         self.assertEqual(len(brief.sources), 1)
-        self.assertFalse(brief.sources[0].verified)
-        self.assertIn("enterprise API billing limits", brief.sources[0].unverified_claims)
+        self.assertTrue(brief.sources[0].verified)
+        self.assertEqual(brief.sources[0].verified_claims, [])
+        self.assertEqual(brief.sources[0].unverified_claims, [])
 
     @patch.object(
         ResearchCollector,
