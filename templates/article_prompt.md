@@ -119,4 +119,4 @@ Return only one valid JSON object. Do not wrap it in Markdown fences.
   "last_checked_date": "Month Year"
 }
 
-Include sources_used only when a useful reference link is genuinely needed; otherwise use an empty array. Keep the JSON schema complete. If screenshots are not useful, set screenshot_spec.needed to false.
+Include sources_used only when a useful reference link is genuinely needed; otherwise use an empty array. When no real references are included, omit any Sources, References or Resources heading from html_content—never add a placeholder section. Keep the JSON schema complete. If screenshots are not useful, set screenshot_spec.needed to false.
