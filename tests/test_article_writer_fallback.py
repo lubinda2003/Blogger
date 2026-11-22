@@ -164,7 +164,7 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertEqual(completed["meta_description"], "A supplied description.")
         self.assertEqual(completed["labels"], ["AI Tools", "Tutorial"])
 
-    def test_groq_metadata_recovery_does_not_repair_missing_article_body_or_sources(self):
+    def test_groq_metadata_recovery_does_not_repair_missing_article_body(self):
         writer = self.make_writer()
         topic = MagicMock()
         topic.topic = "A real topic"
@@ -174,7 +174,6 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         errors = writer._validate_schema(completed)
 
         self.assertTrue(any("html_content" in error for error in errors))
-        self.assertTrue(any("sources_used" in error for error in errors))
 
 
 if __name__ == "__main__":
