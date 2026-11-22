@@ -226,6 +226,16 @@ class TestQualityChecks(unittest.TestCase):
             "support.upwork.com/hc/en-us/articles/123",
         )
 
+    def test_live_qa_warns_when_current_product_claims_have_no_claim_level_evidence(self):
+        draft = self._create_valid_draft()
+        draft.html_content += (
+            "<p>ChatGPT free plan limits and Chrome extension integrations may change. "
+            "Check current pricing and features before choosing.</p>"
+        )
+        report = self.live_gate.run_all_checks(draft, verified_source_evidence=[], check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("no individual claims were matched to source evidence" in w for w in report.warnings))
+
     def test_qa_fails_if_sources_used_are_not_linked_in_body(self):
         """QA gate must fail if sources listed in sources_used are not linked with href in HTML body."""
         draft = self._create_valid_draft()
