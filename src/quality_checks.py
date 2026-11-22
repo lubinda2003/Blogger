@@ -218,6 +218,25 @@ class QualityGate:
         clean_text = re.sub(r"<[^>]+>", " ", html_str)
         text_lower = clean_text.lower()
 
+        # Retrieval success is not factual verification. Warn when an article
+        # includes changing product claims but research produced no claim mapping.
+        evidence_items = verified_source_evidence or []
+        claim_support_count = sum(
+            len(item.get("verified_claims", []) or []) for item in evidence_items
+            if isinstance(item, dict)
+        )
+        current_product_claims = bool(re.search(
+            r"\b(?:free plan|free tier|pricing|per month|per year|messages? per|minutes? of|"
+            r"chrome extension|integration|supports? \d+|available in|included with|"
+            r"works with|compatible with)\b",
+            text_lower,
+        ))
+        if self.is_live_mode and current_product_claims and claim_support_count == 0:
+            warnings.append(
+                "Research evidence warning: the article contains current product features, limits, pricing or integrations, "
+                "but no individual claims were matched to source evidence. Recheck these details against official provider pages before publication."
+            )
+
         # 0b. Mock & Test Fixture Guard for Live Mode
         if self.is_live_mode:
             if draft.is_dry_run_fixture:

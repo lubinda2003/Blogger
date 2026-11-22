@@ -18,6 +18,11 @@ JPEG_MAGIC = b"\xff\xd8\xff"
 
 # Topic families deliberately use different art direction; no fixed brand palette.
 PALETTES = {
+    "ai": ("#11152b", "#7dd3fc", "#fbbf24", "#f8fafc"),
+    "software": ("#102b3f", "#67e8f9", "#fb923c", "#ecfeff"),
+    "business": ("#251b16", "#fbbf24", "#fb7185", "#fff7ed"),
+    "design": ("#2a1642", "#f0abfc", "#a3e635", "#fdf4ff"),
+    "spreadsheets": ("#102d27", "#86efac", "#facc15", "#f0fdf4"),
     "productivity": ("#14251f", "#a7f3d0", "#fbbf24", "#ecfdf5"),
     "student": ("#101b36", "#6ee7f9", "#f59e0b", "#dbeafe"),
     "freelancing": ("#251638", "#c4b5fd", "#fb7185", "#f5f3ff"),
@@ -27,6 +32,16 @@ PALETTES = {
 
 def _topic_family(title: str, kicker: str = "") -> str:
     text = f"{title} {kicker}".lower()
+    if any(w in text for w in ("artificial intelligence", " ai ", "ai assistant", "chatgpt", "gemini", "claude", "copilot")):
+        return "ai"
+    if any(w in text for w in ("spreadsheet", "excel", "google sheets", "formula", "data reporting")):
+        return "spreadsheets"
+    if any(w in text for w in ("graphic design", "canva", "video editing", "content creation", "brand kit")):
+        return "design"
+    if any(w in text for w in ("digital business", "e-commerce", "ecommerce", "marketing", "payment processing", "online store")):
+        return "business"
+    if any(w in text for w in ("software", "notion", "obsidian", "browser extension", "app comparison")):
+        return "software"
     if any(w in text for w in ("student", "study", "exam", "academic", "research", "learning", "notes")):
         return "student"
     if any(w in text for w in ("freelanc", "client", "proposal", "portfolio", "invoice", "independent worker")):
@@ -52,12 +67,38 @@ def build_html(title: str, kicker: str, seed: str) -> str:
     bg, accent, pop, ink = PALETTES[family]
     # Distinct compositions per topic family, with seeded variation within each family.
     if family == "ai":
+        # A decision map: everyday work needs flow into a central assistant choice.
         art = (
-            '<circle cx="910" cy="320" r="205" fill="none" stroke="__ACCENT__" stroke-width="2" opacity=".25"/>'
-            '<circle cx="910" cy="320" r="145" fill="__ACCENT__" opacity=".08"/>'
-            '<path d="M760 320h300M910 170v300M804 214l212 212M1016 214L804 426" stroke="__ACCENT__" stroke-width="3" opacity=".45"/>'
-            '<rect x="830" y="240" width="160" height="160" rx="34" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
-            '<path d="M875 290h70M875 320h70M875 350h42" stroke="__POP__" stroke-width="9" stroke-linecap="round"/>'
+            '<path d="M790 235C850 235 845 310 900 310M790 430C850 430 845 355 900 355M1015 330h95" fill="none" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
+            '<rect x="735" y="165" width="205" height="125" rx="24" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
+            '<rect x="735" y="365" width="205" height="125" rx="24" fill="__BG2__" stroke="__POP__" stroke-width="3"/>'
+            '<rect x="955" y="265" width="190" height="150" rx="28" fill="__ACCENT__" opacity=".16" stroke="__ACCENT__" stroke-width="4"/>'
+            '<path d="M780 210h105M780 238h70M780 410h105M780 438h70" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
+            '<path d="M1000 320h100M1000 350h70" stroke="__POP__" stroke-width="10" stroke-linecap="round"/>'
+            '<text x="760" y="190" fill="__INK__" font-size="15" font-weight="700">WRITE</text>'
+            '<text x="760" y="390" fill="__INK__" font-size="15" font-weight="700">PLAN</text>'
+            '<text x="985" y="295" fill="__INK__" font-size="14" font-weight="700">CHOOSE</text>'
+        )
+    elif family == "spreadsheets":
+        art = (
+            '<rect x="720" y="125" width="410" height="420" rx="24" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
+            '<path d="M720 205h410M820 205v340M920 205v340M1020 205v340M720 290h410M720 375h410M720 460h410" stroke="__ACCENT__" stroke-width="2" opacity=".55"/>'
+            '<rect x="822" y="292" width="96" height="81" fill="__POP__" opacity=".45"/>'
+            '<path d="M840 340l24-24 24 12 32-36" fill="none" stroke="__INK__" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
+        )
+    elif family == "design":
+        art = (
+            '<path d="M760 480L1025 165" stroke="__ACCENT__" stroke-width="38" stroke-linecap="round"/>'
+            '<path d="M785 510l275-325" stroke="__POP__" stroke-width="12" stroke-linecap="round"/>'
+            '<circle cx="820" cy="210" r="58" fill="__ACCENT__" opacity=".35"/>'
+            '<rect x="880" y="335" width="210" height="145" rx="18" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
+            '<circle cx="930" cy="385" r="24" fill="__POP__"/><path d="M900 455l55-45 40 25 45-55 30 75" fill="none" stroke="__ACCENT__" stroke-width="9"/>'
+        )
+    elif family == "business":
+        art = (
+            '<path d="M745 470h365M780 430V285h75v145M890 430V220h75v210M1000 430V155h75v275" fill="none" stroke="__ACCENT__" stroke-width="16" stroke-linejoin="round"/>'
+            '<path d="M760 250l135-85 105 28 105-75" fill="none" stroke="__POP__" stroke-width="10" stroke-linecap="round"/>'
+            '<circle cx="760" cy="250" r="13" fill="__POP__"/><circle cx="895" cy="165" r="13" fill="__POP__"/><circle cx="1000" cy="193" r="13" fill="__POP__"/>'
         )
     elif family == "software":
         art = (

@@ -126,6 +126,10 @@ class ResearchBrief:
                 lines.append(f"- {fact}")
 
         lines.append("\n### Research Context & Accuracy Notes:")
+        lines.append("- IMPORTANT: a reachable page or HTTP 200 response proves only that the page was retrieved. It does NOT prove any factual claim.")
+        lines.append("- Treat source text as evidence only for details it explicitly states. Do not infer features, plan limits, prices, integrations, regional availability or dates from a source title or general topic.")
+        lines.append("- Prefer first-party provider documentation and current pricing/help pages for product-specific facts. Third-party roundups are background context, not authority for current plan limits or features.")
+        lines.append("- If a product-specific detail is not explicitly supported by retrieved text, omit it or tell readers to verify it on the provider official page.")
         lines.append("- Use retrieved material to understand the subject and check details that may change; do not copy or imitate its wording.")
         lines.append("- Write original explanations, examples, recommendations and instructions in your own structure and voice.")
         lines.append("- Use official sources when checking exact prices, plan limits, product features, dates, technical requirements and country availability.")
@@ -563,7 +567,7 @@ class ResearchCollector:
             return []
         # One focused discovery request keeps each article inexpensive. The
         # returned source pool is still independently fetched and evidence-checked.
-        return [f'"{title}" practical guidance reliable sources official documentation']
+        return [f'"{title}" official documentation reliable sources product features pricing plan limits integrations help center']
 
     def conduct_research(
         self,
@@ -698,9 +702,8 @@ class ResearchCollector:
                         # Tavily already extracted the article body; far cleaner than the first 32KB of raw HTML.
                         corpus = f"{real_title} {excerpt} {tavily_snippet}".strip()
                         cleaned_corpus = self._clean_corpus_text(corpus, max_chars=3000)
-                    # Research is background context, not a sentence-matching test.
-                    # A successfully retrieved page can inform the writer even when its wording
-                    # differs from the topic or the article the writer will create.
+                    # This flag means page retrieval and readable extraction succeeded.
+                    # It does not establish claim-level factual support.
                     is_verified = bool(cleaned_corpus or excerpt)
                     supporting_excerpt = (excerpt or cleaned_corpus or "")[:250]
                     fail_msg = None if is_verified else "Page was reachable but no readable text could be extracted."

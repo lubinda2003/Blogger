@@ -160,7 +160,7 @@ class PipelineReporter:
             f"- **Duration:** {report['total_duration_seconds']}s",
             f"- **Topic:** {report['selected_topic'] or 'None selected'}",
             f"- **Publish Mode:** `{report['publish_mode']}` (Draft default enforced)",
-            f"- **Sources Verified:** {report['metrics']['source_count']}",
+            f"- **Source Pages Retrieved:** {report['metrics']['source_count']}",
             f"- **Screenshot Captured:** {'Yes' if report['metrics']['screenshot_captured'] else 'No / Skipped'}",
             "",
         ]
@@ -215,8 +215,8 @@ class PipelineReporter:
 
         if report.get("research_sources"):
             lines.extend([
-                "### 🔍 Research Sources & Evidence Verification",
-                "| Source Title | URL | Extraction | HTTP | Verification | Details / Failure Reason |",
+                "### 🔍 Research Source Retrieval (not claim verification)",
+                "| Source Title | URL | Text Retrieved | HTTP | Claim-level Evidence | Details / Failure Reason |",
                 "| :--- | :--- | :--- | :--- | :--- | :--- |",
             ])
             for src in report["research_sources"]:
@@ -224,9 +224,11 @@ class PipelineReporter:
                 s_url = src.get("url", "#")
                 s_ext = "Success" if src.get("content_extraction_success") else "Failed"
                 s_status = str(src.get("http_status") or "N/A")
-                s_ver = "✅ Verified" if src.get("verified") else "❌ Unverified"
+                claim_count = len(src.get("verified_claims", []) or [])
+                s_ver = f"{claim_count} supported" if claim_count else "None mapped"
                 s_reason = src.get("failure_reason") or (
-                    f"Supports {len(src.get('verified_claims', []))} claim(s)" if src.get("verified") else "Unverified"
+                    "Page retrieved; factual claims were not independently mapped to this source."
+                    if src.get("verified") else "Page could not be retrieved or read."
                 )
                 lines.append(f"| {s_title} | [{s_url}]({s_url}) | {s_ext} | {s_status} | {s_ver} | {s_reason} |")
             lines.append("")
@@ -242,6 +244,12 @@ class PipelineReporter:
             lines.append(f"| {s['stage']} | {st_badge} | {s['duration_seconds']}s | {s['details'] or '-'} |")
 
         lines.append("")
+        if report["qa"].get("warnings"):
+            lines.append("### ⚠️ Editorial Review Warnings:")
+            for warning in report["qa"]["warnings"]:
+                lines.append(f"- {warning}")
+            lines.append("")
+
         if report["qa"]["failures"]:
             lines.append("### ⛔ QA Gate Hard Failures:")
             for f in report["qa"]["failures"]:
