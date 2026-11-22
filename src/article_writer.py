@@ -271,10 +271,10 @@ class ArticleWriter:
         return parsed
 
     def _drop_unverified_sources(self, parsed: Dict[str, Any], brief: ResearchBrief) -> Dict[str, Any]:
-        """Remove citations that research did not verify, rather than failing an otherwise good article.
+        """Keep only background links that were successfully retrieved.
 
-        The cited link is unwrapped in the body (its text stays). The quality gate still enforces the minimum
-        number of verified sources afterwards.
+        Sources are optional. This only removes a link if the research collector explicitly failed to retrieve it;
+        it never blocks an article for having too few sources.
         """
         from src.quality_checks import normalize_url  # imported here: quality_checks imports this module
 
