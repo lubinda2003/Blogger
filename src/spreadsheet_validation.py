@@ -186,6 +186,16 @@ def validate_spreadsheet_examples(examples: List[Dict[str, Any]]) -> List[str]:
             failures.append(f"Spreadsheet example {index} is not an object.")
             continue
         formula = str(example.get("formula") or "")
+        application = str(example.get("application") or "").strip()
+        formula_cell = str(example.get("formula_cell") or "").strip().upper()
+        if not application:
+            failures.append(f"Spreadsheet example {index} must name Excel or Google Sheets.")
+            continue
+        try:
+            _cell_parts(formula_cell)
+        except FormulaValidationError:
+            failures.append(f"Spreadsheet example {index} must provide a valid formula cell such as D2.")
+            continue
         cells = example.get("cells")
         if not isinstance(cells, list):
             failures.append(f"Spreadsheet example {index} must provide a list of cell references and values.")
