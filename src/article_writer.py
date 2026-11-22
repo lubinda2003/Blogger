@@ -37,6 +37,30 @@ ARTICLE_RESPONSE_SCHEMA: Dict[str, Any] = {
             "items": {"type": "STRING"},
         },
         "html_content": {"type": "STRING"},
+        "spreadsheet_examples": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "application": {"type": "STRING"},
+                    "formula_cell": {"type": "STRING"},
+                    "formula": {"type": "STRING"},
+                    "cells": {
+                        "type": "ARRAY",
+                        "items": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "reference": {"type": "STRING"},
+                                "value": {"type": "STRING"},
+                            },
+                            "required": ["reference", "value"],
+                        },
+                    },
+                    "expected_result": {"type": "STRING"},
+                },
+                "required": ["application", "formula_cell", "formula", "cells", "expected_result"],
+            },
+        },
         "summary": {"type": "STRING"},
         "sources_used": {
             "type": "ARRAY",
@@ -112,6 +136,8 @@ class ArticleDraft:
     visual_plan: List[Dict[str, str]] = field(default_factory=list)
     actual_provider: str = ""
     actual_model: str = ""
+    category: str = ""
+    spreadsheet_examples: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -136,6 +162,8 @@ class ArticleDraft:
             "visual_plan": self.visual_plan,
             "actual_provider": self.actual_provider,
             "actual_model": self.actual_model,
+            "category": self.category,
+            "spreadsheet_examples": self.spreadsheet_examples,
         }
 
 
@@ -1205,4 +1233,6 @@ against primary documentation."</code>
             visual_plan=visual_plan,
             actual_provider=provider_used,
             actual_model=model_used,
+            category=topic.category,
+            spreadsheet_examples=parsed.get("spreadsheet_examples", []) or [],
         )

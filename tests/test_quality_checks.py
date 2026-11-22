@@ -64,6 +64,59 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(report.passed, f"Expected pass, got failures: {report.failures}")
         self.assertEqual(len(report.failures), 0)
 
+    def test_spreadsheet_formula_with_correct_calculated_result_passes(self):
+        draft = self._create_valid_draft()
+        draft.category = "Spreadsheets, Data and Reporting"
+        draft.html_content += (
+            "<h2>Worked example</h2>"
+            "<p>Enter =SUM(B2:B5) in D2. The expected result is 750.</p>"
+        )
+        draft.spreadsheet_examples = [{
+            "application": "Excel",
+            "formula_cell": "D2",
+            "formula": "=SUM(B2:B5)",
+            "cells": [
+                {"reference": "B2", "value": "120"},
+                {"reference": "B3", "value": "50"},
+                {"reference": "B4", "value": "80"},
+                {"reference": "B5", "value": "500"},
+            ],
+            "expected_result": "750",
+        }]
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+
+    def test_spreadsheet_formula_with_wrong_result_fails_quality_gate(self):
+        draft = self._create_valid_draft()
+        draft.category = "Spreadsheets, Data and Reporting"
+        draft.html_content += (
+            "<h2>Worked example</h2>"
+            "<p>Enter =SUM(B2:B5) in D2. The expected result is 700.</p>"
+        )
+        draft.spreadsheet_examples = [{
+            "application": "Google Sheets",
+            "formula_cell": "D2",
+            "formula": "=SUM(B2:B5)",
+            "cells": [
+                {"reference": "B2", "value": "120"},
+                {"reference": "B3", "value": "50"},
+                {"reference": "B4", "value": "80"},
+                {"reference": "B5", "value": "500"},
+            ],
+            "expected_result": "700",
+        }]
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertFalse(report.passed)
+        self.assertTrue(any("incorrect expected result" in item for item in report.failures))
+
+    def test_spreadsheet_formula_without_structured_example_fails(self):
+        draft = self._create_valid_draft()
+        draft.category = "Spreadsheets, Data and Reporting"
+        draft.html_content += "<p>Enter =AVERAGE(B2:B5) in C2 to calculate the average.</p>"
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertFalse(report.passed)
+        self.assertTrue(any("no structured sample cells" in item for item in report.failures))
+
     def test_ai_cliche_is_a_warning_not_a_publication_blocker(self):
         """Generic AI phrasing should be flagged for editing without blocking a useful draft."""
         draft = self._create_valid_draft()
