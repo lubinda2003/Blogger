@@ -51,7 +51,9 @@ class TestBuildHtml(unittest.TestCase):
         self.assertEqual(_topic_family("How to plan your week", "Productivity"), "productivity")
         self.assertEqual(_topic_family("How to take better notes", "Student Success"), "student")
         self.assertEqual(_topic_family("Write a freelance proposal", "Freelancing"), "freelancing")
-        self.assertEqual(_topic_family("Spreadsheet skills for daily tasks", "Digital Skills"), "digital_skills")
+        self.assertEqual(_topic_family("Spreadsheet skills for daily tasks", "Digital Skills"), "spreadsheets")
+        self.assertEqual(_topic_family("How to Choose an AI Assistant for Everyday Work", "AI and AI Tools"), "ai")
+        self.assertEqual(_topic_family("Canva Brand Kit Design Walkthrough", "Graphic Design"), "design")
         self.assertEqual(len(set(PALETTES.values())), len(PALETTES))
 
     def test_thumbnail_contains_topic_palette_and_no_remote_assets(self):
@@ -66,6 +68,14 @@ class TestBuildHtml(unittest.TestCase):
             self.assertNotIn("@import", page)
             self.assertNotIn("__ACCENT__", page)
             self.assertNotIn("__POP__", page)
+
+    def test_ai_cover_uses_a_decision_map_instead_of_generic_checklist_art(self):
+        page = build_html("How to Choose an AI Assistant for Everyday Work", "AI and AI Tools", "ai-assistant")
+        self.assertIn("WRITE", page)
+        self.assertIn("PLAN", page)
+        self.assertIn("CHOOSE", page)
+        self.assertIn(PALETTES["ai"][1], page)
+        self.assertNotIn("M810 280l55 55 110-112", page)
 
     def test_placeholder_like_text_in_the_title_is_not_substituted(self):
         page = build_html("__KICKER__ and __BRAND__", "Guide", "seed")
