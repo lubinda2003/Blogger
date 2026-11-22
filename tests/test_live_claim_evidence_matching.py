@@ -5,6 +5,7 @@ import unittest
 from src.quality_checks import (
     _evidence_text_for_matching,
     claim_is_represented_in_article,
+    is_heading_fragment_claim,
 )
 
 
@@ -80,6 +81,14 @@ class TestLiveClaimEvidenceMatching(unittest.TestCase):
                 claim, "The free plan includes team collaboration features."
             )
         )
+
+    def test_short_heading_fragment_is_not_treated_as_a_factual_claim(self):
+        html = "<h3>Avoiding Information Indigestion</h3><p>Unstructured notes can overwhelm readers.</p>"
+        self.assertTrue(is_heading_fragment_claim("Information Indigestion.", html))
+        self.assertFalse(is_heading_fragment_claim(
+            "Unstructured notes can overwhelm readers.",
+            html,
+        ))
 
     def test_markdown_links_and_emphasis_do_not_break_source_quote_matching(self):
         source = (
