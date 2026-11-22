@@ -12,6 +12,7 @@ from src.readability import analyze as analyze_readability
 from src.screenshot_capture import ScreenshotResult
 from src.state_store import StateStore
 from src.spreadsheet_validation import validate_spreadsheet_examples
+from src.content_type_checks import analyze_content_type
 
 
 @dataclass
@@ -340,7 +341,11 @@ class QualityGate:
                             "does not appear in the article body."
                         )
 
-        # 5b. Plain English: measure and report readability, but do not reject
+        # 5b. Content-type-aware structure and completeness coaching.
+        type_warnings, type_metrics = analyze_content_type(draft.content_type, html_str)
+        warnings.extend(type_warnings)
+
+        # 5c. Plain English: measure and report readability, but do not reject
         # otherwise sound articles on a formulaic grade-level score alone.
         if self.max_reading_grade:
             read = analyze_readability(html_str)
@@ -434,5 +439,7 @@ class QualityGate:
                 "seo_description_characters": len((draft.meta_description or "").strip()),
                 "screenshot_captured": bool(screenshot_result and screenshot_result.success),
                 "has_public_screenshot": bool(screenshot_result and screenshot_result.public_url),
+                "content_type": draft.content_type or "unspecified",
+                **type_metrics,
             },
         )
