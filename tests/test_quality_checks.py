@@ -50,7 +50,6 @@ class TestQualityChecks(unittest.TestCase):
     def test_live_gate_does_not_require_exact_source_quotes(self):
         """Original articles must not need sentence-by-sentence copied-source quote mappings."""
         draft = self._create_valid_draft()
-        draft.claim_evidence = []
         report = self.live_gate.run_all_checks(
             draft,
             verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
@@ -86,7 +85,7 @@ class TestQualityChecks(unittest.TestCase):
         draft = self._create_valid_draft()
         draft.is_dry_run_fixture = True
         report = self.live_gate.run_all_checks(
-            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+            draft, check_duplicate=False
         )
         self.assertFalse(report.passed)
         self.assertTrue(any("Live Guard failed: Dry-run test fixture cannot be published" in f for f in report.failures))
@@ -115,15 +114,15 @@ class TestQualityChecks(unittest.TestCase):
         draft = self._create_valid_draft()
         draft.sources_used = [{"title": "Only One Source", "url": "https://example.com"}]
         report = self.gate.run_all_checks(draft, check_duplicate=False)
-        self.assertTrue(report.passed, f"Optional sources should not block a draft: {report.failures})
+        self.assertTrue(report.passed, f"Optional sources should not block a draft: {report.failures}")
 
-    def test_unverified_source_in_live_mode_fails(self):
-        """Test that citing an unverified source fails in live mode."""
+    def test_optional_citation_still_must_be_verified_in_live_mode(self):
+        """A citation is optional, but a supplied citation must match a verified source."""
         draft = self._create_valid_draft()
         verified_urls = {"https://ai.google.dev/docs"}  # W3C was not verified
         report = self.live_gate.run_all_checks(
             draft, verified_source_urls=verified_urls,
-            verified_source_evidence=self._verified_evidence(), check_duplicate=False
+            check_duplicate=False
         )
         self.assertFalse(report.passed)
         self.assertTrue(any("was not verified" in f for f in report.failures))
@@ -246,7 +245,7 @@ class TestFinalBloggerHTMLValidation(unittest.TestCase):
         )
         self.assertTrue(any("Google-supported BlogPosting type" in item for item in validate_final_blogger_html(bad)))
 
-    def test_missing_sources_section_fails(self):
+    def test_sources_section_is_optional_in_final_html(self):
         failures = validate_final_blogger_html(self._valid_html().replace("Sources &amp; References", "Further reading"))
         self.assertEqual(failures, [])
 
