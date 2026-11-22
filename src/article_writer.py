@@ -248,7 +248,7 @@ class ArticleWriter:
             f"{self.min_word_count} words; aim for about {self._target_words()}.\n\n"
             "Rewrite and expand the article so html_content reaches that length by adding practical depth: more concrete "
             "step-by-step detail, who each option suits, honest pros, cons and limits, common mistakes, and a short FAQ. "
-            "Use ONLY facts from the research brief. Do not invent pricing, numbers, quotes or features. Keep the same "
+            "Use the research brief for changing or product-specific facts. You may add clearly labelled hypothetical examples and general procedural detail, but do not invent product features, prices, statistics, quotes or outcomes. Keep the same "
             "title, labels and any useful source links unchanged. "
             "not be paraphrased or dropped. Keep every source linked in the body, and keep the "
             "plain, natural voice: plain English at about US grade 7 to 8, sentences averaging about 15 words. "
