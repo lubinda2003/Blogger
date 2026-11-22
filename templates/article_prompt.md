@@ -87,6 +87,19 @@ Your task is to produce a useful, accurate article that answers a real reader ne
 - Do not promise search rankings, traffic, client results or fixed time-to-results. Avoid phrases such as "will rank in three weeks".
 - If a feature, price, limit or availability is uncertain, say so briefly or direct readers to the provider's current plan or help page. Do not fill gaps with guesses.
 
+## Spreadsheet formula and calculation articles
+
+When the topic teaches spreadsheet formulas, include one complete worked example that can be independently checked.
+
+- Name the application (Excel or Google Sheets) and note any relevant version or locale difference. Do not imply their features or formula behavior are always identical.
+- Show a small, complete sample dataset with exact cell references (for example, A1:B5). Identify the cell where each formula belongs.
+- Explain the formula in plain English and show the expected calculated result, not just the formula text.
+- Include a structured `spreadsheet_examples` item in the JSON output for every worked formula. Each item must contain: `application`, `formula_cell`, `formula`, `cells` (an array of `{"reference":"A1","value":"..." }` entries for every referenced cell), and `expected_result`.
+- Keep the cell values in the structured example identical to the sample data shown in the article. The formula, formula cell and expected result must also appear in the article body.
+- The automated checker independently evaluates these common functions: SUM, AVERAGE, COUNT, COUNTA, MIN, MAX, COUNTIF, AVERAGEIF and IF, plus basic arithmetic and comparisons. Do not claim the checker verifies other functions. If teaching another function (such as XLOOKUP), explain its behavior carefully and do not add a structured calculation example that the checker cannot evaluate.
+- Check ranges, criteria, blank cells and edge cases. For conditional formulas, show at least one example for each meaningful outcome.
+- If the example cannot be independently calculated, do not invent an output. Simplify the example or explain that the reader should verify it in the named spreadsheet application.
+
 ## Screenshots and images
 - Include a relevant featured image brief.
 - For a practical walkthrough, suggest genuine screenshots at the points where a reader needs to see a screen, setting or result.
@@ -115,6 +128,7 @@ Return only one valid JSON object. Do not wrap it in Markdown fences.
   "labels": ["Relevant category", "Relevant tool if applicable"],
   "primary_intent": "Tutorial / Comparison / Explanation / Troubleshooting / Guide",
   "html_content": "<p>Opening answer...</p>",
+  "spreadsheet_examples": [],
   "summary": "Two short sentences explaining what the reader will learn",
   "featured_image_brief": {
     "description": "Clear visual idea for a branded featured image",
