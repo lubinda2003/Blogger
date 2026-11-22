@@ -74,6 +74,19 @@ def build_html(title: str, kicker: str, seed: str) -> str:
             '<rect x="830" y="240" width="160" height="160" rx="34" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
             '<path d="M875 290h70M875 320h70M875 350h42" stroke="__POP__" stroke-width="9" stroke-linecap="round"/>'
         )
+    elif family == "ai":
+        # A decision map: everyday work needs flow into a central assistant choice.
+        art = (
+            '<path d="M790 235C850 235 845 310 900 310M790 430C850 430 845 355 900 355M1015 330h95" fill="none" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
+            '<rect x="735" y="165" width="205" height="125" rx="24" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
+            '<rect x="735" y="365" width="205" height="125" rx="24" fill="__BG2__" stroke="__POP__" stroke-width="3"/>'
+            '<rect x="955" y="265" width="190" height="150" rx="28" fill="__ACCENT__" opacity=".16" stroke="__ACCENT__" stroke-width="4"/>'
+            '<path d="M780 210h105M780 238h70M780 410h105M780 438h70" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
+            '<path d="M1000 320h100M1000 350h70" stroke="__POP__" stroke-width="10" stroke-linecap="round"/>'
+            '<text x="760" y="190" fill="__INK__" font-size="15" font-weight="700">WRITE</text>'
+            '<text x="760" y="390" fill="__INK__" font-size="15" font-weight="700">PLAN</text>'
+            '<text x="985" y="295" fill="__INK__" font-size="14" font-weight="700">CHOOSE</text>'
+        )
     elif family == "software":
         art = (
             '<rect x="720" y="125" width="390" height="400" rx="28" fill="__BG2__" stroke="__ACCENT__" stroke-width="2"/>'
