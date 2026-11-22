@@ -67,14 +67,6 @@ def build_html(title: str, kicker: str, seed: str) -> str:
     bg, accent, pop, ink = PALETTES[family]
     # Distinct compositions per topic family, with seeded variation within each family.
     if family == "ai":
-        art = (
-            '<circle cx="910" cy="320" r="205" fill="none" stroke="__ACCENT__" stroke-width="2" opacity=".25"/>'
-            '<circle cx="910" cy="320" r="145" fill="__ACCENT__" opacity=".08"/>'
-            '<path d="M760 320h300M910 170v300M804 214l212 212M1016 214L804 426" stroke="__ACCENT__" stroke-width="3" opacity=".45"/>'
-            '<rect x="830" y="240" width="160" height="160" rx="34" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
-            '<path d="M875 290h70M875 320h70M875 350h42" stroke="__POP__" stroke-width="9" stroke-linecap="round"/>'
-        )
-    elif family == "ai":
         # A decision map: everyday work needs flow into a central assistant choice.
         art = (
             '<path d="M790 235C850 235 845 310 900 310M790 430C850 430 845 355 900 355M1015 330h95" fill="none" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
