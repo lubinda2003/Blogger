@@ -87,6 +87,27 @@ def build_html(title: str, kicker: str, seed: str) -> str:
             '<text x="760" y="390" fill="__INK__" font-size="15" font-weight="700">PLAN</text>'
             '<text x="985" y="295" fill="__INK__" font-size="14" font-weight="700">CHOOSE</text>'
         )
+    elif family == "spreadsheets":
+        art = (
+            '<rect x="720" y="125" width="410" height="420" rx="24" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
+            '<path d="M720 205h410M820 205v340M920 205v340M1020 205v340M720 290h410M720 375h410M720 460h410" stroke="__ACCENT__" stroke-width="2" opacity=".55"/>'
+            '<rect x="822" y="292" width="96" height="81" fill="__POP__" opacity=".45"/>'
+            '<path d="M840 340l24-24 24 12 32-36" fill="none" stroke="__INK__" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
+        )
+    elif family == "design":
+        art = (
+            '<path d="M760 480L1025 165" stroke="__ACCENT__" stroke-width="38" stroke-linecap="round"/>'
+            '<path d="M785 510l275-325" stroke="__POP__" stroke-width="12" stroke-linecap="round"/>'
+            '<circle cx="820" cy="210" r="58" fill="__ACCENT__" opacity=".35"/>'
+            '<rect x="880" y="335" width="210" height="145" rx="18" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
+            '<circle cx="930" cy="385" r="24" fill="__POP__"/><path d="M900 455l55-45 40 25 45-55 30 75" fill="none" stroke="__ACCENT__" stroke-width="9"/>'
+        )
+    elif family == "business":
+        art = (
+            '<path d="M745 470h365M780 430V285h75v145M890 430V220h75v210M1000 430V155h75v275" fill="none" stroke="__ACCENT__" stroke-width="16" stroke-linejoin="round"/>'
+            '<path d="M760 250l135-85 105 28 105-75" fill="none" stroke="__POP__" stroke-width="10" stroke-linecap="round"/>'
+            '<circle cx="760" cy="250" r="13" fill="__POP__"/><circle cx="895" cy="165" r="13" fill="__POP__"/><circle cx="1000" cy="193" r="13" fill="__POP__"/>'
+        )
     elif family == "software":
         art = (
             '<rect x="720" y="125" width="390" height="400" rx="28" fill="__BG2__" stroke="__ACCENT__" stroke-width="2"/>'
