@@ -64,6 +64,15 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(report.passed, f"Expected pass, got failures: {report.failures}")
         self.assertEqual(len(report.failures), 0)
 
+    def test_content_type_warnings_are_reported_without_becoming_hard_blocks(self):
+        draft = self._create_valid_draft()
+        draft.content_type = "Step-by-step tutorial"
+        draft.html_content = "<h2>Overview</h2><p>" + "Useful guidance helps readers complete practical tasks. " * 100 + "</p>"
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertEqual(report.metrics["content_type"], "Step-by-step tutorial")
+        self.assertTrue(any("Content format advisory (tutorial)" in item for item in report.warnings))
+
     def test_spreadsheet_formula_with_correct_calculated_result_passes(self):
         draft = self._create_valid_draft()
         draft.category = "Spreadsheets, Data and Reporting"
