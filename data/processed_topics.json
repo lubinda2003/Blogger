@@ -249,25 +249,42 @@
         ],
         "word_count": 1409
       }
+    },
+    {
+      "topic_id": "freelance-portfolio",
+      "topic_title": "How to Build a Clear Freelance Portfolio Without a Personal Website",
+      "fingerprint": "ffbe74964af062c4",
+      "post_id": "8588497908500776455",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-22T12:35:39.353822+00:00",
+      "metadata": {
+        "labels": [
+          "Freelancing",
+          "Portfolio"
+        ],
+        "word_count": 1047
+      }
     }
   ],
-  "last_updated": "2026-11-21T16:13:00.642154+00:00",
-  "total_runs": 14,
+  "last_updated": "2026-11-22T12:35:39.353842+00:00",
+  "total_runs": 15,
   "failed_attempts": {
+    "claude-code-web-prototyping": 1,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
     "best-e-commerce-software-for-small-business-novo": 1,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "weekly-work-plan": 2,
+    "organize-digital-files": 3,
     "freelance-portfolio": 1,
     "digital-study-notes": 3,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "organize-digital-files": 3,
-    "canva-brand-kit-design-walkthrough": 2,
     "evaluate-online-sources": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "best-free-invoicing-tools-freelancers": 2,
     "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
-    "weekly-work-plan": 2,
-    "claude-code-web-prototyping": 1,
+    "best-free-invoicing-tools-freelancers": 2,
+    "canva-brand-kit-design-walkthrough": 2,
     "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1
   }
 }
