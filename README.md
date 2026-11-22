@@ -34,7 +34,7 @@ Articles should use plain English, practical instructions, original examples, an
 4. **Research** — use focused research as background context and check changing details when needed. References are optional; there is no minimum source count or sentence-by-sentence evidence matching.
 5. **Article generation** — write original explanations, instructions and examples using the configured language-model provider.
 6. **Visual assets** — render branded featured covers and supporting illustrations locally, capture genuine product screenshots with Playwright, render Mermaid diagrams, optimize raster images with Sharp, and run an axe-core accessibility scan.
-7. **Quality checks** — validate article length, sources, style, safety, and duplication.
+7. **Quality checks** — validate article usefulness, structure, style, safety, optional reference links, and duplication.
 8. **Blogger action** — create a draft only; public publishing is disabled in configuration validation and the Blogger client.
 9. **State and reports** — persist topic outcomes and upload run artifacts/reports.
 
