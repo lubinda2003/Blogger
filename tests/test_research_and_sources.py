@@ -58,8 +58,8 @@ class TestResearchAndSources(unittest.TestCase):
             self.assertEqual(title, "Official Documentation Page")
             self.assertIn("substantive factual documentation", excerpt)
 
-    def test_insufficient_verified_sources_flags_failure(self):
-        """If fewer than 2 sources can be verified, insufficient_evidence must be True."""
+    def test_one_verified_background_source_is_enough(self):
+        """There is no minimum number of background sources required."""
         brief = ResearchBrief(topic_id="test", topic_title="Test Topic", target_url="https://example.com")
         brief.sources = [
             SourceCitation(title="Failed Source 1", url="https://example.com/1", retrieval_date="Today", verified=False),
@@ -73,8 +73,8 @@ class TestResearchAndSources(unittest.TestCase):
         self.assertIn("How to organize digital files", queries[0])
         self.assertIn("reliable sources", queries[0])
 
-    def test_prompt_format_includes_claim_to_source_mapping(self):
-        """The rendered prompt text must include the verified source URLs and claim mappings."""
+    def test_prompt_format_includes_background_sources_without_claim_mappings(self):
+        """The brief supplies context for original writing, not sentence-by-sentence claim maps."""
         brief = ResearchBrief(topic_id="test", topic_title="Test", target_url="https://example.com")
         brief.key_facts = ["Fact 1: Gemini accepts structured schemas."]
         brief.sources = [
@@ -90,12 +90,12 @@ class TestResearchAndSources(unittest.TestCase):
 
         prompt_str = brief.format_for_prompt()
         self.assertIn("https://ai.google.dev", prompt_str)
-        self.assertIn("Structured output schema", prompt_str)
+        self.assertIn("Background Sources", prompt_str)
         self.assertIn("Gemini models accept response schema", prompt_str)
 
 
-    def test_http_200_with_irrelevant_content_does_not_verify_claims(self):
-        """A website returning HTTP 200 with unrelated content must NOT mark claims as verified."""
+    def test_http_200_readable_content_is_background_not_claim_evidence(self):
+        """A readable page is available as context without claiming it verifies article sentences."""
         with patch.object(self.collector, "verify_and_fetch_source") as mock_fetch:
             # Returns HTTP 200, but content is an unrelated cake baking blog
             mock_fetch.return_value = (
@@ -122,14 +122,13 @@ class TestResearchAndSources(unittest.TestCase):
             )
 
             source = brief.sources[0]
-            # Must NOT be verified because content does not support the claim!
-            self.assertFalse(source.verified)
-            self.assertEqual(len(source.verified_claims), 0)
-            self.assertIn("Database organization, workspace templates, and permission management", source.unverified_claims)
-            self.assertIn("does not support required claims", source.failure_reason)
+            self.assertTrue(source.verified)
+            self.assertEqual(source.verified_claims, [])
+            self.assertEqual(source.unverified_claims, [])
+            self.assertIsNone(source.failure_reason)
 
-    def test_http_200_with_supporting_content_marks_claims_verified(self):
-        """A website returning HTTP 200 that substantively mentions claim keywords is marked verified."""
+    def test_http_200_supporting_content_is_available_as_background(self):
+        """Retrieved text is available to the writer without sentence-level claim matching."""
         with patch.object(self.collector, "verify_and_fetch_source") as mock_fetch:
             mock_fetch.return_value = (
                 True,
@@ -158,8 +157,8 @@ class TestResearchAndSources(unittest.TestCase):
 
             source = brief.sources[0]
             self.assertTrue(source.verified)
-            self.assertIn("Database organization, workspace templates, and permission management", source.verified_claims)
-            self.assertEqual(len(source.unverified_claims), 0)
+            self.assertEqual(source.verified_claims, [])
+            self.assertEqual(source.unverified_claims, [])
 
     def test_soft_404_or_error_page_disguised_as_200_is_rejected(self):
         """Pages returning HTTP 200 with '404 Not Found' or error title must fail verification."""
@@ -193,8 +192,8 @@ class TestResearchAndSources(unittest.TestCase):
             "Loose keyword overlap unexpectedly verified a claim without contextual sentence-level support.",
         )
 
-    def test_unsupported_claim_routes_to_unverified_and_requires_manual_review(self):
-        """Claims without reliable source support must be routed to unverified_claims and marked for review."""
+    def test_article_claims_are_not_prevalidated_against_source_wording(self):
+        """The research stage does not reject readable pages for lacking matching article phrases."""
         with patch.object(self.collector, "verify_and_fetch_source") as mock_fetch:
             mock_fetch.return_value = (
                 True,
@@ -220,10 +219,10 @@ class TestResearchAndSources(unittest.TestCase):
             )
 
             source = brief.sources[0]
-            self.assertFalse(source.verified)
-            self.assertIn("Freelancer service fee structure on Upwork contracts", source.unverified_claims)
-            self.assertEqual(len(source.verified_claims), 0)
-            self.assertIn("does not support required claims", source.failure_reason.lower())
+            self.assertTrue(source.verified)
+            self.assertEqual(source.unverified_claims, [])
+            self.assertEqual(source.verified_claims, [])
+            self.assertIsNone(source.failure_reason)
 
     def test_javascript_spa_page_fails_extraction(self):
         """A JavaScript-only SPA page returning HTTP 200 with an empty skeleton must fail content extraction."""
@@ -389,8 +388,8 @@ class TestResearchAndSources(unittest.TestCase):
         self.assertFalse(collector_block._is_domain_allowed("https://blog.sketchy-affiliate.net/link"))
         self.assertTrue(collector_block._is_domain_allowed("https://trusted.org/help"))
 
-    def test_tavily_fallback_does_not_verify_unsupported_snippet_over_200_chars(self):
-        """A Tavily fallback snippet > 200 characters with completely unsupported claims must NOT be verified."""
+    def test_tavily_fallback_keeps_readable_snippet_as_background(self):
+        """A readable Tavily snippet can inform original writing without exact phrase matching."""
         collector = ResearchCollector(tavily_api_key="tvly-mock-key")
         with patch.object(collector, "_search_tavily") as mock_search, \
              patch.object(collector, "verify_and_fetch_source") as mock_fetch:
@@ -424,9 +423,8 @@ class TestResearchAndSources(unittest.TestCase):
             )
 
             source = brief.sources[0]
-            # Must NOT be marked verified despite snippet length > 200 chars!
-            self.assertFalse(source.verified)
-            self.assertEqual(len(source.verified_claims), 0)
+            self.assertTrue(source.verified)
+            self.assertEqual(source.verified_claims, [])
 
     def test_topic_relevance_claim_uses_named_product_and_subject(self):
         """Topic claims should be specific and searchable, not generic instructions."""

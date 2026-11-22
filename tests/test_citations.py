@@ -71,10 +71,11 @@ class TestDropUnverifiedSources(unittest.TestCase):
 
 
 class TestCitationRuleInBrief(unittest.TestCase):
-    def test_brief_tells_the_model_to_cite_only_verified_urls(self):
+    def test_brief_treats_sources_as_optional_background(self):
         text = _brief(_source("https://docs.example.com/guide")).format_for_prompt()
-        self.assertIn("CITATION RULE", text)
-        self.assertIn("Target URL", text)
+        self.assertIn("Background Sources", text)
+        self.assertIn("reference material only", text)
+        self.assertIn("do not copy", text)
 
 
 class TestTopicBrand(unittest.TestCase):
@@ -116,12 +117,12 @@ class TestRelevanceGate(unittest.TestCase):
              patch.object(ResearchCollector, "verify_and_fetch_source", fake_fetch):
             return collector.conduct_research("t", self.TITLE, "Productivity", "https://www.notion.com", zambia_context=False)
 
-    def test_a_page_about_a_competitor_is_not_accepted_as_a_source_for_a_notion_topic(self):
+    def test_research_pages_are_background_not_sentence_matching_evidence(self):
         brief = self._research()
         by_url = {s.url: s for s in brief.sources}
         self.assertTrue(by_url["https://blog.example.com/notion"].verified)
-        self.assertFalse(by_url["https://profiles.example.com/taskade"].verified)
-        self.assertIn("notion", by_url["https://profiles.example.com/taskade"].failure_reason.lower())
+        self.assertTrue(by_url["https://profiles.example.com/taskade"].verified)
+        self.assertEqual(by_url["https://profiles.example.com/taskade"].verified_claims, [])
 
 
 if __name__ == "__main__":

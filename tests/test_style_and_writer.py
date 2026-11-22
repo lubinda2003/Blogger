@@ -176,7 +176,7 @@ class TestStyleAndWriter(unittest.TestCase):
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
 
     def test_groq_user_agent_and_completion_budget(self):
-        """Groq REST call must send custom User-Agent and the expanded completion budget."""
+        """Groq REST call must send custom User-Agent and the bounded completion budget."""
         writer = ArticleWriter(groq_api_key="gsk-test", provider="groq")
         with patch("urllib.request.urlopen") as mock_urlopen:
             resp = MagicMock()
@@ -190,7 +190,7 @@ class TestStyleAndWriter(unittest.TestCase):
             req = args[0]
             self.assertEqual(req.headers.get("User-agent"), "DigitalToolkitContentEngine/1.0")
             payload = json.loads(req.data.decode("utf-8"))
-            self.assertEqual(payload.get("max_completion_tokens"), 8192)
+            self.assertEqual(payload.get("max_completion_tokens"), 6000)
             self.assertNotIn("max_tokens", payload)
             self.assertEqual(payload.get("reasoning_effort"), "low")
 
@@ -275,11 +275,6 @@ class TestStyleAndWriter(unittest.TestCase):
                 {"title": "Official API guide", "url": "https://example.com/api-guide"},
                 {"title": "Official API reference", "url": "https://example.org/api-reference"},
             ],
-            "claim_evidence": [{
-                "claim": "The API guide describes request setup.",
-                "source_url": "https://example.com/api-guide",
-                "evidence_quote": "The API guide describes request setup.",
-            }],
         })
 
         with patch.object(writer, "_call_llm_provider") as mock_llm:

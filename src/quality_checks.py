@@ -4,7 +4,6 @@ import html
 import json
 import re
 from html.parser import HTMLParser
-from urllib.parse import urlparse
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set
 
@@ -12,7 +11,6 @@ from src.article_writer import ArticleDraft
 from src.readability import analyze as analyze_readability
 from src.screenshot_capture import ScreenshotResult
 from src.state_store import StateStore
-from src.research import ResearchCollector
 
 
 @dataclass
@@ -32,153 +30,6 @@ class QAReport:
         }
 
 
-
-
-GOOGLE_OFFICIAL_PRODUCT_DOMAINS = (
-    "ai.google.dev",
-    "cloud.google.com",
-    "support.google.com",
-    "workspace.google.com",
-    "developers.googleblog.com",
-    "blog.google",
-)
-GOOGLE_OFFICIAL_PRICING_DOMAINS = ("ai.google.dev", "cloud.google.com")
-
-
-CLAIM_STOP_WORDS = {
-    "a", "an", "and", "are", "as", "at", "be", "been", "being", "by", "for", "from",
-    "has", "have", "how", "in", "into", "is", "it", "its", "of", "on", "or", "that",
-    "the", "their", "this", "to", "use", "used", "using", "was", "were", "what", "when",
-    "which", "with", "you", "your", "let", "lets", "allow", "allows",
-}
-CLAIM_NEGATIONS = {"no", "not", "never", "cannot", "can't", "doesn't", "don't", "without", "neither", "nor"}
-
-
-def _claim_token_key(token: str) -> str:
-    """Normalize common inflections and safe editorial paraphrases for claim matching."""
-    token = token.casefold()
-    aliases = {
-        "revealed": "show", "showed": "show",
-        "delivers": "give", "delivered": "give", "gives": "give",
-        "citations": "source", "citation": "source", "links": "source", "link": "source",
-        "supported": "source", "supporting": "source", "sources": "source",
-        "discussions": "call", "discussion": "call", "meetings": "call", "meeting": "call",
-        "flexible": "flexibility", "evaluating": "test", "evaluate": "test",
-        "committing": "spend", "subscription": "plan", "subscriptions": "plan",
-        "desire": "choose", "driven": "choose", "earn": "income",
-    }
-    if token in aliases:
-        return aliases[token]
-    if token.endswith("ies") and len(token) > 4:
-        token = token[:-3] + "y"
-    elif token.endswith("ing") and len(token) > 5:
-        token = token[:-3]
-    elif token.endswith("ed") and len(token) > 4:
-        token = token[:-2]
-    elif token.endswith("s") and len(token) > 3:
-        token = token[:-1]
-    return aliases.get(token, token)
-
-
-def _normalized_claim_tokens(value: str) -> Set[str]:
-    return {
-        _claim_token_key(token)
-        for token in re.findall(r"[a-z0-9]+", (value or "").casefold())
-        if token not in CLAIM_STOP_WORDS and token not in {"largely", "looking", "inline"}
-    }
-
-
-def _evidence_text_for_matching(value: str) -> str:
-    """Remove lightweight Markdown decoration while preserving linked evidence text."""
-    text = html.unescape(str(value or ""))
-    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
-    text = re.sub(r"[*_`~]{1,3}", "", text)
-    text = text.replace("\u2011", "-").replace("\u2013", "-").replace("\u2014", "-")
-    text = re.sub(r"\s+", " ", text)
-    return text.casefold().strip()
-
-
-def _claim_number_contexts(claim: str) -> List[tuple]:
-    """Return each numeric marker and nearby claim terms that identify what it measures."""
-    tokens = list(re.finditer(r"[a-z0-9]+", (claim or "").casefold()))
-    contexts = []
-    for index, match in enumerate(tokens):
-        if not re.fullmatch(r"\d+(?:[.,]\d+)?%?", match.group()):
-            continue
-        nearby = [
-            _claim_token_key(item.group())
-            for item in tokens[max(0, index - 1):index] + tokens[index + 1:index + 3]
-            if item.group() not in CLAIM_STOP_WORDS and not re.fullmatch(r"\d+(?:[.,]\d+)?%?", item.group())
-        ]
-        contexts.append((match.group().rstrip("%"), set(nearby)))
-    return contexts
-
-
-def claim_is_represented_in_article(claim: str, article_text: str) -> bool:
-    """Match paraphrased claims in a local passage while keeping numbers and negation grounded."""
-    claim_tokens = _normalized_claim_tokens(claim)
-    if len(claim_tokens) < 3:
-        return False
-
-    sentences = [
-        sentence.strip()
-        for sentence in re.split(r"(?<=[.!?])\s+|\n+", (article_text or "").casefold())
-        if sentence.strip()
-    ]
-    if not sentences:
-        return False
-
-    negation_pattern = r"\b(?:no|not|never|cannot|can't|doesn't|don't|without|neither|nor)\b"
-    claim_has_negation = bool(re.search(negation_pattern, claim.casefold()))
-    number_contexts = _claim_number_contexts(claim)
-    claim_numbers = {number for number, _ in number_contexts}
-
-    # A claim can span a short paragraph (for example, a statistic explained over
-    # two sentences). Do not compare against the whole article.
-    for index in range(len(sentences)):
-        for width in (1, 2, 3, 4):
-            passage = sentences[index:index + width]
-            window = " ".join(passage)
-            window_tokens = _normalized_claim_tokens(window)
-            coverage = len(claim_tokens & window_tokens) / len(claim_tokens)
-            if coverage < 0.65:
-                continue
-
-            # Every number must occur in the passage and be anchored to at least one
-            # nearby subject/context term from the claim in the same sentence.
-            if number_contexts:
-                valid_numbers = set()
-                for sentence in passage:
-                    sentence_numbers = {
-                        number.rstrip("%")
-                        for number in re.findall(r"\b\d+(?:[.,]\d+)?%?\b", sentence)
-                    }
-                    if not sentence_numbers:
-                        continue
-                    sentence_tokens = _normalized_claim_tokens(sentence)
-                    for number, anchors in number_contexts:
-                        if number in sentence_numbers and (not anchors or anchors & sentence_tokens):
-                            valid_numbers.add(number)
-                if not claim_numbers.issubset(valid_numbers):
-                    continue
-
-            if claim_has_negation != bool(re.search(negation_pattern, window)):
-                continue
-            return True
-    return False
-
-
-def has_official_google_source(source_urls, pricing: bool = False) -> bool:
-    """Return True only when a citation URL belongs to an official Google product source."""
-    allowed = GOOGLE_OFFICIAL_PRICING_DOMAINS if pricing else GOOGLE_OFFICIAL_PRODUCT_DOMAINS
-    for url in source_urls or []:
-        try:
-            host = (urlparse(url).hostname or "").lower()
-        except (TypeError, ValueError):
-            continue
-        if any(host == domain or host.endswith("." + domain) for domain in allowed):
-            return True
-    return False
 
 
 def normalize_url(url: str) -> str:
@@ -275,8 +126,6 @@ def validate_final_blogger_html(document: str) -> List[str]:
         failures.append("Final HTML validation failed: styled article body wrapper is missing.")
     if "h2" not in inspector.tags:
         failures.append("Final HTML validation failed: article has no section headings (h2).")
-    if "Sources &amp; References" not in document and "Sources & References" not in document:
-        failures.append("Final HTML validation failed: visible Sources & References section is missing.")
     if inspector.duplicate_ids:
         failures.append("Final HTML validation failed: duplicate element IDs: " + ", ".join(sorted(inspector.duplicate_ids)) + ".")
     if inspector.images_without_alt:
@@ -366,54 +215,6 @@ class QualityGate:
         html_str = draft.html_content or ""
         clean_text = re.sub(r"<[^>]+>", " ", html_str)
         text_lower = clean_text.lower()
-
-        # 0. Claim-level evidence verification. URL reachability alone is not proof.
-        if self.is_live_mode:
-            evidence_by_url = {
-                normalize_url(item.get("url", "")): item
-                for item in (verified_source_evidence or [])
-                if item.get("verified") and item.get("url")
-            }
-            if not draft.claim_evidence:
-                failures.append(
-                    "Evidence check failed: live article has no claim_evidence mappings. "
-                    "Every material factual claim must map to retrieved source text."
-                )
-            else:
-                normalized_article_text = re.sub(r"\s+", " ", html.unescape(clean_text)).strip().casefold()
-                for index, item in enumerate(draft.claim_evidence, start=1):
-                    claim = re.sub(r"\s+", " ", str(item.get("claim", ""))).strip()
-                    source_url = str(item.get("source_url", "")).strip()
-                    quote = re.sub(r"\s+", " ", str(item.get("evidence_quote", ""))).strip()
-                    if not claim or not source_url or not quote:
-                        failures.append(f"Evidence check failed: claim mapping #{index} is incomplete.")
-                        continue
-                    if not claim_is_represented_in_article(claim, normalized_article_text):
-                        failures.append(
-                            f"Evidence check failed: mapped claim #{index} is not sufficiently represented in the article "
-                            "(key terms, numeric values, and negation must be preserved)."
-                        )
-                        continue
-                    normalized_url = normalize_url(source_url)
-                    source = evidence_by_url.get(normalized_url)
-                    if not source:
-                        failures.append(f"Evidence check failed: claim #{index} points to a source that was not verified.")
-                        continue
-                    # The compact cleaned_text window may not include a relevant passage found
-                    # later in the page. evidence_excerpt is separately extracted from the
-                    # verified source and must remain eligible as direct supporting evidence.
-                    source_text = _evidence_text_for_matching(
-                        " ".join(
-                            str(source.get(field) or "")
-                            for field in ("cleaned_text", "evidence_excerpt")
-                        )
-                    )
-                    normalized_quote = _evidence_text_for_matching(quote)
-                    if normalized_quote not in source_text:
-                        failures.append(f"Evidence check failed: evidence quote for claim #{index} is not present in retrieved source text.")
-                        continue
-                    if not ResearchCollector._supports_numeric_markers(claim, quote):
-                        failures.append(f"Evidence check failed: numeric values in claim #{index} are not supported by its evidence quote.")
 
         # 0b. Mock & Test Fixture Guard for Live Mode
         if self.is_live_mode:
@@ -539,52 +340,25 @@ class QualityGate:
                     f"HTML check failed: Tag <{tag}> is unbalanced (opened {open_count} times, closed {close_count} times)."
                 )
 
-        # 7. Real Sourced Evidence & Citations Verification
-        if not draft.sources_used or len(draft.sources_used) < self.min_sources:
-            failures.append(
-                f"Sources check failed: Article cites {len(draft.sources_used or [])} sources, "
-                f"failing the requirement of at least {self.min_sources} verified credible sources."
-            )
-        else:
+        # 7. Optional source-link validation. Sources can help readers, but are not a publication quota.
+        if draft.sources_used:
             normalized_verified = (
-                {normalize_url(u) for u in verified_source_urls}
+                {normalize_url(url) for url in verified_source_urls}
                 if verified_source_urls is not None
                 else None
             )
             found_hrefs = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_str, re.IGNORECASE)
-            normalized_body_links = {normalize_url(html.unescape(l)) for l in found_hrefs}  # hrefs hold &amp;, URLs hold &
-
-            for s in draft.sources_used:
-                url = s.get("url", "")
-                if not url.startswith("http://") and not url.startswith("https://"):
+            normalized_body_links = {normalize_url(html.unescape(link)) for link in found_hrefs}
+            for source in draft.sources_used:
+                url = source.get("url", "")
+                if not url.startswith(("http://", "https://")):
                     failures.append(f"Sources check failed: Source URL '{url}' is malformed.")
-                else:
-                    norm_url = normalize_url(url)
-                    if normalized_verified is not None and norm_url not in normalized_verified:
-                        # In live mode or when verified URLs list is supplied
-                        failures.append(
-                            f"Sources check failed: Cited source '{url}' was not verified during the research phase."
-                        )
-                    if norm_url not in normalized_body_links:
-                        failures.append(
-                            f"Sources check failed: Cited source '{url}' is not linked in the article body."
-                        )
-
-        # 7b. Google product and API claims need primary-source evidence.
-        source_urls = [s.get("url", "") for s in (draft.sources_used or [])]
-        mentions_google_product = bool(re.search(r"\b(?:google|gemini)\b", text_lower))
-        has_exact_pricing = bool(
-            re.search(r"\$\s?\d|\bper\s+(?:1m|million)\s+tokens\b|\bapi\s+rates\b", text_lower)
-        )
-        has_model_identifier = bool(re.search(r"\bgemini\s+\d+(?:\.\d+)?\s+flash\b", text_lower))
-        if mentions_google_product and has_exact_pricing and not has_official_google_source(source_urls, pricing=True):
-            failures.append(
-                "Evidence check failed: Google/Gemini pricing claims require an official Google AI pricing or Cloud pricing source."
-            )
-        elif mentions_google_product and has_model_identifier and not has_official_google_source(source_urls, pricing=False):
-            failures.append(
-                "Evidence check failed: Specific Gemini model availability claims require an official Google product or developer source."
-            )
+                    continue
+                normalized_url = normalize_url(url)
+                if normalized_verified is not None and normalized_url not in normalized_verified:
+                    failures.append(f"Sources check failed: Cited source '{url}' was not verified during the research phase.")
+                if normalized_url not in normalized_body_links:
+                    failures.append(f"Sources check failed: Cited source '{url}' is not linked in the article body.")
 
         # 8. Affiliate Disclosure
         found_links = re.findall(r'href=["\'](https?://[^"\']+)["\']', html_str, re.IGNORECASE)

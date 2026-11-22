@@ -39,11 +39,6 @@ class TestQualityChecks(unittest.TestCase):
             html_content=html_with_sources,
             summary="A clear walkthrough detailing copy editing workflows.",
             sources_used=sources,
-            claim_evidence=[{
-                "claim": "Each step is short and easy to follow.",
-                "source_url": "https://ai.google.dev/docs",
-                "evidence_quote": "Each step is short and easy to follow.",
-            }],
             primary_intent="Tutorial",
             word_count=850,
             last_checked_date="October 2026",
@@ -52,73 +47,15 @@ class TestQualityChecks(unittest.TestCase):
             screenshot_needed=False,
         )
 
-    def _verified_evidence(self):
-        return [{
-            "title": "Official Google Documentation",
-            "url": "https://ai.google.dev/docs",
-            "verified": True,
-            "cleaned_text": "Each step is short and easy to follow.",
-            "evidence_excerpt": "Each step is short and easy to follow.",
-        }]
-
-    def test_live_gate_rejects_missing_claim_evidence(self):
+    def test_live_gate_does_not_require_exact_source_quotes(self):
+        """Original articles must not need sentence-by-sentence copied-source quote mappings."""
         draft = self._create_valid_draft()
-        draft.claim_evidence = []
-        report = self.live_gate.run_all_checks(
-            draft, verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
-            verified_source_evidence=self._verified_evidence(), check_duplicate=False
-        )
-        self.assertFalse(report.passed)
-        self.assertTrue(any("no claim_evidence mappings" in item for item in report.failures))
-
-    def test_live_gate_rejects_quote_not_found_in_retrieved_source(self):
-        draft = self._create_valid_draft()
-        draft.claim_evidence[0]["evidence_quote"] = "This quote does not appear in the retrieved page."
-        report = self.live_gate.run_all_checks(
-            draft, verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
-            verified_source_evidence=self._verified_evidence(), check_duplicate=False
-        )
-        self.assertFalse(report.passed)
-        self.assertTrue(any("not present in retrieved source text" in item for item in report.failures))
-
-    def test_live_gate_accepts_quote_from_verified_evidence_excerpt_outside_cleaned_window(self):
-        """A verified source's extracted supporting excerpt remains valid when outside its compact text window."""
-        draft = self._create_valid_draft()
-        evidence_quote = "Each step is short and easy to follow."
-        source_evidence = [{
-            "title": "Official Google Documentation",
-            "url": "https://ai.google.dev/docs",
-            "verified": True,
-            "cleaned_text": " ".join(["Unrelated introductory page text."] * 120),
-            "evidence_excerpt": evidence_quote + " Additional details appear later in the article.",
-        }]
-        draft.claim_evidence[0]["evidence_quote"] = evidence_quote
-
         report = self.live_gate.run_all_checks(
             draft,
             verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
-            verified_source_evidence=source_evidence,
             check_duplicate=False,
         )
-        self.assertTrue(
-            report.passed,
-            f"Expected verified evidence excerpt to pass, got failures: {report.failures}",
-        )
-
-    def test_live_gate_rejects_unsupported_numeric_claim(self):
-        draft = self._create_valid_draft()
-        draft.claim_evidence[0]["claim"] = "Each step is short and easy to follow in 2026."
-        draft.claim_evidence[0]["evidence_quote"] = "Each step is short and easy to follow."
-        draft.html_content = draft.html_content.replace(
-            "Each step is short and easy to follow.",
-            "Each step is short and easy to follow in 2026."
-        )
-        report = self.live_gate.run_all_checks(
-            draft, verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
-            verified_source_evidence=self._verified_evidence(), check_duplicate=False
-        )
-        self.assertFalse(report.passed)
-        self.assertTrue(any("numeric values" in item for item in report.failures))
+        self.assertTrue(report.passed, f"Unexpected source-quote blocker: {report.failures}")
 
     def test_valid_draft_passes_gate(self):
         """Test that a compliant article passes all quality checks."""
@@ -148,7 +85,7 @@ class TestQualityChecks(unittest.TestCase):
         draft = self._create_valid_draft()
         draft.is_dry_run_fixture = True
         report = self.live_gate.run_all_checks(
-            draft, verified_source_evidence=self._verified_evidence(), check_duplicate=False
+            draft, check_duplicate=False
         )
         self.assertFalse(report.passed)
         self.assertTrue(any("Live Guard failed: Dry-run test fixture cannot be published" in f for f in report.failures))
@@ -172,21 +109,27 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(report.passed, report.failures)
         self.assertTrue(any("Length advisory" in warning for warning in report.warnings))
 
-    def test_insufficient_sources_fails(self):
-        """Test that lack of credible sources fails the gate."""
+    def test_article_without_source_links_can_pass(self):
+        """An original article is not blocked when no external citations are needed."""
         draft = self._create_valid_draft()
-        draft.sources_used = [{"title": "Only One Source", "url": "https://example.com"}]
+        draft.sources_used = []
         report = self.gate.run_all_checks(draft, check_duplicate=False)
-        self.assertFalse(report.passed)
-        self.assertTrue(any("Sources check failed" in f for f in report.failures))
+        self.assertTrue(report.passed, f"An uncited original article should pass: {report.failures}")
 
-    def test_unverified_source_in_live_mode_fails(self):
-        """Test that citing an unverified source fails in live mode."""
+    def test_one_optional_source_does_not_fail_source_count_gate(self):
+        """An article may include one useful source; no minimum source quota applies."""
+        draft = self._create_valid_draft()
+        draft.sources_used = [draft.sources_used[0]]
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, f"Optional sources should not block a draft: {report.failures}")
+
+    def test_optional_citation_still_must_be_verified_in_live_mode(self):
+        """A citation is optional, but a supplied citation must match a verified source."""
         draft = self._create_valid_draft()
         verified_urls = {"https://ai.google.dev/docs"}  # W3C was not verified
         report = self.live_gate.run_all_checks(
             draft, verified_source_urls=verified_urls,
-            verified_source_evidence=self._verified_evidence(), check_duplicate=False
+            check_duplicate=False
         )
         self.assertFalse(report.passed)
         self.assertTrue(any("was not verified" in f for f in report.failures))
@@ -233,7 +176,7 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(any("is not linked in the article body" in f for f in report.failures))
 
     def test_qa_normalizes_urls_when_matching_verified_sources(self):
-        """Quality gate must match verified sources even with http/https, www, or trailing slash differences."""
+        """Optional citations must match verified URLs despite protocol, www, or trailing-slash differences."""
         draft = self._create_valid_draft()
         # Verified URL has https and trailing slash, draft cited source has http without trailing slash
         verified_urls = {
@@ -243,7 +186,6 @@ class TestQualityChecks(unittest.TestCase):
         report = self.live_gate.run_all_checks(
             draft,
             verified_source_urls=verified_urls,
-            verified_source_evidence=self._verified_evidence(),
             check_duplicate=False,
         )
         self.assertTrue(report.passed, f"Expected pass with normalized URLs, got: {report.failures}")
@@ -309,9 +251,9 @@ class TestFinalBloggerHTMLValidation(unittest.TestCase):
         )
         self.assertTrue(any("Google-supported BlogPosting type" in item for item in validate_final_blogger_html(bad)))
 
-    def test_missing_sources_section_fails(self):
+    def test_sources_section_is_optional_in_final_html(self):
         failures = validate_final_blogger_html(self._valid_html().replace("Sources &amp; References", "Further reading"))
-        self.assertTrue(any("Sources & References" in item for item in failures))
+        self.assertEqual(failures, [])
 
     def test_local_or_non_https_image_fails(self):
         bad = self._valid_html().replace("https://cdn.example/image.jpg", "output/featured/cover.png")

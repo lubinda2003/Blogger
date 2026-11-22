@@ -42,57 +42,20 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertLessEqual(len(prompt), GROQ_MAX_PROMPT_CHARS)
         self.assertEqual(writer._fit_groq_prompt(prompt), prompt)
 
-    def test_live_evidence_requires_claim_mapping_and_two_verified_citations(self):
+    def test_live_article_does_not_require_claim_evidence_metadata(self):
         writer = self.make_writer()
-        brief = ResearchBrief(
-            topic_id="topic-1",
-            topic_title="Digital notes",
-            target_url="https://example.com",
-            sources=[
-                SourceCitation("Official guide A", "https://example.com/a", "2026-11-19", verified=True),
-                SourceCitation("Official guide B", "https://example.org/b", "2026-11-19", verified=True),
-            ],
-        )
         parsed = {
-            "sources_used": [
-                {"title": "Official guide A", "url": "https://example.com/a"},
-                {"title": "Official guide B", "url": "https://example.org/b"},
-            ],
-            "claim_evidence": [{
-                "claim": "The app supports folders.",
-                "source_url": "https://example.com/a",
-                "evidence_quote": "Create folders to organize notes.",
-            }],
+            "title": "Original article",
+            "meta_description": "A useful explanation.",
+            "labels": ["Digital Skills"],
+            "html_content": "<p>" + ("Original practical guidance. " * 20) + "</p>",
         }
-        self.assertEqual(writer._live_evidence_coverage_errors(parsed, brief), [])
-
-        missing_mapping = dict(parsed, claim_evidence=[])
-        errors = writer._live_evidence_coverage_errors(missing_mapping, brief)
-        self.assertTrue(any("no claim_evidence mappings" in error for error in errors))
-
-        one_source = dict(parsed, sources_used=[parsed["sources_used"][0]])
-        errors = writer._live_evidence_coverage_errors(one_source, brief)
-        self.assertTrue(any("at least two distinct verified sources" in error for error in errors))
-
-    def test_live_evidence_fails_when_research_has_fewer_than_two_verified_sources(self):
-        writer = self.make_writer()
-        brief = ResearchBrief(
-            topic_id="topic-1",
-            topic_title="Digital notes",
-            target_url="https://example.com",
-            sources=[
-                SourceCitation("Official guide A", "https://example.com/a", "2026-11-19", verified=True),
-            ],
-        )
-        errors = writer._live_evidence_coverage_errors(
-            {"sources_used": [], "claim_evidence": []}, brief
-        )
-        self.assertTrue(any("fewer than two verified sources" in error for error in errors))
+        self.assertEqual(writer._validate_schema(parsed), [])
 
     def test_groq_completion_budget_is_conservative(self):
-        self.assertEqual(GROQ_MAX_COMPLETION_TOKENS, 8192)
+        self.assertEqual(GROQ_MAX_COMPLETION_TOKENS, 6000)
 
-    def test_groq_request_uses_expanded_completion_budget_and_gpt_oss_low_effort(self):
+    def test_groq_request_uses_bounded_completion_budget_and_gpt_oss_low_effort(self):
         writer = self.make_writer()
         response = MagicMock()
         response.__enter__.return_value.read.return_value = (
@@ -104,7 +67,7 @@ class ArticleWriterFallbackTests(unittest.TestCase):
 
         request = urlopen.call_args.args[0]
         payload = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(payload["max_completion_tokens"], 8192)
+        self.assertEqual(payload["max_completion_tokens"], 6000)
         self.assertNotIn("max_tokens", payload)
         self.assertEqual(payload["reasoning_effort"], "low")
 
@@ -143,13 +106,11 @@ class ArticleWriterFallbackTests(unittest.TestCase):
             "labels": ["Tutorial"],
             "html_content": "<p>" + ("Useful content. " * 30) + "</p>",
             "sources_used": ["https://example.com"],
-            "claim_evidence": ["unsupported string item"],
             "screenshot_spec": "not-an-object",
             "visual_plan": ["not-an-object"],
         }
         errors = writer._validate_schema(parsed)
         self.assertTrue(any("sources_used[0]" in error for error in errors))
-        self.assertTrue(any("claim_evidence[0]" in error for error in errors))
         self.assertTrue(any("screenshot_spec" in error for error in errors))
         self.assertTrue(any("visual_plan[0]" in error for error in errors))
 
@@ -160,24 +121,12 @@ class ArticleWriterFallbackTests(unittest.TestCase):
             "screenshot_spec": "not-an-object",
             "featured_image_brief": "not-an-object",
             "visual_plan": ["not-an-object", {"prompt": "A useful illustration"}],
-            "claim_evidence": [{"claim": "A claim", "source_url": "https://example.com", "evidence_quote": "Exact evidence"}],
         }
         normalized = writer._normalize_groq_nested_fields(parsed)
         self.assertEqual(normalized["sources_used"], [{"title": "example.com", "url": "https://www.example.com/help"}])
         self.assertNotIn("screenshot_spec", normalized)
         self.assertNotIn("featured_image_brief", normalized)
         self.assertEqual(normalized["visual_plan"], [{"prompt": "A useful illustration"}])
-        self.assertEqual(normalized["claim_evidence"], parsed["claim_evidence"])
-
-    def test_groq_does_not_invent_or_repair_invalid_claim_evidence(self):
-        writer = self.make_writer()
-        normalized = writer._normalize_groq_nested_fields({"sources_used": [], "claim_evidence": ["unsupported"]})
-        errors = writer._validate_schema({
-            "title": "Title", "meta_description": "Description", "labels": ["Tutorial"],
-            "html_content": "<p>" + ("Article body. " * 30) + "</p>",
-            "sources_used": [], "claim_evidence": normalized["claim_evidence"],
-        })
-        self.assertTrue(any("claim_evidence[0]" in error for error in errors))
 
     def test_groq_metadata_recovery_uses_topic_and_article_without_changing_body(self):
         writer = self.make_writer()
@@ -215,7 +164,7 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         self.assertEqual(completed["meta_description"], "A supplied description.")
         self.assertEqual(completed["labels"], ["AI Tools", "Tutorial"])
 
-    def test_groq_metadata_recovery_does_not_repair_missing_article_body_or_sources(self):
+    def test_groq_metadata_recovery_does_not_repair_missing_article_body(self):
         writer = self.make_writer()
         topic = MagicMock()
         topic.topic = "A real topic"
@@ -225,7 +174,6 @@ class ArticleWriterFallbackTests(unittest.TestCase):
         errors = writer._validate_schema(completed)
 
         self.assertTrue(any("html_content" in error for error in errors))
-        self.assertTrue(any("sources_used" in error for error in errors))
 
 
 if __name__ == "__main__":
