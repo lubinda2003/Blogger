@@ -283,25 +283,42 @@
         ],
         "word_count": 1073
       }
+    },
+    {
+      "topic_id": "spreadsheet-basics",
+      "topic_title": "Spreadsheet Skills: Everyday Formulas That Save Time",
+      "fingerprint": "c80f95c36ff98e03",
+      "post_id": "8488663095300355910",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-22T15:21:06.318788+00:00",
+      "metadata": {
+        "labels": [
+          "Digital Skills",
+          "Spreadsheets"
+        ],
+        "word_count": 1209
+      }
     }
   ],
-  "last_updated": "2026-11-22T13:04:14.348446+00:00",
-  "total_runs": 16,
+  "last_updated": "2026-11-22T15:21:06.318808+00:00",
+  "total_runs": 17,
   "failed_attempts": {
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "digital-study-notes": 3,
-    "best-free-invoicing-tools-freelancers": 2,
-    "weekly-work-plan": 2,
-    "freelance-portfolio": 1,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "organize-digital-files": 3,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
     "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "organize-digital-files": 3,
     "canva-brand-kit-design-walkthrough": 2,
+    "digital-study-notes": 3,
     "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "weekly-work-plan": 2,
     "claude-code-web-prototyping": 1,
     "evaluate-online-sources": 1,
-    "best-e-commerce-software-for-small-business-novo": 1
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "freelance-portfolio": 1,
+    "best-e-commerce-software-for-small-business-novo": 1,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "best-free-invoicing-tools-freelancers": 2
   }
 }
