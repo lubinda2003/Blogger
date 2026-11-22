@@ -81,6 +81,34 @@ class TestQualityChecks(unittest.TestCase):
         self.assertFalse(report.passed)
         self.assertTrue(any("not present in retrieved source text" in item for item in report.failures))
 
+    def test_live_gate_rejects_quote_joining_noncontiguous_source_fragments(self):
+        """Ellipses must not turn separate source passages into a supposedly verbatim quote."""
+        draft = self._create_valid_draft()
+        draft.claim_evidence[0]["evidence_quote"] = (
+            "Your freelance portfolio is more than just a collection of work, "
+            "it is your secret weapon... it serves as a mix of resume and sales pitch."
+        )
+        source_evidence = [{
+            "title": "Official Google Documentation",
+            "url": "https://ai.google.dev/docs",
+            "verified": True,
+            "cleaned_text": (
+                "Your freelance portfolio is more than just a collection of work, "
+                "it is your secret weapon for attracting clients. "
+                "A carefully created space serves as a mix of resume and sales pitch."
+            ),
+            "evidence_excerpt": "",
+        }]
+        draft.claim_evidence[0]["claim"] = "Each step is short and easy to follow."
+        report = self.live_gate.run_all_checks(
+            draft,
+            verified_source_urls={"https://ai.google.dev/docs", "https://www.w3.org/"},
+            verified_source_evidence=source_evidence,
+            check_duplicate=False,
+        )
+        self.assertFalse(report.passed)
+        self.assertTrue(any("not present in retrieved source text" in item for item in report.failures))
+
     def test_live_gate_accepts_quote_from_verified_evidence_excerpt_outside_cleaned_window(self):
         """A verified source's extracted supporting excerpt remains valid when outside its compact text window."""
         draft = self._create_valid_draft()
