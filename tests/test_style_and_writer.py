@@ -275,11 +275,6 @@ class TestStyleAndWriter(unittest.TestCase):
                 {"title": "Official API guide", "url": "https://example.com/api-guide"},
                 {"title": "Official API reference", "url": "https://example.org/api-reference"},
             ],
-            "claim_evidence": [{
-                "claim": "The API guide describes request setup.",
-                "source_url": "https://example.com/api-guide",
-                "evidence_quote": "The API guide describes request setup.",
-            }],
         })
 
         with patch.object(writer, "_call_llm_provider") as mock_llm:
