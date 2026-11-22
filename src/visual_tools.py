@@ -234,35 +234,59 @@ def render_mermaid_blocks(
     publisher: Optional[Callable[[Path, str, str], Optional[str]]] = None,
     max_items: int = 2,
 ) -> tuple[str, list[dict]]:
-    """Render useful Mermaid blocks and replace them only when a public asset URL is available."""
+    """Render Mermaid blocks and never leave raw diagram source in article HTML.
+
+    If rendering, hosting, or the per-article diagram limit prevents embedding,
+    replace the source with a short accessible note. Source code is never exposed
+    as reader-facing article content.
+    """
     pattern = re.compile(
         r'<pre\b[^>]*class=["\'][^"\']*\bmermaid\b[^"\']*["\'][^>]*>(.*?)</pre\s*>',
         re.I | re.S,
     )
+    matches = list(pattern.finditer(article_html or ""))
+    updated = article_html or ""
     items: list[dict] = []
-    updated = article_html
-    for index, match in enumerate(list(pattern.finditer(article_html))[:max(0, max_items)], start=1):
+    render_limit = max(0, int(max_items))
+
+    for index, match in reversed(list(enumerate(matches, start=1))):
         source = html.unescape(re.sub(r"<[^>]+>", "", match.group(1))).strip()
-        if not source or len(source) > 12000:
-            continue
-        try:
-            svg_path = Path(output_dir) / "visuals" / f"diagram-{index}.svg"
-            render_mermaid_svg(source, svg_path)
-            digest = hashlib.sha256(svg_path.read_bytes()).hexdigest()
-            public_url = publisher(svg_path, f"diagram-{index}", digest) if publisher else None
-            if public_url and public_url.startswith("https://"):
-                figure = (
-                    '<figure class="article-visual article-diagram" style="margin:26px auto;max-width:900px;">'
-                    f'<img src="{html.escape(public_url)}" alt="Explanatory diagram for this section" '
-                    'loading="lazy" style="display:block;width:100%;height:auto;margin:auto;" />'
-                    '</figure>'
-                )
-                updated = updated.replace(match.group(0), figure, 1)
-                items.append({"path": str(svg_path), "url": public_url, "kind": "diagram"})
-            else:
-                items.append({"path": str(svg_path), "url": None, "kind": "diagram"})
-        except Exception as exc:
-            logger.warning("Could not render Mermaid diagram %s: %s", index, exc)
+        replacement = (
+            '<p class="diagram-note">A diagram for this section is not available in this article. '
+            "Use the written steps in this section to follow the process.</p>"
+        )
+        item = {"path": None, "url": None, "kind": "diagram", "status": "omitted"}
+        if source and len(source) <= 12000 and index <= render_limit:
+            try:
+                svg_path = Path(output_dir) / "visuals" / f"diagram-{index}.svg"
+                render_mermaid_svg(source, svg_path)
+                digest = hashlib.sha256(svg_path.read_bytes()).hexdigest()
+                public_url = publisher(svg_path, f"diagram-{index}", digest) if publisher else None
+                item["path"] = str(svg_path)
+                if isinstance(public_url, str) and public_url.startswith("https://"):
+                    replacement = (
+                        '<figure class="article-visual article-diagram" style="margin:26px auto;max-width:900px;">'
+                        f'<img src="{html.escape(public_url)}" alt="Explanatory diagram for this section" '
+                        'loading="lazy" style="display:block;width:100%;height:auto;margin:auto;" />'
+                        '</figure>'
+                    )
+                    item.update({"url": public_url, "status": "hosted"})
+                else:
+                    item["status"] = "rendered_unhosted"
+            except Exception as exc:
+                item["error"] = str(exc)[:300]
+                logger.warning("Could not render Mermaid diagram %s: %s", index, exc)
+        elif not source:
+            item["error"] = "Diagram source was empty."
+        elif len(source) > 12000:
+            item["error"] = "Diagram source exceeded the rendering size limit."
+        else:
+            item["error"] = "Per-article diagram limit reached."
+        items.append(item)
+        updated = updated[:match.start()] + replacement + updated[match.end():]
+
+    # The reverse-order replacement above preserves all original offsets.
+    items.reverse()
     return updated, items
 
 

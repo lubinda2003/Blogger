@@ -152,7 +152,8 @@ def _style_compare_tables(body: str) -> str:
         )
         inner = re.sub(r"<td>", f'<td style="padding:10px 12px;border:1px solid {_BORDER};vertical-align:top;">', inner)
         return (
-            '<div style="overflow-x:auto;margin:22px 0;">\n'
+            '<div role="region" aria-label="Scrollable comparison table" tabindex="0" '
+            'style="overflow-x:auto;margin:22px 0;">\n'
             f'<table class="compare" style="border-collapse:collapse;width:100%;min-width:480px;">{inner}</table>\n</div>'
         )
 
@@ -191,6 +192,20 @@ def convert_markdown_tables(body: str) -> str:
         i += 1
     return "\n".join(output)
 
+def _keyboard_accessible_scrollables(body: str) -> str:
+    """Make explicitly scrollable code examples keyboard reachable and named."""
+    def update(match: "re.Match[str]") -> str:
+        attrs = match.group(1)
+        if not re.search(r"\boverflow(?:-[xy])?\s*:\s*(?:auto|scroll)\b", attrs, re.I):
+            return match.group(0)
+        if not re.search(r"\btabindex\s*=", attrs, re.I):
+            attrs += ' tabindex="0"'
+        if not re.search(r"\baria-label\s*=", attrs, re.I):
+            attrs += ' aria-label="Scrollable code example"'
+        return "<pre" + attrs + ">"
+    return re.sub(r"<pre\b([^>]*)>", update, body or "", flags=re.I)
+
+
 def apply_layout(body: str) -> str:
     """Sanitize, add the table of contents, then style the components. Safe to apply twice."""
     body = convert_markdown_tables(body)
@@ -200,4 +215,5 @@ def apply_layout(body: str) -> str:
     body = add_table_of_contents(body)
     body = _style_callouts(body)
     body = _style_steps(body)
-    return _style_compare_tables(body)
+    body = _style_compare_tables(body)
+    return _keyboard_accessible_scrollables(body)
