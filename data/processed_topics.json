@@ -316,25 +316,41 @@
         ],
         "word_count": 1259
       }
+    },
+    {
+      "topic_id": "ai-assistant-basics",
+      "topic_title": "How to Choose an AI Assistant for Everyday Work",
+      "fingerprint": "c1fb89fd620b8e13",
+      "post_id": "3625802421189096813",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-22T17:07:46.171759+00:00",
+      "metadata": {
+        "labels": [
+          "AI And AI Tools"
+        ],
+        "word_count": 940
+      }
     }
   ],
-  "last_updated": "2026-11-22T16:21:16.203636+00:00",
-  "total_runs": 18,
+  "last_updated": "2026-11-22T17:07:46.171781+00:00",
+  "total_runs": 19,
   "failed_attempts": {
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "organize-digital-files": 3,
-    "canva-brand-kit-design-walkthrough": 2,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
-    "claude-code-web-prototyping": 1,
-    "evaluate-online-sources": 1,
-    "best-e-commerce-software-for-small-business-novo": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
-    "weekly-work-plan": 2,
-    "digital-study-notes": 3,
-    "freelance-portfolio": 1,
     "best-free-invoicing-tools-freelancers": 2,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "canva-brand-kit-design-walkthrough": 2,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "best-e-commerce-software-for-small-business-novo": 1,
+    "claude-code-web-prototyping": 1,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "evaluate-online-sources": 1,
+    "organize-digital-files": 3,
+    "freelance-portfolio": 1,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "digital-study-notes": 3,
+    "weekly-work-plan": 2
   }
 }
