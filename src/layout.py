@@ -86,7 +86,7 @@ def remove_empty_reference_sections(body: str) -> str:
         )
         end = next_section.start() if next_section else len(body)
         section = body[match.end():end]
-        if not re.search(r"<a\\b[^>]*\\bhref=[\"'][^\\"']+[\"']", section, re.I):
+        if not re.search(r"""<a\b[^>]*\bhref=["'][^"']+["']""", section, re.I):
             removals.append((match.start(), end))
 
     for start, end in reversed(removals):
