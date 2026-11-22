@@ -152,7 +152,8 @@ def _style_compare_tables(body: str) -> str:
         )
         inner = re.sub(r"<td>", f'<td style="padding:10px 12px;border:1px solid {_BORDER};vertical-align:top;">', inner)
         return (
-            '<div style="overflow-x:auto;margin:22px 0;">\n'
+            '<div role="region" aria-label="Scrollable comparison table" tabindex="0" '
+            'style="overflow-x:auto;margin:22px 0;">\n'
             f'<table class="compare" style="border-collapse:collapse;width:100%;min-width:480px;">{inner}</table>\n</div>'
         )
 
