@@ -31,7 +31,7 @@ class TestContentTypeChecks(unittest.TestCase):
         self.assertEqual(warnings, [])
 
     def test_comparison_requires_criteria_and_tradeoffs(self):
-        warnings, _ = analyze_content_type("Comparison", "<p>Option one costs less. Option two has more features.</p>")
+        warnings, _ = analyze_content_type("Comparison", "<p>Option one is simpler. Option two is more flexible.</p>")
         self.assertTrue(any("consistent, named criteria" in item for item in warnings))
         self.assertTrue(any("limitations" in item for item in warnings))
 
