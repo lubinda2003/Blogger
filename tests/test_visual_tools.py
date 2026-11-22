@@ -52,6 +52,66 @@ class TestVisualHelpers(unittest.TestCase):
             render_mermaid_svg("flowchart TD; A[Start] --> B[Finish]", output)
             self.assertIn("<svg", output.read_text(encoding="utf-8"))
 
+    def test_mermaid_render_failure_replaces_source_with_accessible_note(self):
+        body = '<pre class="mermaid">flowchart TD; A[Start] --> B[Finish]</pre>'
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "src.visual_tools.render_mermaid_svg", side_effect=RuntimeError("renderer unavailable")
+        ):
+            rendered, items = render_mermaid_blocks(
+                body, tmp, publisher=lambda *args: "https://cdn.example/x.svg"
+            )
+        self.assertNotIn("flowchart TD", rendered)
+        self.assertIn("diagram-note", rendered)
+        self.assertEqual(items[0]["status"], "omitted")
+
+    def test_mermaid_without_public_host_is_not_left_as_raw_source(self):
+        body = '<pre class="mermaid">flowchart TD; A[Start] --> B[Finish]</pre>'
+        def fake_render(source, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
+                encoding="utf-8",
+            )
+            return output_path
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "src.visual_tools.render_mermaid_svg", side_effect=fake_render
+        ):
+            rendered, items = render_mermaid_blocks(body, tmp)
+        self.assertNotIn("flowchart TD", rendered)
+        self.assertIn("diagram-note", rendered)
+        self.assertEqual(items[0]["status"], "rendered_unhosted")
+
+    def test_mermaid_block_over_limit_is_removed_from_reader_facing_html(self):
+        body = (
+            '<pre class="mermaid">flowchart TD; A[First] --> B[Second]</pre>'
+            '<pre class="mermaid">flowchart TD; C[Third] --> D[Fourth]</pre>'
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            rendered, items = render_mermaid_blocks(body, tmp, max_items=0)
+        self.assertNotIn("flowchart TD", rendered)
+        self.assertEqual(rendered.count("diagram-note"), 2)
+        self.assertEqual(len(items), 2)
+        self.assertTrue(all(item["status"] == "omitted" for item in items))
+
+    def test_mermaid_with_successful_public_host_is_replaced_by_image(self):
+        body = '<pre class="mermaid">flowchart TD; A[Start] --> B[Finish]</pre>'
+        def fake_render(source, output_path):
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(
+                '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
+                encoding="utf-8",
+            )
+            return output_path
+        with tempfile.TemporaryDirectory() as tmp, patch(
+            "src.visual_tools.render_mermaid_svg", side_effect=fake_render
+        ):
+            rendered, items = render_mermaid_blocks(
+                body, tmp, publisher=lambda *args: "https://cdn.example/diagram.svg"
+            )
+        self.assertNotIn("flowchart TD", rendered)
+        self.assertIn("https://cdn.example/diagram.svg", rendered)
+        self.assertEqual(items[0]["status"], "hosted")
+
     def test_supporting_visuals_render_local_svg_without_image_api(self):
         plan = [{"prompt": "A simple workflow showing input, processing and output",
                  "alt_text": "Three stages of an automated workflow",
