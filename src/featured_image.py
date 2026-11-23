@@ -132,6 +132,10 @@ def build_html(title: str, kicker: str, seed: str, brief: Optional[dict] = None)
     else:
         title_block = f'<div class="title">{title_html}</div>'
         title_visibility = ""
+    dots = "".join(
+        f'<circle cx="{110 + digest[i] % 980}" cy="{80 + digest[i+1] % 500}" r="{3 + digest[i+2] % 8}" fill="{pop}" opacity=".55"/>'
+        for i in (0, 3, 6, 9, 12, 15)
+    )
     template = """<!doctype html><html><head><meta charset="utf-8"><style>
 *{box-sizing:border-box}html,body{margin:0;width:1200px;height:675px;overflow:hidden}
 body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:__BG__;color:#f8fafc;position:relative}
@@ -148,8 +152,9 @@ body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:__BG
 <div class="brand"><span class="mark"></span><span>The Digital Toolkit</span></div></div></body></html>"""
     values = {
         "__BG__": bg, "__ACCENT__": accent, "__POP__": pop, "__COPY__": copy_css,
-        "__TITLE_BLOCK__": title_block, "__TITLE__": title_css,
-        "__SCENE__": panel + f'<g transform="{scene_transform}">{scene}</g>', "__KICKER__": kicker_html,
+        "__TITLE__": title_css,
+        "__SCENE__": panel + f'<g transform="{scene_transform}">{scene}</g>' + dots,
+        "__KICKER__": kicker_html, "__TITLE_BLOCK__": title_block,
     }
     for key, value in values.items():
         template = template.replace(key, value)
