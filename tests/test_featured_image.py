@@ -71,7 +71,7 @@ class TestBuildHtml(unittest.TestCase):
 
     def test_article_specific_visual_concepts_use_distinct_artwork(self):
         cases = (
-            ("How to Choose an AI Assistant for Everyday Work", "AI and AI Tools", "CHOOSE"),
+            ("How to Choose an AI Assistant for Everyday Work", "AI and AI Tools", 'cx="810" cy="302"'),
             ("Simple Ways to Make Your Online Accounts Safer", "Digital Foundations", "M845 170"),
             ("Build a Clear Freelance Portfolio", "Freelancing", "M750 390"),
             ("Spreadsheet Skills: Everyday Formulas", "Spreadsheets", "M715 490"),
