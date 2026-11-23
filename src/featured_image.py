@@ -148,8 +148,8 @@ body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:__BG
 <div class="brand"><span class="mark"></span><span>The Digital Toolkit</span></div></div></body></html>"""
     values = {
         "__BG__": bg, "__ACCENT__": accent, "__POP__": pop, "__COPY__": copy_css,
-        "__TITLE__": title_css, "__SCENE__": panel + f'<g transform="{scene_transform}">{scene}</g>',
-        "__KICKER__": kicker_html, "__TITLE_BLOCK__": title_block,
+        "__TITLE_BLOCK__": title_block, "__TITLE__": title_css,
+        "__SCENE__": panel + f'<g transform="{scene_transform}">{scene}</g>', "__KICKER__": kicker_html,
     }
     for key, value in values.items():
         template = template.replace(key, value)
