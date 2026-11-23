@@ -69,13 +69,27 @@ class TestBuildHtml(unittest.TestCase):
             self.assertNotIn("__ACCENT__", page)
             self.assertNotIn("__POP__", page)
 
-    def test_ai_cover_uses_a_decision_map_instead_of_generic_checklist_art(self):
-        page = build_html("How to Choose an AI Assistant for Everyday Work", "AI and AI Tools", "ai-assistant")
-        self.assertIn("WRITE", page)
-        self.assertIn("PLAN", page)
-        self.assertIn("CHOOSE", page)
-        self.assertIn(PALETTES["ai"][1], page)
-        self.assertNotIn("M810 280l55 55 110-112", page)
+    def test_article_specific_visual_concepts_use_distinct_artwork(self):
+        cases = (
+            ("How to Choose an AI Assistant for Everyday Work", "AI and AI Tools", "CHOOSE"),
+            ("Simple Ways to Make Your Online Accounts Safer", "Digital Foundations", "M845 170"),
+            ("Build a Clear Freelance Portfolio", "Freelancing", "M750 390"),
+            ("Spreadsheet Skills: Everyday Formulas", "Spreadsheets", "M715 490"),
+        )
+        pages = [build_html(title, kicker, str(i)) for i, (title, kicker, _) in enumerate(cases)]
+        for page, (_, _, motif) in zip(pages, cases):
+            self.assertIn(motif, page)
+            self.assertNotIn("M810 280l55 55 110-112", page)
+        self.assertEqual(len(set(pages)), len(pages))
+
+    def test_layouts_vary_and_cover_title_can_be_controlled_by_brief(self):
+        pages = [build_html("A useful guide", "Tutorial", f"layout-{i}") for i in range(20)]
+        self.assertGreaterEqual(len(set(pages)), 4)
+        hidden = build_html("A useful guide", "Tutorial", "no-title", brief={"show_title": False})
+        self.assertNotIn('<div class="title">', hidden)
+        custom = build_html("A long article title", "Tutorial", "custom", brief={"cover_title": "Work Smarter"})
+        self.assertIn("Work Smarter", custom)
+        self.assertNotIn("A long article title", custom)
 
     def test_placeholder_like_text_in_the_title_is_not_substituted(self):
         page = build_html("__KICKER__ and __BRAND__", "Guide", "seed")
