@@ -60,107 +60,99 @@ def _title_size(length: int) -> int:
     return 46
 
 
-def build_html(title: str, kicker: str, seed: str) -> str:
-    """Build a self-contained, topic-aware editorial cover using local HTML and SVG only."""
+def _visual_concept(title: str, family: str) -> str:
+    """Choose a concrete subject motif from the article title, not just its category."""
+    text = title.lower()
+    if any(word in text for word in ("account", "password", "security", "safe", "phishing", "privacy", "passkey")):
+        return "security"
+    if any(word in text for word in ("portfolio", "proposal", "freelance", "client", "invoice")):
+        return "freelance"
+    if any(word in text for word in ("spreadsheet", "formula", "excel", "sheets", "dashboard", "report")):
+        return "spreadsheet"
+    if any(word in text for word in ("assistant", "chatgpt", "gemini", "claude", "copilot", "artificial intelligence", " ai ")):
+        return "ai"
+    return family
+
+
+def _artwork(concept: str, accent: str, pop: str, ink: str, pale: str) -> str:
+    """Purpose-drawn SVG scenes; each concept has a different silhouette and visual story."""
+    scenes = {
+        "ai": '<rect x="700" y="130" width="410" height="390" rx="34" fill="#101d35" stroke="#6ccdf5" stroke-width="3"/><rect x="735" y="165" width="340" height="52" rx="16" fill="#233d5b"/><circle cx="765" cy="191" r="8" fill="#f7c85b"/><circle cx="792" cy="191" r="8" fill="#76e0cf"/><rect x="755" y="260" width="110" height="120" rx="24" fill="#173f56" stroke="#6ccdf5" stroke-width="3"/><circle cx="810" cy="302" r="23" fill="#6ccdf5"/><circle cx="802" cy="299" r="4" fill="#102033"/><circle cx="818" cy="299" r="4" fill="#102033"/><path d="M795 320q15 13 30 0" fill="none" stroke="#102033" stroke-width="4" stroke-linecap="round"/><rect x="900" y="255" width="165" height="55" rx="14" fill="#293b61"/><path d="M925 282h112" stroke="#b8d8f5" stroke-width="8" stroke-linecap="round"/><rect x="900" y="335" width="165" height="55" rx="14" fill="#224c4d"/><path d="M925 362h82" stroke="#9de7cb" stroke-width="8" stroke-linecap="round"/><path d="M810 410v42m0 0h145" stroke="#6ccdf5" stroke-width="5" stroke-linecap="round"/><circle cx="970" cy="452" r="18" fill="#f7c85b"/>',
+        "security": '<rect x="680" y="170" width="470" height="300" rx="28" fill="#102b48" stroke="#4aa9e8" stroke-width="4"/><rect x="710" y="200" width="410" height="230" rx="12" fill="#153d61"/><path d="M845 170v-48q0-90 75-90t75 90v48" transform="translate(0 130)" fill="none" stroke="#7bd8ff" stroke-width="28" stroke-linecap="round"/><rect x="850" y="245" width="145" height="150" rx="24" fill="#2c8cc7"/><path d="M922 280v38m-22 18q22 26 44 0" stroke="#fff" stroke-width="12" stroke-linecap="round" fill="none"/><circle cx="922" cy="340" r="12" fill="#fff"/><path d="M720 480h390" stroke="#4aa9e8" stroke-width="12" stroke-linecap="round"/><circle cx="760" cy="520" r="12" fill="#f4c95d"/><path d="M1040 110l42 18v48q0 48-42 72-42-24-42-72v-48z" fill="#123f59" stroke="#79e0d0" stroke-width="6"/><path d="M1020 168l15 15 29-34" fill="none" stroke="#79e0d0" stroke-width="8" stroke-linecap="round"/>',
+        "freelance": '<rect x="690" y="145" width="440" height="345" rx="24" fill="#14243d" stroke="#c6a6ff" stroke-width="3"/><rect x="715" y="175" width="390" height="46" rx="12" fill="#3b3158"/><circle cx="742" cy="198" r="7" fill="#ffb77a"/><circle cx="765" cy="198" r="7" fill="#c6a6ff"/><rect x="730" y="250" width="155" height="185" rx="14" fill="#31506b"/><rect x="905" y="250" width="185" height="78" rx="14" fill="#594273"/><rect x="905" y="345" width="185" height="90" rx="14" fill="#24545b"/><path d="M750 390l40-65 45 45 28-35" fill="none" stroke="#f6c56c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/><path d="M930 286h130m-130 20h82M930 380h120m-120 20h88" stroke="#f1eaff" stroke-width="7" stroke-linecap="round"/><path d="M820 520h180" stroke="#c6a6ff" stroke-width="12" stroke-linecap="round"/>',
+        "spreadsheet": '<rect x="675" y="120" width="470" height="420" rx="24" fill="#f4fbf7" stroke="#62c69a" stroke-width="5"/><rect x="675" y="120" width="470" height="64" rx="22" fill="#16734f"/><path d="M675 184h470M770 184v356M865 184v356M960 184v356M1055 184v356M675 270h470M675 356h470M675 442h470" stroke="#b9d9c9" stroke-width="3"/><rect x="772" y="272" width="91" height="82" fill="#b8ebd0"/><rect x="867" y="358" width="91" height="82" fill="#8edbb4"/><path d="M715 490l70-65 70 24 90-105 75-35" fill="none" stroke="#14885d" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M1000 306h32v32" fill="none" stroke="#14885d" stroke-width="10" stroke-linecap="round"/>',
+        "design": '<rect x="700" y="145" width="410" height="360" rx="26" fill="#251b3e" stroke="#d6a5f5" stroke-width="3"/><circle cx="830" cy="280" r="85" fill="#f5a9ca"/><circle cx="830" cy="280" r="42" fill="#ffc96b"/><path d="M830 195a85 85 0 0 1 85 85h-85z" fill="#71d7c1"/><rect x="945" y="225" width="115" height="24" rx="12" fill="#9b83e8"/><rect x="945" y="270" width="90" height="24" rx="12" fill="#f5a9ca"/><rect x="945" y="315" width="105" height="24" rx="12" fill="#71d7c1"/><path d="M750 420h300" stroke="#f8eaff" stroke-width="8" stroke-linecap="round"/>',
+        "business": '<path d="M700 270l210-120 210 120v240H700z" fill="#273a50" stroke="#f6c56c" stroke-width="4"/><path d="M670 275h480" stroke="#f6c56c" stroke-width="18" stroke-linecap="round"/><rect x="750" y="330" width="110" height="180" rx="10" fill="#356a68"/><rect x="900" y="330" width="150" height="95" rx="10" fill="#8d6bb8"/><path d="M920 380h110M920 400h80" stroke="#fff" stroke-width="7" stroke-linecap="round"/><path d="M930 245l80-60 80 30" fill="none" stroke="#8be0c2" stroke-width="10" stroke-linecap="round"/>',
+        "student": '<path d="M680 230q120-70 240 0v270q-120-70-240 0z" fill="#234568" stroke="#85d6f0" stroke-width="4"/><path d="M920 230q120-70 240 0v270q-120-70-240 0z" fill="#31577a" stroke="#85d6f0" stroke-width="4"/><path d="M920 230v270" stroke="#f6c56c" stroke-width="5"/><path d="M720 290h145m-145 42h145m-145 42h110m130-84h145m-145 42h145m-145 42h110" stroke="#dceeff" stroke-width="8" stroke-linecap="round"/>',
+        "software": '<rect x="680" y="135" width="470" height="370" rx="25" fill="#152e49" stroke="#79d6e6" stroke-width="4"/><rect x="680" y="135" width="470" height="58" rx="22" fill="#244d68"/><circle cx="720" cy="164" r="8" fill="#f6c56c"/><circle cx="747" cy="164" r="8" fill="#85d6c4"/><rect x="720" y="225" width="125" height="235" rx="12" fill="#315a70"/><rect x="870" y="225" width="245" height="95" rx="12" fill="#3b456f"/><rect x="870" y="340" width="112" height="120" rx="12" fill="#286b65"/><rect x="995" y="340" width="120" height="120" rx="12" fill="#775a92"/>',
+        "productivity": '<rect x="710" y="135" width="410" height="390" rx="24" fill="#183a3c" stroke="#91dfc3" stroke-width="4"/><rect x="710" y="135" width="410" height="70" rx="20" fill="#285c53"/><path d="M765 115v55m300-55v55" stroke="#f6c56c" stroke-width="12" stroke-linecap="round"/><path d="M755 270h300m-300 75h300m-300 75h300" stroke="#8bcab7" stroke-width="4"/><rect x="755" y="235" width="28" height="28" rx="6" fill="#f6c56c"/><path d="M761 249l7 7 13-17" stroke="#183a3c" stroke-width="4" fill="none"/><rect x="755" y="310" width="28" height="28" rx="6" fill="#f6c56c"/><path d="M761 324l7 7 13-17" stroke="#183a3c" stroke-width="4" fill="none"/>',
+        "default": '<circle cx="900" cy="330" r="190" fill="#24496a" stroke="#85d6f0" stroke-width="4"/><circle cx="900" cy="330" r="120" fill="none" stroke="#f6c56c" stroke-width="8"/><path d="M770 330h260M900 200v260" stroke="#85d6f0" stroke-width="5"/><circle cx="900" cy="330" r="35" fill="#f6c56c"/>',
+    }
+    return scenes.get(concept, scenes["default"])
+
+
+def build_html(title: str, kicker: str, seed: str, brief: Optional[dict] = None) -> str:
+    """Build an article-aware cover with varied compositions and subject-specific artwork."""
     digest = hashlib.sha256(seed.encode("utf-8")).digest()
     family = _topic_family(title, kicker)
+    concept = _visual_concept(title, family)
     bg, accent, pop, ink = PALETTES[family]
-    # Distinct compositions per topic family, with seeded variation within each family.
-    if family == "ai":
-        # A decision map: everyday work needs flow into a central assistant choice.
-        art = (
-            '<path d="M790 235C850 235 845 310 900 310M790 430C850 430 845 355 900 355M1015 330h95" fill="none" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
-            '<rect x="735" y="165" width="205" height="125" rx="24" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
-            '<rect x="735" y="365" width="205" height="125" rx="24" fill="__BG2__" stroke="__POP__" stroke-width="3"/>'
-            '<rect x="955" y="265" width="190" height="150" rx="28" fill="__ACCENT__" opacity=".16" stroke="__ACCENT__" stroke-width="4"/>'
-            '<path d="M780 210h105M780 238h70M780 410h105M780 438h70" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
-            '<path d="M1000 320h100M1000 350h70" stroke="__POP__" stroke-width="10" stroke-linecap="round"/>'
-            '<text x="760" y="190" fill="__INK__" font-size="15" font-weight="700">WRITE</text>'
-            '<text x="760" y="390" fill="__INK__" font-size="15" font-weight="700">PLAN</text>'
-            '<text x="985" y="295" fill="__INK__" font-size="14" font-weight="700">CHOOSE</text>'
-        )
-    elif family == "spreadsheets":
-        art = (
-            '<rect x="720" y="125" width="410" height="420" rx="24" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
-            '<path d="M720 205h410M820 205v340M920 205v340M1020 205v340M720 290h410M720 375h410M720 460h410" stroke="__ACCENT__" stroke-width="2" opacity=".55"/>'
-            '<rect x="822" y="292" width="96" height="81" fill="__POP__" opacity=".45"/>'
-            '<path d="M840 340l24-24 24 12 32-36" fill="none" stroke="__INK__" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
-        )
-    elif family == "design":
-        art = (
-            '<path d="M760 480L1025 165" stroke="__ACCENT__" stroke-width="38" stroke-linecap="round"/>'
-            '<path d="M785 510l275-325" stroke="__POP__" stroke-width="12" stroke-linecap="round"/>'
-            '<circle cx="820" cy="210" r="58" fill="__ACCENT__" opacity=".35"/>'
-            '<rect x="880" y="335" width="210" height="145" rx="18" fill="__BG2__" stroke="__ACCENT__" stroke-width="3"/>'
-            '<circle cx="930" cy="385" r="24" fill="__POP__"/><path d="M900 455l55-45 40 25 45-55 30 75" fill="none" stroke="__ACCENT__" stroke-width="9"/>'
-        )
-    elif family == "business":
-        art = (
-            '<path d="M745 470h365M780 430V285h75v145M890 430V220h75v210M1000 430V155h75v275" fill="none" stroke="__ACCENT__" stroke-width="16" stroke-linejoin="round"/>'
-            '<path d="M760 250l135-85 105 28 105-75" fill="none" stroke="__POP__" stroke-width="10" stroke-linecap="round"/>'
-            '<circle cx="760" cy="250" r="13" fill="__POP__"/><circle cx="895" cy="165" r="13" fill="__POP__"/><circle cx="1000" cy="193" r="13" fill="__POP__"/>'
-        )
-    elif family == "software":
-        art = (
-            '<rect x="720" y="125" width="390" height="400" rx="28" fill="__BG2__" stroke="__ACCENT__" stroke-width="2"/>'
-            '<rect x="750" y="158" width="330" height="48" rx="12" fill="__ACCENT__" opacity=".18"/>'
-            '<rect x="750" y="232" width="100" height="250" rx="15" fill="__ACCENT__" opacity=".13"/>'
-            '<rect x="872" y="232" width="208" height="112" rx="15" fill="__POP__" opacity=".2"/>'
-            '<rect x="872" y="365" width="96" height="117" rx="15" fill="__ACCENT__" opacity=".2"/>'
-            '<rect x="984" y="365" width="96" height="117" rx="15" fill="__POP__" opacity=".15"/>'
-            '<path d="M775 290h50M775 325h38M895 310l35-24 35 15 65-49" fill="none" stroke="__POP__" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>'
-        )
-    elif family == "business":
-        art = (
-            '<path d="M735 475L835 365l88 50 150-190" fill="none" stroke="__ACCENT__" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>'
-            '<path d="M1010 225h65v65" fill="none" stroke="__POP__" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>'
-            '<rect x="735" y="490" width="360" height="5" rx="2" fill="__ACCENT__" opacity=".4"/>'
-            '<circle cx="835" cy="365" r="17" fill="__POP__"/><circle cx="923" cy="415" r="17" fill="__POP__"/>'
-            '<circle cx="1073" cy="225" r="17" fill="__POP__"/>'
-            '<rect x="755" y="145" width="290" height="55" rx="16" fill="__BG2__" stroke="__ACCENT__" stroke-opacity=".6"/>'
-            '<path d="M785 172h105M925 172h85" stroke="__ACCENT__" stroke-width="8" stroke-linecap="round"/>'
-        )
-    else:
-        art = (
-            '<rect x="755" y="145" width="330" height="355" rx="28" fill="__BG2__" stroke="__ACCENT__" stroke-width="2"/>'
-            '<rect x="790" y="180" width="260" height="48" rx="12" fill="__ACCENT__" opacity=".18"/>'
-            '<circle cx="820" cy="204" r="7" fill="__POP__"/><circle cx="844" cy="204" r="7" fill="__ACCENT__"/>'
-            '<path d="M810 280l55 55 110-112" fill="none" stroke="__POP__" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>'
-            '<path d="M810 395h220M810 430h165" stroke="__ACCENT__" stroke-width="10" stroke-linecap="round" opacity=".55"/>'
-        )
-    art = art.replace("__ACCENT__", accent).replace("__POP__", pop).replace("__BG2__", bg)
-    # Small deterministic decorative dots make repeat runs stable but not identical across articles.
-    dots = "".join(
-        f'<circle cx="{760 + digest[i] % 350}" cy="{100 + digest[i+1] % 470}" r="{5 + digest[i+2] % 10}" fill="{pop}" opacity=".5"/>'
-        for i in (0, 3, 6, 9, 12, 15)
-    )
-    title_html = html.escape(title.strip())
+    scene = _artwork(concept, accent, pop, ink, "#f8fafc")
+    # Four composition families. The title can move, shrink or disappear when the visual carries the story.
+    layout = digest[0] % 4
+    title_text = (brief or {}).get("cover_title") or title.strip()
+    show_title = (brief or {}).get("show_title")
+    if show_title is None:
+        show_title = len(title_text) < 76 and layout != 2
+    title_html = html.escape(str(title_text))
     kicker_html = html.escape((kicker or "Guide").strip().upper())
+    if layout == 0:
+        copy_css = "left:64px;top:64px;bottom:52px;width:520px;justify-content:space-between;text-align:left"
+        title_css = "font-size:clamp(48px,5.4vw,70px);max-width:520px"
+        scene_transform = "translate(0 0)"
+        panel = '<rect x="0" y="0" width="590" height="675" fill="#081321" opacity=".82"/>'
+    elif layout == 1:
+        copy_css = "left:70px;right:70px;top:48px;bottom:42px;width:auto;justify-content:space-between;text-align:left"
+        title_css = "font-size:58px;max-width:690px"
+        scene_transform = "translate(0 0) scale(.86) translate(100 55)"
+        panel = '<rect x="0" y="0" width="1200" height="675" fill="#071522" opacity=".20"/>'
+    elif layout == 2:
+        copy_css = "left:70px;right:70px;top:485px;bottom:34px;width:auto;justify-content:flex-end;text-align:left"
+        title_css = "font-size:48px;max-width:1050px"
+        scene_transform = "translate(0 -30) scale(1.04)"
+        panel = '<rect x="0" y="445" width="1200" height="230" fill="#071522" opacity=".88"/>'
+    else:
+        copy_css = "left:70px;top:58px;bottom:50px;width:410px;justify-content:space-between;text-align:left"
+        title_css = "font-size:56px;max-width:410px"
+        scene_transform = "translate(80 0) scale(.92)"
+        panel = '<path d="M0 0h560v675H0z" fill="#071522" opacity=".86"/>'
+    if not show_title:
+        title_block = ""
+        title_visibility = "display:none"
+    else:
+        title_block = f'<div class="title">{title_html}</div>'
+        title_visibility = ""
     template = """<!doctype html><html><head><meta charset="utf-8"><style>
 *{box-sizing:border-box}html,body{margin:0;width:1200px;height:675px;overflow:hidden}
-body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:radial-gradient(ellipse at 78% 48%,__BG2__ 0%,__BG__ 68%);color:__INK__;position:relative}
-.texture{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(90deg,black,transparent)}
-.orb{position:absolute;width:540px;height:540px;right:30px;top:65px;border-radius:50%;background:__ACCENT__;opacity:.045;filter:blur(2px)}
-.copy{position:absolute;left:78px;top:75px;bottom:58px;width:625px;display:flex;flex-direction:column;justify-content:space-between}
-.kicker{font-size:17px;letter-spacing:.16em;font-weight:800;color:__ACCENT__;text-transform:uppercase}
-.rule{width:76px;height:6px;border-radius:9px;background:__POP__;margin-top:18px}
-.title{font-size:__SIZE__px;line-height:1.08;letter-spacing:-.045em;font-weight:820;max-width:630px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
-.brand{display:flex;align-items:center;gap:11px;color:__INK__;font-size:17px;font-weight:700;opacity:.82}
-.mark{width:10px;height:10px;border-radius:3px;background:__ACCENT__;transform:rotate(45deg)}
+body{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;background:__BG__;color:#f8fafc;position:relative}
 .art{position:absolute;inset:0;width:1200px;height:675px}
-</style></head><body><div class="texture"></div><div class="orb"></div>
-<svg class="art" viewBox="0 0 1200 675" aria-hidden="true">__ART____DOTS__</svg>
-<div class="copy"><div><div class="kicker">__SAFE_KICKER_SLOT__</div><div class="rule"></div></div><div class="title">__SAFE_TITLE_SLOT__</div>
-<div class="brand"><span class="mark"></span><span>__BRAND__</span></div></div></body></html>"""
+.copy{position:absolute;__COPY__}
+.kicker{font-size:15px;letter-spacing:.16em;font-weight:800;color:__ACCENT__;text-transform:uppercase;text-shadow:0 2px 12px #000}
+.title{font-weight:850;line-height:1.02;letter-spacing:-.045em;text-shadow:0 3px 18px rgba(0,0,0,.55);__TITLE__}
+.rule{width:76px;height:6px;border-radius:9px;background:__POP__;margin-top:16px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;font-size:15px;font-weight:750;letter-spacing:.01em;text-shadow:0 2px 10px #000}
+.mark{width:13px;height:13px;border:3px solid __ACCENT__;border-radius:4px;transform:rotate(45deg)}
+</style></head><body>
+<svg class="art" viewBox="0 0 1200 675" aria-hidden="true">__SCENE__</svg>
+<div class="copy"><div><div class="kicker">__KICKER__</div><div class="rule"></div></div>__TITLE_BLOCK__
+<div class="brand"><span class="mark"></span><span>The Digital Toolkit</span></div></div></body></html>"""
     values = {
-        "__BG__": bg, "__BG2__": bg, "__ACCENT__": accent, "__POP__": pop, "__INK__": ink,
-        "__SIZE__": str(min(_title_size(len(title.strip())), 68)), "__ART__": art, "__DOTS__": dots,
-        "__BRAND__": BRAND,
+        "__BG__": bg, "__ACCENT__": accent, "__POP__": pop, "__COPY__": copy_css,
+        "__TITLE__": title_css, "__SCENE__": panel + f'<g transform="{scene_transform}">{scene}</g>',
+        "__KICKER__": kicker_html, "__TITLE_BLOCK__": title_block,
     }
     for key, value in values.items():
         template = template.replace(key, value)
-    template = template.replace("__SAFE_KICKER_SLOT__", kicker_html)
-    template = template.replace("__SAFE_TITLE_SLOT__", title_html)
     return template
 
 
@@ -195,7 +187,7 @@ class FeaturedImageGenerator:
             self.output_dir.mkdir(parents=True, exist_ok=True)
             path = self.output_dir / f"{safe}.jpg"
             # Fully offline: local HTML/CSS/SVG rendering only. No image API or remote assets.
-            self._render_png(build_html(title, kicker, seed=safe), path)
+            self._render_png(build_html(title, kicker, seed=safe, brief=brief), path)
             data = path.read_bytes()
             if not data.startswith(JPEG_MAGIC) or len(data) < 2000:
                 raise ValueError("rendered file is not a valid JPEG")
