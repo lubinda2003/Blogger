@@ -332,25 +332,41 @@
         ],
         "word_count": 940
       }
+    },
+    {
+      "topic_id": "canva-brand-kit",
+      "topic_title": "How to Create a Simple Brand Kit in Canva",
+      "fingerprint": "760e237cae731d40",
+      "post_id": "1286428739492169780",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-23T17:55:26.968082+00:00",
+      "metadata": {
+        "labels": [
+          "Graphic Design, Video And Content Creation"
+        ],
+        "word_count": 998
+      }
     }
   ],
-  "last_updated": "2026-11-22T17:07:46.171781+00:00",
-  "total_runs": 19,
+  "last_updated": "2026-11-23T17:55:26.968104+00:00",
+  "total_runs": 20,
   "failed_attempts": {
-    "best-free-invoicing-tools-freelancers": 2,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
-    "canva-brand-kit-design-walkthrough": 2,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "best-e-commerce-software-for-small-business-novo": 1,
-    "claude-code-web-prototyping": 1,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "evaluate-online-sources": 1,
     "organize-digital-files": 3,
-    "freelance-portfolio": 1,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "claude-code-web-prototyping": 1,
+    "canva-brand-kit-design-walkthrough": 2,
+    "best-e-commerce-software-for-small-business-novo": 1,
+    "best-free-invoicing-tools-freelancers": 2,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
     "digital-study-notes": 3,
-    "weekly-work-plan": 2
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "weekly-work-plan": 2,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "freelance-portfolio": 1,
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "evaluate-online-sources": 1,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4
   }
 }
