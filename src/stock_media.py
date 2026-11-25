@@ -127,8 +127,8 @@ class PixabayClient:
         if len(data) > MAX_DOWNLOAD_BYTES:
             raise ValueError("Selected stock photo exceeds the 12 MB download limit.")
         signatures = {
-            "image/jpeg": data.startswith(b"\\xff\\xd8\\xff"),
-            "image/png": data.startswith(b"\\x89PNG\\r\\n\\x1a\\n"),
+            "image/jpeg": data.startswith(b"\xff\xd8\xff"),
+            "image/png": data.startswith(b"\x89PNG\r\n\x1a\n"),
             "image/webp": data.startswith(b"RIFF") and data[8:12] == b"WEBP",
         }
         valid = next((ext for mime, ext in (("image/jpeg", ".jpg"), ("image/png", ".png"), ("image/webp", ".webp")) if content_type.startswith(mime) and signatures[mime]), None)
@@ -175,11 +175,11 @@ def select_article_photos(
     client = client or PixabayClient(cache_dir=str(Path(output_dir) / ".cache" / "pixabay"))
     if not client.available or max_items <= 0:
         return []
-    headings = re.findall(r"<h[23]\\b[^>]*>(.*?)</h[23]>", article_html or "", re.I | re.S)
+    headings = re.findall(r"<h[23]\b[^>]*>(.*?)</h[23]>", article_html or "", re.I | re.S)
     candidates = []
     for raw in headings:
         heading = re.sub(r"<[^>]+>", " ", raw)
-        heading = html.unescape(re.sub(r"\\s+", " ", heading)).strip()
+        heading = html.unescape(re.sub(r"\s+", " ", heading)).strip()
         if not heading or re.search(r"faq|frequently asked|conclusion|sources|references|next steps", heading, re.I):
             continue
         if len(_words(heading)) < 2:
@@ -229,16 +229,16 @@ def inject_stock_photos(article_html: str, photo_items: list[dict]) -> str:
         if not isinstance(url, str) or not url.startswith("https://") or not heading:
             continue
         pattern = re.compile(
-            r"(<h[23]\\b[^>]*>)(.*?)(</h[23]>)(.*?)(?=<h[23]\\b|$)",
+            r"(<h[23]\b[^>]*>)(.*?)(</h[23]>)(.*?)(?=<h[23]\b|$)",
             re.I | re.S,
         )
         inserted = False
         for match in pattern.finditer(updated):
             plain_heading = html.unescape(re.sub(r"<[^>]+>", " ", match.group(2)))
-            if re.sub(r"\\s+", " ", plain_heading).strip().casefold() != heading.casefold():
+            if re.sub(r"\s+", " ", plain_heading).strip().casefold() != heading.casefold():
                 continue
             section = match.group(4)
-            paragraph = re.search(r"</p\\s*>", section, re.I)
+            paragraph = re.search(r"</p\s*>", section, re.I)
             if not paragraph:
                 break
             figure = (
