@@ -187,7 +187,10 @@ def select_article_photos(
         candidates.append(heading)
     # Choose headings spread through the article rather than adjacent sections.
     if len(candidates) > max_items:
-        indexes = [round((i + 1) * (len(candidates) - 1) / (max_items + 1)) for i in range(max_items)]
+        if max_items == 1:
+            indexes = [len(candidates) // 2]
+        else:
+            indexes = [round(i * (len(candidates) - 1) / (max_items - 1)) for i in range(max_items)]
         candidates = [candidates[i] for i in indexes]
     used_ids: set[int] = set()
     selected = []
