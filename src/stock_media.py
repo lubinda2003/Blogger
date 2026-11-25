@@ -228,7 +228,6 @@ def inject_stock_photos(article_html: str, photo_items: list[dict]) -> str:
         url = item.get("url")
         heading = str(item.get("section_heading") or "").strip()
         alt = html.escape(str(item.get("alt_text") or ""))
-        caption = item.get("caption") or ""
         if not isinstance(url, str) or not url.startswith("https://") or not heading:
             continue
         pattern = re.compile(
@@ -248,7 +247,6 @@ def inject_stock_photos(article_html: str, photo_items: list[dict]) -> str:
                 '<figure class="dt-stock-photo" style="margin:24px 0;text-align:center">'
                 f'<img src="{html.escape(url, quote=True)}" alt="{alt}" loading="lazy" '
                 'style="display:block;width:100%;height:auto;max-width:100%;border-radius:8px"/>'
-                f'<figcaption style="font-size:.85em;color:#666;margin-top:7px">{caption}</figcaption>'
                 '</figure>'
             )
             insert_at = match.start(4) + paragraph.end()
