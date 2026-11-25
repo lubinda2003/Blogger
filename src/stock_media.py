@@ -90,8 +90,12 @@ class PixabayClient:
             raise RuntimeError(f"Pixabay photo search failed: {exc}") from exc
 
     @staticmethod
-    def choose_photo(hits: list[dict], used_ids: Optional[set[int]] = None) -> Optional[dict]:
-        """Prefer large landscape photos and avoid reusing a photo within one article."""
+    def choose_photo(
+        hits: list[dict],
+        used_ids: Optional[set[int]] = None,
+        required_terms: Optional[set[str]] = None,
+    ) -> Optional[dict]:
+        """Choose a large landscape photo only when its Pixabay tags match the subject."""
         used_ids = used_ids or set()
         candidates = []
         for hit in hits:
@@ -104,12 +108,21 @@ class PixabayClient:
                 ratio = width / max(height, 1)
                 if not 1.25 <= ratio <= 2.4:
                     continue
+                relevance = 0
+                if required_terms:
+                    searchable = " ".join((str(hit.get("tags") or ""), str(hit.get("pageURL") or ""))).lower()
+                    searchable_terms = set(re.findall(r"[a-z0-9]+", searchable))
+                    relevance = len(required_terms.intersection(searchable_terms))
+                    if not relevance:
+                        continue
+                hit["_editorial_relevance"] = relevance
                 candidates.append(hit)
             except (TypeError, ValueError):
                 continue
         if not candidates:
             return None
         return max(candidates, key=lambda item: (
+            int(item.get("_editorial_relevance", 0) or 0),
             int(item.get("downloads", 0) or 0),
             int(item.get("likes", 0) or 0),
             int(item.get("imageWidth", 0) or 0),
@@ -126,14 +139,20 @@ class PixabayClient:
             content_type = (response.headers.get("Content-Type") or "").lower()
         if len(data) > MAX_DOWNLOAD_BYTES:
             raise ValueError("Selected stock photo exceeds the 12 MB download limit.")
-        signatures = {
-            "image/jpeg": data.startswith(b"\xff\xd8\xff"),
-            "image/png": data.startswith(b"\x89PNG\r\n\x1a\n"),
-            "image/webp": data.startswith(b"RIFF") and data[8:12] == b"WEBP",
-        }
-        valid = next((ext for mime, ext in (("image/jpeg", ".jpg"), ("image/png", ".png"), ("image/webp", ".webp")) if content_type.startswith(mime) and signatures[mime]), None)
+        # Some image CDNs label valid image bytes as application/octet-stream.
+        # Trust the file signature, not the response header; still reject HTML/error pages.
+        valid = None
+        if data.startswith(b"\xff\xd8\xff"):
+            valid = ".jpg"
+        elif data.startswith(b"\x89PNG\r\n\x1a\n"):
+            valid = ".png"
+        elif data.startswith(b"RIFF") and data[8:12] == b"WEBP":
+            valid = ".webp"
         if not valid:
-            raise ValueError("Pixabay download was not a supported, valid JPEG, PNG or WebP image.")
+            raise ValueError(
+                "Pixabay download was not a supported, valid JPEG, PNG or WebP image "
+                f"(response content type: {content_type or 'missing'})."
+            )
         target = Path(output_path).with_suffix(valid)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(data)
@@ -150,7 +169,7 @@ def choose_cover_photo(title: str, brief: Optional[dict], output_dir: str = "out
     if not query:
         query = title[:100]
     try:
-        hit = client.choose_photo(client.search_photos(query))
+        hit = client.choose_photo(client.search_photos(query), required_terms=set(_words(title, 8)))
         if not hit:
             return None
         path = client.download_photo(hit, Path(output_dir) / "stock" / f"cover-{hashlib.sha256(title.encode()).hexdigest()[:12]}")
@@ -199,7 +218,9 @@ def select_article_photos(
         if not query:
             continue
         try:
-            hit = client.choose_photo(client.search_photos(query), used_ids)
+            hit = client.choose_photo(
+                client.search_photos(query), used_ids, required_terms=set(_words(heading, 6))
+            )
             if not hit:
                 continue
             photo_id = int(hit.get("id", 0))
