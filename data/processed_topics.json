@@ -364,25 +364,41 @@
         ],
         "word_count": 1134
       }
+    },
+    {
+      "topic_id": "14-best-small-business-marketing-tools-proven-to-work",
+      "topic_title": "14 Best Small Business Marketing Tools (Proven to Work)",
+      "fingerprint": "cc52213654c5729b",
+      "post_id": "2846415748312045375",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-25T18:41:43.496575+00:00",
+      "metadata": {
+        "labels": [
+          "Digital Business, Marketing And E-commerce"
+        ],
+        "word_count": 1165
+      }
     }
   ],
-  "last_updated": "2026-11-24T19:33:39.790439+00:00",
-  "total_runs": 21,
+  "last_updated": "2026-11-25T18:41:43.496595+00:00",
+  "total_runs": 22,
   "failed_attempts": {
-    "canva-brand-kit-design-walkthrough": 2,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "best-free-invoicing-tools-freelancers": 2,
-    "weekly-work-plan": 2,
-    "freelance-portfolio": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "organize-digital-files": 3,
     "digital-study-notes": 3,
     "claude-code-web-prototyping": 1,
-    "best-e-commerce-software-for-small-business-novo": 1,
-    "evaluate-online-sources": 1,
     "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "best-e-commerce-software-for-small-business-novo": 1,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "evaluate-online-sources": 1,
+    "weekly-work-plan": 2,
+    "canva-brand-kit-design-walkthrough": 2,
+    "best-free-invoicing-tools-freelancers": 2,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "organize-digital-files": 3,
+    "freelance-portfolio": 1
   }
 }
