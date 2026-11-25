@@ -615,7 +615,7 @@ def run_pipeline(
                 logger.warning("Stock photo hosting skipped: %s", exc)
     article_body = inject_stock_photos(article_body, stock_photo_items)
 
-    if featured and featured.source_credit:
+    if featured and featured.success and featured.source_credit:
         article_body = (
             '<p class="dt-media-credit" style="font-size:.82em;color:#666">Cover photo: '
             + featured.source_credit + '</p>\n' + article_body
