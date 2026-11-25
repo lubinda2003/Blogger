@@ -67,7 +67,7 @@ class TestStockPhotoPlacement(unittest.TestCase):
         output = inject_stock_photos(article, [photo])
         self.assertLess(output.index("Start with your strongest work"), output.index("portfolio.jpg"))
         self.assertLess(output.index("portfolio.jpg"), output.index("Explain each project"))
-        self.assertIn("Photo by Creator", output)
+        self.assertNotIn("Photo by Creator", output)
 
     def test_untrusted_or_incomplete_photo_is_not_inserted(self):
         article = "<h2>Introduction</h2><p>Text.</p>"
