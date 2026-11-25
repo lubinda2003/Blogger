@@ -10,7 +10,7 @@ class TestPhotoCoverHtml(unittest.TestCase):
     def test_stock_photo_is_embedded_locally_with_headline_and_brand(self):
         with tempfile.TemporaryDirectory() as tmp:
             photo = Path(tmp) / "background.jpg"
-            photo.write_bytes(b"\\xff\\xd8\\xff" + b"photo-bytes")
+            photo.write_bytes(b"\xff\xd8\xff" + b"photo-bytes")
             page = _build_photo_cover_html(
                 "How to Build a Clear Freelance Portfolio",
                 "Freelancing",
@@ -27,7 +27,7 @@ class TestPhotoCoverHtml(unittest.TestCase):
     def test_cover_title_is_html_escaped(self):
         with tempfile.TemporaryDirectory() as tmp:
             photo = Path(tmp) / "background.jpg"
-            photo.write_bytes(b"\\xff\\xd8\\xff" + b"photo-bytes")
+            photo.write_bytes(b"\xff\xd8\xff" + b"photo-bytes")
             page = _build_photo_cover_html("<script>alert(1)</script>", "Guide", "x", {}, photo)
         self.assertNotIn("<script>", page)
         self.assertIn("&lt;script&gt;", page)
