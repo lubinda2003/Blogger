@@ -117,8 +117,8 @@ class TestStockPhotoPlacement(unittest.TestCase):
                          "largeImageURL": f"https://images.example/{self.n}.jpg",
                          "pageURL": f"https://pixabay.com/photos/{self.n}/",
                          "tags": query, "user": "Photographer", "downloads": 100}]
-            def choose_photo(self, hits, used_ids=None):
-                return PixabayClient.choose_photo(hits, used_ids)
+            def choose_photo(self, hits, used_ids=None, required_terms=None):
+                return PixabayClient.choose_photo(hits, used_ids, required_terms)
             def download_photo(self, hit, output_path):
                 path = Path(output_path).with_suffix(".jpg")
                 path.parent.mkdir(parents=True, exist_ok=True)
