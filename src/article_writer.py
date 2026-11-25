@@ -239,7 +239,7 @@ class ArticleWriter:
             "scene description with no text, logos, UI claims or invented product screens), alt_text, caption, "
             "and section_heading (an exact or near-exact article heading where it belongs). Do not create "
             "decorative filler. Genuine product interfaces must be captured as screenshots, never fabricated. "
-            "Keep the total supporting visuals (screenshots plus custom visuals) at three or fewer.\n"
+            "Aim for roughly three to five useful in-body visuals overall when suitable material exists. This is a flexible target, not a quota: combine genuine official screenshots, relevant stock photographs, and locally rendered diagrams or data examples. Do not add filler or repeat images.\n"
             "When a process, decision path, or architecture is genuinely easier to understand visually, include "
             'at most one <pre class="mermaid">...</pre> block using valid Mermaid flowchart syntax. '
             "Do not invent statistics or add decorative diagrams.\n"
