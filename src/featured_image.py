@@ -241,7 +241,7 @@ class FeaturedImageGenerator:
                 raise ValueError("rendered file is not a valid JPEG")
             return FeaturedImage(
                 success=True, file_path=path, sha256=hashlib.sha256(data).hexdigest(),
-                alt_text=(brief or {}).get("alt_text") or f"Cover photograph illustrating: {title.strip()}",
+                alt_text=(brief or {}).get("alt_text") or (f"Cover photograph illustrating: {title.strip()}" if photo_path and Path(photo_path).is_file() else f"Editorial cover graphic for: {title.strip()}"),
                 source_credit=source_credit,
             )
         except Exception as e:
