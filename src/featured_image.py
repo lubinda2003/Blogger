@@ -1,5 +1,6 @@
 """Offline topic-aware editorial cover images rendered with local HTML, CSS, SVG and Playwright."""
 
+import base64
 import hashlib
 import html
 import logging
@@ -169,6 +170,45 @@ class FeaturedImage:
     alt_text: str = ""
     public_url: Optional[str] = None
     error_message: str = ""
+    source_credit: str = ""
+
+
+def _build_photo_cover_html(title: str, kicker: str, seed: str, brief: Optional[dict], photo_path: Path) -> str:
+    """Compose a real stock photograph with flexible, readable editorial typography."""
+    data = photo_path.read_bytes()
+    suffix = photo_path.suffix.lower()
+    mime = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}.get(suffix)
+    if not mime:
+        raise ValueError("Unsupported stock cover photo format.")
+    photo_uri = f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
+    digest = hashlib.sha256(seed.encode("utf-8")).digest()
+    title_text = str((brief or {}).get("cover_title") or title.strip())
+    title_text = re.sub(r"\\s+", " ", title_text).strip()
+    kicker_text = html.escape((kicker or "Guide").strip().upper())
+    title_html = html.escape(title_text)
+    layout = digest[0] % 3
+    if layout == 0:
+        copy_css = "left:64px;bottom:58px;max-width:760px"
+        gradient = "linear-gradient(90deg,rgba(7,16,28,.88) 0%,rgba(7,16,28,.48) 62%,rgba(7,16,28,0) 100%)"
+        title_size = "66px"
+    elif layout == 1:
+        copy_css = "left:64px;top:58px;max-width:720px"
+        gradient = "linear-gradient(180deg,rgba(7,16,28,.78) 0%,rgba(7,16,28,.28) 58%,rgba(7,16,28,0) 100%)"
+        title_size = "62px"
+    else:
+        copy_css = "left:64px;right:64px;bottom:48px;max-width:920px"
+        gradient = "linear-gradient(0deg,rgba(7,16,28,.91) 0%,rgba(7,16,28,.40) 55%,rgba(7,16,28,0) 100%)"
+        title_size = "58px"
+    return f'''<!doctype html><html><head><meta charset="utf-8"><style>
+*{{box-sizing:border-box}}html,body{{margin:0;width:1200px;height:675px;overflow:hidden}}
+body{{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;color:#fff;background:#101820}}
+.photo{{position:absolute;inset:0;background-image:{gradient},url("{photo_uri}");background-size:cover;background-position:center}}
+.copy{{position:absolute;{copy_css};display:flex;flex-direction:column;gap:18px}}
+.kicker{{font-size:15px;letter-spacing:.16em;font-weight:800;text-transform:uppercase;color:#fff;text-shadow:0 2px 12px #000}}
+.title{{font-size:{title_size};font-weight:850;line-height:1.02;letter-spacing:-.04em;text-shadow:0 3px 18px rgba(0,0,0,.55);max-width:100%}}
+.brand{{position:absolute;right:42px;bottom:32px;font-size:14px;font-weight:750;letter-spacing:.02em;color:#fff;text-shadow:0 2px 10px #000}}
+</style></head><body><div class="photo"></div><div class="copy"><div class="kicker">{kicker_text}</div><div class="title">{title_html}</div></div><div class="brand">The Digital Toolkit</div></body></html>'''
+
 
 class FeaturedImageGenerator:
     def __init__(self, output_dir: str = "output"):
@@ -186,19 +226,23 @@ class FeaturedImageGenerator:
             finally:
                 browser.close()
 
-    def generate(self, title: str, kicker: str, slug: str, brief: Optional[dict] = None) -> FeaturedImage:
+    def generate(self, title: str, kicker: str, slug: str, brief: Optional[dict] = None, photo_path: Optional[Path] = None, source_credit: str = "") -> FeaturedImage:
         try:
             safe = re.sub(r"[^a-z0-9\\-]+", "-", slug.lower()).strip("-") or "article"
             self.output_dir.mkdir(parents=True, exist_ok=True)
             path = self.output_dir / f"{safe}.jpg"
-            # Fully offline: local HTML/CSS/SVG rendering only. No image API or remote assets.
-            self._render_png(build_html(title, kicker, seed=safe, brief=brief), path)
+            # A downloaded stock photograph is composed locally; SVG remains the safe fallback.
+            page_html = (_build_photo_cover_html(title, kicker, safe, brief, Path(photo_path))
+                         if photo_path and Path(photo_path).is_file()
+                         else build_html(title, kicker, seed=safe, brief=brief))
+            self._render_png(page_html, path)
             data = path.read_bytes()
             if not data.startswith(JPEG_MAGIC) or len(data) < 2000:
                 raise ValueError("rendered file is not a valid JPEG")
             return FeaturedImage(
                 success=True, file_path=path, sha256=hashlib.sha256(data).hexdigest(),
-                alt_text=(brief or {}).get("alt_text") or f"Editorial cover graphic for: {title.strip()}",
+                alt_text=(brief or {}).get("alt_text") or f"Cover photograph illustrating: {title.strip()}",
+                source_credit=source_credit,
             )
         except Exception as e:
             logger.warning("Featured image not generated: %s", e)
@@ -215,6 +259,8 @@ def prepare_featured_image(
     generator: Optional[FeaturedImageGenerator] = None,
     publisher: Optional[Callable[[Path, str, str], Optional[str]]] = None,
     brief: Optional[dict] = None,
+    photo_path: Optional[Path] = None,
+    source_credit: str = "",
 ) -> Optional[FeaturedImage]:
     """Render the header image and, in live runs only, publish it. Returns None when disabled.
 
@@ -223,7 +269,9 @@ def prepare_featured_image(
     """
     if not enabled:
         return None
-    image = (generator or FeaturedImageGenerator(output_dir)).generate(title, kicker, slug, brief=brief)
+    image = (generator or FeaturedImageGenerator(output_dir)).generate(
+        title, kicker, slug, brief=brief, photo_path=photo_path, source_credit=source_credit
+    )
     if image.success and not dry_run:
         if publisher is None:
             from src.screenshot_capture import ScreenshotCapture
