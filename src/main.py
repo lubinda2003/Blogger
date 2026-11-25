@@ -595,7 +595,7 @@ def run_pipeline(
         draft.visual_plan,
         config.output_dir,
         publisher=visual_publisher,
-        max_items=max(0, 3 - len(public_screenshot_items) - len(diagram_assets)),
+        max_items=max(0, min(2, 5 - len(public_screenshot_items) - len(diagram_assets))),
     )
     article_body = inject_visual_figures(article_body, supporting_visuals)
 
@@ -618,7 +618,7 @@ def run_pipeline(
     if featured and featured.source_credit:
         article_body = (
             '<p class="dt-media-credit" style="font-size:.82em;color:#666">Cover photo: '
-            + featured.source_credit + '</p>\\n' + article_body
+            + featured.source_credit + '</p>\n' + article_body
         )
 
     final_html = SEOMetadata.inject_seo_and_assets(
