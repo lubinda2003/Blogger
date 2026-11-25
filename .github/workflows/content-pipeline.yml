@@ -16,7 +16,7 @@ concurrency:
 jobs:
   run-pipeline:
     runs-on: ubuntu-22.04
-    timeout-minutes: 25
+    timeout-minutes: 40
     env:
       # Real research, article and visual generation; Blogger writes remain drafts only.
       # PUBLISH_MODE is hardcoded to draft below and live publishing stays disabled.
@@ -71,6 +71,13 @@ jobs:
           key: pixabay-search-${{ runner.os }}-${{ github.run_id }}
           restore-keys: |
             pixabay-search-${{ runner.os }}-
+
+      # Unit tests write sample reports into output/. Remove these fixtures before
+      # production, while preserving the restored Pixabay API response cache.
+      - name: Clear test output before live run
+        run: |
+          mkdir -p output
+          find output -mindepth 1 -maxdepth 1 ! -name '.cache' -exec rm -rf {} +
 
       - name: Run Editorial & Publishing Pipeline
         env:
