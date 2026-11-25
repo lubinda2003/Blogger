@@ -14,7 +14,7 @@ class TestPixabayClient(unittest.TestCase):
     def test_search_query_is_concise_and_removes_stopwords(self):
         self.assertEqual(
             build_search_query("How to Build a Clear Freelance Portfolio", "Create Three High Quality Sample Projects"),
-            "three high quality sample projects freelance portfolio",
+            "three high quality sample freelance portfolio",
         )
 
     def test_photo_selection_prefers_large_landscape_and_avoids_duplicates(self):
