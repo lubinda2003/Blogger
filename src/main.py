@@ -13,6 +13,7 @@ from src.article_writer import ArticleWriter
 from src.blogger_client import BloggerClient
 from src.config import AppConfig, load_config
 from src.featured_image import prepare_featured_image
+from src.stock_media import choose_cover_photo, inject_stock_photos, select_article_photos
 from src.layout import apply_layout
 from src.quality_checks import QualityGate, validate_final_blogger_html
 from src.report import PipelineReporter
@@ -521,7 +522,7 @@ def run_pipeline(
         successful_screenshots = sum(1 for item in screenshot_results if item.success and not item.is_mock)
         article_body, diagram_assets = render_mermaid_blocks(
             article_body, config.output_dir, publisher=diagram_publisher,
-            max_items=max(0, 3 - successful_screenshots),
+            max_items=max(0, 5 - successful_screenshots),
         )
         if diagram_assets:
             reporter.add_stage(
@@ -533,8 +534,20 @@ def run_pipeline(
     except Exception as exc:
         logger.warning("Article diagram rendering skipped without blocking the article: %s", exc)
 
-    # Header image: generated per article and hosted from the repo in live runs. Never fatal.
+    # Retrieve one relevant Pixabay photo for the cover. The local SVG cover remains the fallback.
+    cover_stock = None
+    if not config.dry_run:
+        cover_stock = choose_cover_photo(draft.title, draft.featured_image_brief, config.output_dir)
+
+    # Header image: compose stock photography with a readable editorial headline when available.
     t_img = time.time()
+    cover_credit = ""
+    if cover_stock:
+        from html import escape as _html_escape
+        cover_credit = (
+            f'Photo by {_html_escape(cover_stock.get("photographer", "Pixabay contributor"))} on '
+            f'<a href="{_html_escape(cover_stock.get("source_url", "https://pixabay.com/"), quote=True)}" rel="nofollow noopener">Pixabay</a>'
+        )
     featured = prepare_featured_image(
         enabled=config.featured_image_enabled,
         dry_run=config.dry_run,
@@ -543,6 +556,8 @@ def run_pipeline(
         slug=topic.id,
         output_dir=config.output_dir,
         brief=draft.featured_image_brief,
+        photo_path=cover_stock.get("path") if cover_stock else None,
+        source_credit=cover_credit,
     )
     if featured is not None:
         if featured.public_url:
@@ -583,6 +598,29 @@ def run_pipeline(
         max_items=max(0, 3 - len(public_screenshot_items) - len(diagram_assets)),
     )
     article_body = inject_visual_figures(article_body, supporting_visuals)
+
+    # Add up to two relevant stock photos at the matching article sections. Every selected
+    # photo is downloaded, hosted in our own repository assets and visibly attributed.
+    stock_photo_items = []
+    stock_slots = max(0, min(2, 5 - len(public_screenshot_items) - len(diagram_assets) - len(supporting_visuals)))
+    if stock_slots and not config.dry_run:
+        raw_stock_photos = select_article_photos(draft.title, article_body, config.output_dir, max_items=stock_slots)
+        for index, item in enumerate(raw_stock_photos, start=1):
+            try:
+                digest = __import__("hashlib").sha256(item["path"].read_bytes()).hexdigest()
+                public_url = visual_publisher(item["path"], f"{topic.id}-stock-{index}", digest) if visual_publisher else None
+                if public_url:
+                    stock_photo_items.append({**item, "url": public_url})
+            except Exception as exc:
+                logger.warning("Stock photo hosting skipped: %s", exc)
+    article_body = inject_stock_photos(article_body, stock_photo_items)
+
+    if featured and featured.source_credit:
+        article_body = (
+            '<p class="dt-media-credit" style="font-size:.82em;color:#666">Cover photo: '
+            + featured.source_credit + '</p>\\n' + article_body
+        )
+
     final_html = SEOMetadata.inject_seo_and_assets(
         html_body=apply_layout(article_body),
         title=draft.title,
@@ -624,6 +662,9 @@ def run_pipeline(
         "genuine_screenshots": f"{sum(1 for item in screenshot_results if item.success and not item.is_mock)} captured/hosted; {len(screenshot_results)} attempted",
         "mermaid_diagrams": f"{sum(1 for item in diagram_assets if item.get('url'))} hosted; {len(diagram_assets)} rendered",
         "supporting_illustrations": f"{sum(1 for item in supporting_visuals if item.get('url'))} hosted; {len(supporting_visuals)} generated",
+        "stock_photographs": f"{len(stock_photo_items)} hosted in article; {len(stock_photo_items)} selected",
+        "cover_stock_photo": "Pixabay photo with text overlay" if cover_stock and featured and featured.success else ("local editorial fallback" if featured and featured.success else "not available"),
+        "cover_photo_credit": cover_credit or "not applicable",
         "featured_image": "hosted" if featured and featured.public_url else ("generated locally/unhosted" if featured and featured.success else "skipped or unavailable"),
         "responsive_previews": "captured" if previews else "not captured",
     }
