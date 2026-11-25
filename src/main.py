@@ -541,13 +541,9 @@ def run_pipeline(
 
     # Header image: compose stock photography with a readable editorial headline when available.
     t_img = time.time()
+    # Pixabay does not require visible attribution for ordinary licensed use.
+    # Provider and source metadata remain available in the run report for provenance.
     cover_credit = ""
-    if cover_stock:
-        from html import escape as _html_escape
-        cover_credit = (
-            f'Photo by {_html_escape(cover_stock.get("photographer", "Pixabay contributor"))} on '
-            f'<a href="{_html_escape(cover_stock.get("source_url", "https://pixabay.com/"), quote=True)}" rel="nofollow noopener">Pixabay</a>'
-        )
     featured = prepare_featured_image(
         enabled=config.featured_image_enabled,
         dry_run=config.dry_run,
@@ -614,12 +610,6 @@ def run_pipeline(
             except Exception as exc:
                 logger.warning("Stock photo hosting skipped: %s", exc)
     article_body = inject_stock_photos(article_body, stock_photo_items)
-
-    if featured and featured.success and featured.source_credit:
-        article_body = (
-            '<p class="dt-media-credit" style="font-size:.82em;color:#666">Cover photo: '
-            + featured.source_credit + '</p>\n' + article_body
-        )
 
     final_html = SEOMetadata.inject_seo_and_assets(
         html_body=apply_layout(article_body),
