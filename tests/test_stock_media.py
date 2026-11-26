@@ -40,6 +40,12 @@ class TestPixabayClient(unittest.TestCase):
         self.assertEqual(chosen["id"], 11)
         self.assertIsNone(PixabayClient.choose_photo(hits[:1], required_terms={"portfolio"}))
 
+    def test_single_generic_tag_is_not_enough_to_select_a_photo(self):
+        hit = {"id": 12, "imageWidth": 1600, "imageHeight": 900,
+               "largeImageURL": "https://x/digital.jpg",
+               "tags": "digital workspace", "downloads": 5000}
+        self.assertIsNone(PixabayClient.choose_photo(hit and [hit], required_terms={"digital", "products"}))
+
     def test_search_results_are_cached_for_24_hours(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = PixabayClient(api_key="test-key", cache_dir=tmp)
@@ -131,9 +137,11 @@ class TestStockPhotoPlacement(unittest.TestCase):
                 "<h2>Build Sample Projects</h2><p>Text</p><h2>Choose a Platform</h2><p>Text</p><h2>Find Clients</h2><p>Text</p>",
                 tmp, max_items=2, client=client,
             )
-        self.assertEqual(len(items), 2)
-        self.assertEqual(len(set(x["photo_id"] for x in items)), 2)
-        self.assertEqual(len(client.queries), 2)
+        # Only the concrete "Sample Projects" section qualifies; generic
+        # "Choose a Platform" and "Find Clients" headings are not visual evidence.
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["section_heading"], "Build Sample Projects")
+        self.assertEqual(len(client.queries), 1)
 
 
 if __name__ == "__main__":
