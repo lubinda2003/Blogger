@@ -205,7 +205,7 @@ body{{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;color:#fff;bac
 <div class="copy" id="cover-copy"><div class="kicker">{kicker_html}</div><div class="title">{title_html}</div></div>
 <div class="brand">The Digital Toolkit</div>
 <script>
-(async function(){{
+window.__coverLayoutReady=(async function(){{
  const photo=document.getElementById('cover-photo'),copy=document.getElementById('cover-copy');
  try {{
   await photo.decode();
