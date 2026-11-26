@@ -529,7 +529,7 @@ def capture_article_previews(article_html: str, output_dir: str) -> list[str]:
                         settle,
                         new Promise((resolve) => setTimeout(resolve, 5000))
                     ]);
-                }""", timeout=7000)
+                }""")
                 if MERMAID_JS.is_file() and page.locator(".mermaid").count():
                     page.add_script_tag(path=str(MERMAID_JS.resolve()))
                     page.evaluate("""async () => {
