@@ -47,6 +47,8 @@ Your task is to produce a useful, accurate article that answers a real reader ne
 - If keyword data is absent, do not invent search volume, keyword difficulty, trend direction or ranking chances.
 - Never force exact-match keywords into every heading or paragraph.
 - Make the title specific and honest. Avoid broad promises and clickbait, including guarantees that a proposal, pitch, application or tactic will "win" or secure a result.
+- If the title promises a numbered quantity (for example, "10 tools", "20 ideas" or "116 products"), include and clearly enumerate at least that many distinct, relevant items in the article. Do not use a large number as decoration. If the topic cannot support that many useful items, reduce the number or remove it from the title.
+- Before returning the JSON, compare the title's promise with the actual headings, examples, lists and instructions. Rewrite any title that promises a list, comparison, template or result that the body does not deliver.
 - Write an opening paragraph that answers the main query directly and naturally. Search engines may generate result snippets from visible page text rather than use a supplied description verbatim.
 - Keep the meta description useful and specific (target 120–155 characters), but do not promise that Blogger or Google will display it exactly as written.
 
