@@ -510,16 +510,25 @@ def capture_article_previews(article_html: str, output_dir: str) -> list[str]:
                     device_scale_factor=2,
                     color_scheme="light",
                 )
-                page.set_content(article_html, wait_until="domcontentloaded")
+                # A third-party image or font must never hold the whole publishing run.
+                page.set_default_navigation_timeout(15000)
+                page.set_default_timeout(10000)
+                page.set_content(article_html, wait_until="domcontentloaded", timeout=15000)
                 page.evaluate("""async () => {
-                    await document.fonts.ready;
-                    await Promise.all(Array.from(document.images).map((img) => {
-                        if (img.complete) return Promise.resolve();
-                        return new Promise((resolve) => {
-                            img.addEventListener('load', resolve, { once: true });
-                            img.addEventListener('error', resolve, { once: true });
-                        });
-                    }));
+                    const settle = Promise.all([
+                        document.fonts.ready.catch(() => undefined),
+                        ...Array.from(document.images).map((img) => {
+                            if (img.complete) return Promise.resolve();
+                            return new Promise((resolve) => {
+                                img.addEventListener('load', resolve, { once: true });
+                                img.addEventListener('error', resolve, { once: true });
+                            });
+                        })
+                    ]);
+                    await Promise.race([
+                        settle,
+                        new Promise((resolve) => setTimeout(resolve, 5000))
+                    ]);
                 }""")
                 if MERMAID_JS.is_file() and page.locator(".mermaid").count():
                     page.add_script_tag(path=str(MERMAID_JS.resolve()))
@@ -550,6 +559,7 @@ def capture_article_previews(article_html: str, output_dir: str) -> list[str]:
                     path=str(out / f"article-{name}.png"),
                     full_page=True,
                     animations="disabled",
+                    timeout=15000,
                 )
                 saved.append(str(out / f"article-{name}.png"))
                 page.close()
