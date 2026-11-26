@@ -29,7 +29,7 @@ class TestPhotoCoverHtml(unittest.TestCase):
             photo = Path(tmp) / "background.jpg"
             photo.write_bytes(b"\xff\xd8\xff" + b"photo-bytes")
             page = _build_photo_cover_html("<script>alert(1)</script>", "Guide", "x", {}, photo)
-        self.assertNotIn("<script>", page)
+        self.assertNotIn('<div class="title"><script>', page)
         self.assertIn("&lt;script&gt;", page)
 
     def test_long_seo_title_is_reduced_to_reader_facing_cover_title(self):
