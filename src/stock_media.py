@@ -21,7 +21,7 @@ PIXABAY_API = "https://pixabay.com/api/"
 CACHE_TTL_SECONDS = 24 * 60 * 60
 MAX_DOWNLOAD_BYTES = 12 * 1024 * 1024
 IMAGE_GENERIC_TERMS = {
-    "best", "build", "choose", "create", "creating", "digital", "easy", "guide",
+    "best", "build", "choose", "create", "creating", "digital", "easy", "find", "guide",
     "help", "how", "idea", "ideas", "make", "making", "online", "platform",
     "phase", "product", "products", "sell", "selling",
     "step", "steps", "tool", "tools", "use", "using", "way", "ways", "work",
