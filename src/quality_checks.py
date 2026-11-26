@@ -240,7 +240,7 @@ class QualityGate:
         # Numeric list promises should be fulfilled or softened before a draft is reviewed.
         # This is an advisory, not a hard gate: the post remains a Blogger draft.
         promised_list = re.search(
-            r"\b(\d{1,3})\s+(?=(?:digital\s+)?(?:products?|ideas?|ways?|tips?|tools?|steps?|examples?|strategies?)\b)",
+            r"\b(\d{1,3})\s+(?:(?:digital|practical|useful|simple|essential|best)\s+){0,2}(?=(?:products?|ideas?|ways?|tips?|tools?|steps?|examples?|strategies?)\b)",
             (draft.title or "").lower(),
         )
         if promised_list:
