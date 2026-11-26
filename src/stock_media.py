@@ -20,6 +20,13 @@ logger = logging.getLogger(__name__)
 PIXABAY_API = "https://pixabay.com/api/"
 CACHE_TTL_SECONDS = 24 * 60 * 60
 MAX_DOWNLOAD_BYTES = 12 * 1024 * 1024
+IMAGE_GENERIC_TERMS = {
+    "best", "build", "choose", "create", "creating", "digital", "easy", "guide",
+    "help", "how", "idea", "ideas", "make", "making", "online", "platform",
+    "phase", "product", "products", "project", "projects", "sell", "selling",
+    "step", "steps", "tool", "tools", "use", "using", "way", "ways", "work",
+}
+
 STOPWORDS = {
     "about", "after", "also", "and", "are", "before", "best", "build", "choosing",
     "create", "creating", "easy", "everyday", "first", "from", "guide", "help",
@@ -32,6 +39,11 @@ STOPWORDS = {
 def _words(value: str, limit: int = 7) -> list[str]:
     words = re.findall(r"[a-z0-9]{3,}", (value or "").lower())
     return list(dict.fromkeys(w for w in words if w not in STOPWORDS))[:limit]
+
+
+def _specific_terms(value: str) -> set[str]:
+    """Keep concrete subject words; broad editorial terms are not image evidence."""
+    return set(_words(value, 12)) - IMAGE_GENERIC_TERMS
 
 
 def build_search_query(title: str, section_heading: str = "") -> str:
@@ -113,7 +125,9 @@ class PixabayClient:
                     searchable = " ".join((str(hit.get("tags") or ""), str(hit.get("pageURL") or ""))).lower()
                     searchable_terms = set(re.findall(r"[a-z0-9]+", searchable))
                     relevance = len(required_terms.intersection(searchable_terms))
-                    if not relevance:
+                    # A single broad tag is not enough to justify embedding a photo.
+                    # Require at least two distinct subject matches to reduce false positives.
+                    if relevance < 2:
                         continue
                 hit["_editorial_relevance"] = relevance
                 candidates.append(hit)
@@ -169,7 +183,12 @@ def choose_cover_photo(title: str, brief: Optional[dict], output_dir: str = "out
     if not query:
         query = title[:100]
     try:
-        hit = client.choose_photo(client.search_photos(query), required_terms=set(_words(title, 8)))
+        required_terms = _specific_terms(title)
+        # If the title contains no concrete visual subject, prefer the custom editorial
+        # illustration fallback over an unrelated stock photograph.
+        if len(required_terms) < 2:
+            return None
+        hit = client.choose_photo(client.search_photos(query), required_terms=required_terms)
         if not hit:
             return None
         path = client.download_photo(hit, Path(output_dir) / "stock" / f"cover-{hashlib.sha256(title.encode()).hexdigest()[:12]}")
@@ -201,7 +220,9 @@ def select_article_photos(
         heading = html.unescape(re.sub(r"\s+", " ", heading)).strip()
         if not heading or re.search(r"faq|frequently asked|conclusion|sources|references|next steps", heading, re.I):
             continue
-        if len(_words(heading)) < 2:
+        # Generic headings ("Introduction", "Choose a Platform", "Next Steps")
+        # do not provide enough visual context for a reliable stock-photo match.
+        if len(_specific_terms(heading)) < 2:
             continue
         candidates.append(heading)
     # Choose headings spread through the article rather than adjacent sections.
@@ -218,8 +239,11 @@ def select_article_photos(
         if not query:
             continue
         try:
+            required_terms = _specific_terms(heading)
+            if len(required_terms) < 2:
+                continue
             hit = client.choose_photo(
-                client.search_photos(query), used_ids, required_terms=set(_words(heading, 6))
+                client.search_photos(query), used_ids, required_terms=required_terms
             )
             if not hit:
                 continue
