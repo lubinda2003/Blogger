@@ -21,7 +21,7 @@ class TestPhotoCoverHtml(unittest.TestCase):
         self.assertIn("data:image/jpeg;base64,", page)
         self.assertIn("Build a Strong Portfolio", page)
         self.assertIn("The Digital Toolkit", page)
-        self.assertIn("background-size:cover", page)
+        self.assertIn("object-fit:cover", page)
         self.assertNotIn("https://", page)
 
     def test_cover_title_is_html_escaped(self):
