@@ -252,8 +252,14 @@ class FeaturedImageGenerator:
             browser = p.chromium.launch(headless=True)
             try:
                 page = browser.new_page(viewport={"width": WIDTH, "height": HEIGHT}, device_scale_factor=1)
-                page.set_content(page_html, wait_until="load")
-                page.screenshot(path=str(out_path), type="jpeg", quality=91, animations="disabled")
+                page.set_content(page_html, wait_until="load", timeout=15000)
+                page.evaluate("""async () => {
+                    await Promise.race([
+                        window.__coverLayoutReady || Promise.resolve(),
+                        new Promise((resolve) => setTimeout(resolve, 3000))
+                    ]);
+                }""")
+                page.screenshot(path=str(out_path), type="jpeg", quality=91, animations="disabled", timeout=15000)
             finally:
                 browser.close()
 
