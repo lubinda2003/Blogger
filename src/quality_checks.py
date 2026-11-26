@@ -237,6 +237,22 @@ class QualityGate:
                 "but no individual claims were matched to source evidence. Recheck these details against official provider pages before publication."
             )
 
+        # Numeric list promises should be fulfilled or softened before a draft is reviewed.
+        # This is an advisory, not a hard gate: the post remains a Blogger draft.
+        promised_list = re.search(
+            r"\b(\d{1,3})\s+(?=(?:digital\s+)?(?:products?|ideas?|ways?|tips?|tools?|steps?|examples?|strategies?)\b)",
+            (draft.title or "").lower(),
+        )
+        if promised_list:
+            promised_count = int(promised_list.group(1))
+            list_item_count = len(re.findall(r"<li\b", html_str, re.I))
+            if promised_count >= 5 and list_item_count < promised_count:
+                warnings.append(
+                    f"Title/content alignment advisory: the title promises {promised_count} items, "
+                    f"but the article contains only {list_item_count} list items. Add the promised items "
+                    "or change the title to match what the article actually delivers."
+                )
+
         # 0b. Mock & Test Fixture Guard for Live Mode
         if self.is_live_mode:
             if draft.is_dry_run_fixture:
