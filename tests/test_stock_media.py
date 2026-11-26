@@ -27,6 +27,19 @@ class TestPixabayClient(unittest.TestCase):
         self.assertEqual(PixabayClient.choose_photo(hits, {3})["id"], 2)
         self.assertIsNone(PixabayClient.choose_photo(hits, {1, 2, 3}))
 
+    def test_relevance_filter_rejects_unrelated_stock_photos(self):
+        hits = [
+            {"id": 10, "imageWidth": 1600, "imageHeight": 900,
+             "largeImageURL": "https://x/flowers.jpg", "tags": "flowers garden spring",
+             "downloads": 10000},
+            {"id": 11, "imageWidth": 1600, "imageHeight": 900,
+             "largeImageURL": "https://x/portfolio.jpg", "tags": "freelance portfolio website",
+             "downloads": 10},
+        ]
+        chosen = PixabayClient.choose_photo(hits, required_terms={"portfolio", "freelance"})
+        self.assertEqual(chosen["id"], 11)
+        self.assertIsNone(PixabayClient.choose_photo(hits[:1], required_terms={"portfolio"}))
+
     def test_search_results_are_cached_for_24_hours(self):
         with tempfile.TemporaryDirectory() as tmp:
             client = PixabayClient(api_key="test-key", cache_dir=tmp)
@@ -43,6 +56,20 @@ class TestPixabayClient(unittest.TestCase):
         client = PixabayClient(api_key="")
         self.assertFalse(client.available)
         self.assertEqual(client.search_photos("laptop workspace"), [])
+
+    def test_download_accepts_valid_jpeg_when_cdn_uses_generic_content_type(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            client = PixabayClient(api_key="test")
+            jpeg = b"\xff\xd8\xff" + b"valid-image-bytes"
+            with patch("src.stock_media.urllib.request.urlopen") as urlopen:
+                response = urlopen.return_value.__enter__.return_value
+                response.read.return_value = jpeg
+                response.headers.get.return_value = "application/octet-stream"
+                path = client.download_photo(
+                    {"largeImageURL": "https://example.test/photo"}, Path(tmp) / "photo"
+                )
+            self.assertEqual(path.suffix, ".jpg")
+            self.assertEqual(path.read_bytes(), jpeg)
 
     def test_download_rejects_non_image_content(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -89,9 +116,9 @@ class TestStockPhotoPlacement(unittest.TestCase):
                 return [{"id": self.n, "imageWidth": 1600, "imageHeight": 900,
                          "largeImageURL": f"https://images.example/{self.n}.jpg",
                          "pageURL": f"https://pixabay.com/photos/{self.n}/",
-                         "user": "Photographer", "downloads": 100}]
-            def choose_photo(self, hits, used_ids=None):
-                return PixabayClient.choose_photo(hits, used_ids)
+                         "tags": query, "user": "Photographer", "downloads": 100}]
+            def choose_photo(self, hits, used_ids=None, required_terms=None):
+                return PixabayClient.choose_photo(hits, used_ids, required_terms)
             def download_photo(self, hit, output_path):
                 path = Path(output_path).with_suffix(".jpg")
                 path.parent.mkdir(parents=True, exist_ok=True)
