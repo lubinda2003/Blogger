@@ -23,7 +23,7 @@ MAX_DOWNLOAD_BYTES = 12 * 1024 * 1024
 IMAGE_GENERIC_TERMS = {
     "best", "build", "choose", "create", "creating", "digital", "easy", "guide",
     "help", "how", "idea", "ideas", "make", "making", "online", "platform",
-    "phase", "product", "products", "project", "projects", "sell", "selling",
+    "phase", "product", "products", "sell", "selling",
     "step", "steps", "tool", "tools", "use", "using", "way", "ways", "work",
 }
 
