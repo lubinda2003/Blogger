@@ -43,7 +43,7 @@ def _words(value: str, limit: int = 7) -> list[str]:
 
 def _specific_terms(value: str) -> set[str]:
     """Keep concrete subject words; broad editorial terms are not image evidence."""
-    return set(_words(value, 12)) - IMAGE_GENERIC_TERMS
+    return {term for term in _words(value, 12) if not term.isdigit()} - IMAGE_GENERIC_TERMS
 
 
 def build_search_query(title: str, section_heading: str = "") -> str:
