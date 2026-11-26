@@ -44,7 +44,7 @@ class TestPixabayClient(unittest.TestCase):
         hit = {"id": 12, "imageWidth": 1600, "imageHeight": 900,
                "largeImageURL": "https://x/digital.jpg",
                "tags": "digital workspace", "downloads": 5000}
-        self.assertIsNone(PixabayClient.choose_photo(hit and [hit], required_terms={"digital", "products"}))
+        self.assertIsNone(PixabayClient.choose_photo([hit], required_terms={"digital", "products"}))
 
     def test_search_results_are_cached_for_24_hours(self):
         with tempfile.TemporaryDirectory() as tmp:
