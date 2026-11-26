@@ -64,6 +64,22 @@ class TestQualityChecks(unittest.TestCase):
         self.assertTrue(report.passed, f"Expected pass, got failures: {report.failures}")
         self.assertEqual(len(report.failures), 0)
 
+    def test_numbered_title_promise_warns_when_article_does_not_deliver_the_list(self):
+        draft = self._create_valid_draft()
+        draft.title = "How to Choose 116 Digital Products to Sell in 2026"
+        draft.html_content += "<ul><li>One example</li><li>Another example</li></ul>"
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertTrue(any("promises 116 items" in warning for warning in report.warnings))
+
+    def test_numbered_title_promise_passes_when_list_contains_promised_items(self):
+        draft = self._create_valid_draft()
+        draft.title = "10 Practical Tools for Freelancers"
+        draft.html_content += "<ul>" + "<li>Tool</li>" * 10 + "</ul>"
+        report = self.gate.run_all_checks(draft, check_duplicate=False)
+        self.assertTrue(report.passed, report.failures)
+        self.assertFalse(any("Title/content alignment advisory" in warning for warning in report.warnings))
+
     def test_content_type_warnings_are_reported_without_becoming_hard_blocks(self):
         draft = self._create_valid_draft()
         draft.content_type = "Step-by-step tutorial"

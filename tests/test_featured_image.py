@@ -33,6 +33,14 @@ def _chromium_available():
 
 
 class TestBuildHtml(unittest.TestCase):
+    def test_digital_products_topic_gets_a_dedicated_cover_scene(self):
+        page = build_html(
+            "How to Choose and Create Digital Products to Sell",
+            "Digital Business",
+            "digital-products",
+        )
+        self.assertIn('width="250" height="345"', page)
+
     def test_title_is_escaped_and_nothing_executable_is_added(self):
         tag = "scr" + "ipt"  # built in pieces so this file never contains a literal script tag
         page = build_html(f"<{tag}>alert(1)</{tag}> Guide & Tips", "Digital <b>Skills</b>", "seed")
