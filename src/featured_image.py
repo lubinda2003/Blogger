@@ -177,7 +177,7 @@ def _clean_cover_title(title: str, brief: Optional[dict] = None) -> str:
     """Prefer a concise editorial headline over a keyword-stuffed SEO title."""
     candidate = str((brief or {}).get("cover_title") or title or "").strip()
     candidate = re.split(r"\s+(?:\||｜|—|–)\s+", candidate, maxsplit=1)[0]
-    candidate = re.sub(r"^\s*\d{1,3}\s*[.)\-:]\s*", "", candidate)
+    candidate = re.sub(r"^\s*\d{1,3}(?:\s*[.)\-:]\s*|\s+)", "", candidate)
     candidate = re.sub(r"\s+", " ", candidate).strip(" -|")
     return candidate or "Practical Digital Skills"
 
