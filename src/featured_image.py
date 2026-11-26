@@ -173,41 +173,72 @@ class FeaturedImage:
     source_credit: str = ""
 
 
+def _clean_cover_title(title: str, brief: Optional[dict] = None) -> str:
+    """Prefer a concise editorial headline over a keyword-stuffed SEO title."""
+    candidate = str((brief or {}).get("cover_title") or title or "").strip()
+    candidate = re.split(r"\s+(?:\||｜|—|–)\s+", candidate, maxsplit=1)[0]
+    candidate = re.sub(r"^\s*\d{1,3}\s*[.)\-:]\s*", "", candidate)
+    candidate = re.sub(r"\s+", " ", candidate).strip(" -|")
+    return candidate or "Practical Digital Skills"
+
+
 def _build_photo_cover_html(title: str, kicker: str, seed: str, brief: Optional[dict], photo_path: Path) -> str:
-    """Compose a real stock photograph with flexible, readable editorial typography."""
+    """Compose a stock photo with browser-based negative-space-aware typography."""
     data = photo_path.read_bytes()
     suffix = photo_path.suffix.lower()
     mime = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp"}.get(suffix)
     if not mime:
         raise ValueError("Unsupported stock cover photo format.")
     photo_uri = f"data:{mime};base64,{base64.b64encode(data).decode('ascii')}"
-    digest = hashlib.sha256(seed.encode("utf-8")).digest()
-    title_text = str((brief or {}).get("cover_title") or title.strip())
-    title_text = re.sub(r"\\s+", " ", title_text).strip()
-    kicker_text = html.escape((kicker or "Guide").strip().upper())
-    title_html = html.escape(title_text)
-    layout = digest[0] % 3
-    if layout == 0:
-        copy_css = "left:64px;bottom:58px;max-width:760px"
-        gradient = "linear-gradient(90deg,rgba(7,16,28,.88) 0%,rgba(7,16,28,.48) 62%,rgba(7,16,28,0) 100%)"
-        title_size = "66px"
-    elif layout == 1:
-        copy_css = "left:64px;top:58px;max-width:720px"
-        gradient = "linear-gradient(180deg,rgba(7,16,28,.78) 0%,rgba(7,16,28,.28) 58%,rgba(7,16,28,0) 100%)"
-        title_size = "62px"
-    else:
-        copy_css = "left:64px;right:64px;bottom:48px;max-width:920px"
-        gradient = "linear-gradient(0deg,rgba(7,16,28,.91) 0%,rgba(7,16,28,.40) 55%,rgba(7,16,28,0) 100%)"
-        title_size = "58px"
+    title_html = html.escape(_clean_cover_title(title, brief))
+    kicker_html = html.escape((kicker or "Guide").strip().upper())
     return f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{box-sizing:border-box}}html,body{{margin:0;width:1200px;height:675px;overflow:hidden}}
-body{{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;color:#fff;background:#101820}}
-.photo{{position:absolute;inset:0;background-image:{gradient},url("{photo_uri}");background-size:cover;background-position:center}}
-.copy{{position:absolute;{copy_css};display:flex;flex-direction:column;gap:18px}}
-.kicker{{font-size:15px;letter-spacing:.16em;font-weight:800;text-transform:uppercase;color:#fff;text-shadow:0 2px 12px #000}}
-.title{{font-size:{title_size};font-weight:850;line-height:1.02;letter-spacing:-.04em;text-shadow:0 3px 18px rgba(0,0,0,.55);max-width:100%}}
-.brand{{position:absolute;right:42px;bottom:32px;font-size:14px;font-weight:750;letter-spacing:.02em;color:#fff;text-shadow:0 2px 10px #000}}
-</style></head><body><div class="photo"></div><div class="copy"><div class="kicker">{kicker_text}</div><div class="title">{title_html}</div></div><div class="brand">The Digital Toolkit</div></body></html>'''
+body{{font-family:Inter,-apple-system,"Segoe UI",Arial,sans-serif;color:#fff;background:#101820;position:relative}}
+.photo{{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center}}
+.copy{{position:absolute;left:64px;top:64px;width:470px;max-width:calc(100% - 128px);padding:24px 28px 26px;border-radius:16px;background:linear-gradient(135deg,rgba(5,16,29,.84),rgba(5,16,29,.64));box-shadow:0 12px 36px rgba(0,0,0,.16);display:flex;flex-direction:column;gap:15px}}
+.kicker{{font-size:13px;line-height:1.35;letter-spacing:.13em;font-weight:800;text-transform:uppercase;color:#d9f2ff;text-shadow:0 1px 8px rgba(0,0,0,.45)}}
+.title{{font-size:56px;font-weight:820;line-height:1.04;letter-spacing:-.04em;text-wrap:balance;text-shadow:0 2px 12px rgba(0,0,0,.38);max-width:100%;overflow-wrap:break-word}}
+.brand{{position:absolute;right:34px;bottom:28px;padding:10px 14px;border-radius:999px;background:rgba(5,16,29,.68);font-size:13px;font-weight:750;letter-spacing:.025em;color:#fff}}
+</style></head><body>
+<img class="photo" id="cover-photo" src="{photo_uri}" alt="">
+<div class="copy" id="cover-copy"><div class="kicker">{kicker_html}</div><div class="title">{title_html}</div></div>
+<div class="brand">The Digital Toolkit</div>
+<script>
+(async function(){{
+ const photo=document.getElementById('cover-photo'),copy=document.getElementById('cover-copy');
+ try {{
+  await photo.decode();
+  const canvas=document.createElement('canvas');canvas.width=120;canvas.height=68;
+  const ctx=canvas.getContext('2d',{{willReadFrequently:true}});
+  ctx.drawImage(photo,0,0,120,68);
+  const pixels=ctx.getImageData(0,0,120,68).data;
+  const gray=i=>.2126*pixels[i]+.7152*pixels[i+1]+.0722*pixels[i+2];
+  const candidates=[
+   {{name:'left',x:0,y:0,w:.40,h:1,left:52,top:58,width:470}},
+   {{name:'right',x:.60,y:0,w:.40,h:1,left:678,top:58,width:470}},
+   {{name:'top',x:0,y:0,w:1,h:.32,left:54,top:34,width:850}},
+   {{name:'bottom',x:0,y:.68,w:1,h:.32,left:54,top:426,width:850}}
+  ];
+  function score(r){{
+   let edge=0,light=0,n=0;
+   for(let y=Math.max(1,Math.floor(r.y*68));y<Math.min(67,Math.floor((r.y+r.h)*68));y+=2)
+    for(let x=Math.max(1,Math.floor(r.x*120));x<Math.min(119,Math.floor((r.x+r.w)*120));x+=2){{
+     const i=(y*120+x)*4,g=gray(i);
+     edge+=Math.abs(g-gray(i-4))+Math.abs(g-gray(i-480));light+=g;n++;
+    }}
+   return edge/Math.max(n,1)*.8+Math.abs(light/Math.max(n,1)-105)*.08;
+  }}
+  candidates.sort((a,b)=>score(a)-score(b));
+  const chosen=candidates[0];
+  copy.style.left=chosen.left+'px';copy.style.top=chosen.top+'px';copy.style.width=chosen.width+'px';
+  const heading=copy.querySelector('.title');let size=56;
+  heading.style.fontSize=size+'px';
+  while((heading.scrollHeight>300||heading.scrollWidth>copy.clientWidth-56)&&size>34){{size-=2;heading.style.fontSize=size+'px';}}
+  if(heading.scrollHeight>330)heading.style.fontSize='34px';
+ }} catch(e) {{ /* Keep the readable default composition if image analysis is unavailable. */ }}
+}})();
+</script></body></html>'''
 
 
 class FeaturedImageGenerator:
