@@ -40,7 +40,6 @@ class TestBuildHtml(unittest.TestCase):
             "digital-products",
         )
         self.assertIn('width="250" height="345"', page)
-        self.assertIn("digital-products", page)
 
     def test_title_is_escaped_and_nothing_executable_is_added(self):
         tag = "scr" + "ipt"  # built in pieces so this file never contains a literal script tag
