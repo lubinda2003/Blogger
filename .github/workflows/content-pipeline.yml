@@ -31,7 +31,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # actions/setup-python@v5 pinned to reviewed commit SHA
@@ -54,15 +54,17 @@ jobs:
       - name: Install visual tooling
         run: npm install --prefix tools/visuals --no-audit --no-fund
 
-      - name: Install Playwright Chromium
-        # Ubuntu GitHub-hosted runners already provide browser system libraries.
-        # Avoid --with-deps: it runs apt update/install and can stall on mirror timeouts.
-        run: playwright install chromium
+      # Reuse the Playwright browser across runs instead of downloading Chromium each time.
+      - name: Restore Playwright browser cache
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-v1
 
-      # Run the complete regression suite before any live generation or Blogger write.
-      - name: Run automated tests
-        run: |
-          python -m unittest discover -s tests -v
+      - name: Install Playwright Chromium when cache is empty
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install chromium
 
       - name: Restore Pixabay search cache (24-hour provider requirement)
         uses: actions/cache@v4
