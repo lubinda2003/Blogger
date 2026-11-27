@@ -414,25 +414,41 @@
         ],
         "word_count": 1457
       }
+    },
+    {
+      "topic_id": "best-ai-tools-for-students-freelancers-and-small-businesses-in-2026-tech",
+      "topic_title": "Best AI Tools for Students, Freelancers, and Small Businesses in 2026 - Tech Vibe Daily",
+      "fingerprint": "b9a39e67d82a1799",
+      "post_id": "7774028973572294468",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-27T18:15:12.212169+00:00",
+      "metadata": {
+        "labels": [
+          "AI And AI Tools"
+        ],
+        "word_count": 1134
+      }
     }
   ],
-  "last_updated": "2026-11-27T08:57:38.406117+00:00",
-  "total_runs": 24,
+  "last_updated": "2026-11-27T18:15:12.212190+00:00",
+  "total_runs": 25,
   "failed_attempts": {
     "claude-code-web-prototyping": 1,
     "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "freelance-portfolio": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "best-e-commerce-software-for-small-business-novo": 1,
-    "evaluate-online-sources": 1,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
     "organize-digital-files": 3,
-    "best-free-invoicing-tools-freelancers": 2,
-    "canva-brand-kit-design-walkthrough": 2,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "digital-study-notes": 3,
+    "best-e-commerce-software-for-small-business-novo": 1,
     "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
-    "weekly-work-plan": 2
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "best-free-invoicing-tools-freelancers": 2,
+    "weekly-work-plan": 2,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "digital-study-notes": 3,
+    "canva-brand-kit-design-walkthrough": 2,
+    "freelance-portfolio": 1,
+    "evaluate-online-sources": 1
   }
 }
