@@ -430,25 +430,41 @@
         ],
         "word_count": 1134
       }
+    },
+    {
+      "topic_id": "10-best-ai-tools-for-productivity-in-2026",
+      "topic_title": "10 Best AI Tools for Productivity in 2026",
+      "fingerprint": "3b0094c13d62e44f",
+      "post_id": "3922260863171362187",
+      "post_url": "https://digitaltoolkitguide.blogspot.com/",
+      "mode": "draft",
+      "status": "COMPLETED",
+      "timestamp": "2026-11-28T16:56:18.919546+00:00",
+      "metadata": {
+        "labels": [
+          "AI And AI Tools"
+        ],
+        "word_count": 1482
+      }
     }
   ],
-  "last_updated": "2026-11-27T18:15:12.212190+00:00",
-  "total_runs": 25,
+  "last_updated": "2026-11-28T16:56:18.919564+00:00",
+  "total_runs": 26,
   "failed_attempts": {
-    "claude-code-web-prototyping": 1,
-    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
-    "organize-digital-files": 3,
-    "best-e-commerce-software-for-small-business-novo": 1,
-    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
-    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
-    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
-    "best-free-invoicing-tools-freelancers": 2,
     "weekly-work-plan": 2,
-    "10-best-payment-processing-solutions-for-small-business-2026": 2,
-    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "25-productivity-tools-for-freelancers-and-small-businesses": 1,
+    "best-e-commerce-software-for-small-business-novo": 1,
     "digital-study-notes": 3,
+    "10-best-payment-processing-solutions-for-small-business-2026": 2,
+    "20-of-the-best-online-tools-for-freelancers-jimdo": 3,
+    "25-payment-tools-for-small-businesses-freelancers-and-startups": 4,
+    "15-ai-tips-and-workflows-i-wish-i-knew-sooner-from-400-pms-and-founders": 1,
+    "10-ai-workflow-automation-tools-worth-evaluating-in-2026": 1,
     "canva-brand-kit-design-walkthrough": 2,
     "freelance-portfolio": 1,
-    "evaluate-online-sources": 1
+    "best-free-invoicing-tools-freelancers": 2,
+    "evaluate-online-sources": 1,
+    "organize-digital-files": 3,
+    "claude-code-web-prototyping": 1
   }
 }
