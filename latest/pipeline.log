@@ -1,0 +1,47 @@
+16:55:45 [INFO] pipeline: =================================================================
+16:55:45 [INFO] pipeline: Starting Blogger Content Automation Pipeline
+16:55:45 [INFO] pipeline: Execution Mode: LIVE PRODUCTION
+16:55:45 [INFO] pipeline: Publish Target: DRAFT (Draft default enforced)
+16:55:45 [INFO] pipeline: =================================================================
+16:55:45 [INFO] src.report: [STAGE Validation] Status: SUCCESS (0.00s) - Environment and configuration validated successfully.
+16:55:45 [WARNING] src.topic_discovery: Skipping topic 'organize-digital-files' ('How to Organize Digital Files So You Can Find Them Quickly') due to max failure limit (>=3 attempts).
+16:55:45 [WARNING] src.topic_discovery: Skipping topic 'digital-study-notes' ('How to Take Better Digital Notes for Study') due to max failure limit (>=3 attempts).
+16:55:45 [INFO] src.topic_discovery: No eligible unprocessed topics found in queue.
+16:55:56 [INFO] pipeline: Autonomous discovery selected '10 Best AI Tools for Productivity in 2026' from 24 candidates.
+16:55:56 [INFO] src.report: [STAGE Topic Discovery] Status: SUCCESS (10.41s) - Selected '10 Best AI Tools for Productivity in 2026' from live search opportunities. Tavily searched 8 editorial categories and found 24 unseen topic candidates. Ranking uses Tavily result relevance, not verified search volume.
+16:55:56 [INFO] src.report: [STAGE Topic Selection] Status: SUCCESS (10.41s) - Selected topic '10 Best AI Tools for Productivity in 2026' (Priority 3) [Repository state active]. Tavily searched 8 editorial categories and found 24 unseen topic candidates. Ranking uses Tavily result relevance, not verified search volume.
+16:55:56 [INFO] src.blogger_client: Refreshing OAuth2 access token for client ID 5406....com...
+16:55:56 [INFO] src.blogger_client: Successfully refreshed short-lived Blogger access token.
+16:55:56 [INFO] src.research: Executing Tavily web research discovery for query: '"10 Best AI Tools for Productivity in 2026" official documentation reliable sour...'
+16:55:58 [INFO] src.research: Tavily search discovered 8 candidate sources.
+16:55:58 [INFO] src.research: Research query returned 8 candidate sources.
+16:55:58 [INFO] src.research: URL 'https://www.youtube.com/watch?v=JONEhGODiSA' blocked: domain 'youtube.com' matches blocklist entry 'youtube.com'.
+16:55:58 [INFO] src.research: Skipping Tavily candidate URL blocked by domain policy: https://www.youtube.com/watch?v=JONEhGODiSA
+16:55:58 [INFO] src.research: Verifying live source: https://craftnote.com/blog/best-ai-productivity-tools-2026
+16:55:58 [INFO] src.research: Verifying live source: https://skytonward.com/blog/10-best-ai-tools-for-productivity-you-must-use-this-year
+16:55:58 [INFO] src.research: Verifying live source: https://mantle.chat/blog/best-ai-productivity-tools-2026
+16:56:02 [INFO] src.research: Verifying live source: https://newbananaprompts.in/post/best-ai-productivity-tools-for-professionals-2026
+16:56:03 [INFO] src.research: Verifying live source: https://technologyadvice.com/ai-productivity-tools
+16:56:03 [INFO] src.research: Verifying live source: https://www.datacamp.com/blog/best-ai-tools-productivity
+16:56:03 [INFO] src.research: Verifying live source: https://zapier.com/blog/best-ai-productivity-tools
+16:56:03 [INFO] src.report: [STAGE Research] Status: SUCCESS (7.00s) - [LIVE HTTP VERIFICATION] Verified 7 sources.
+16:56:03 [INFO] src.article_writer: Generating article via primary Groq provider (openai/gpt-oss-120b)...
+16:56:03 [WARNING] src.article_writer: Reducing Groq fallback prompt from 54587 to 32000 characters to respect provider token limits.
+16:56:03 [INFO] src.article_writer: Calling Groq API (openai/gpt-oss-120b), attempt 1/5 (tokens=6000)...
+16:56:12 [INFO] src.article_writer: Article produced by provider='groq', model='openai/gpt-oss-120b'.
+16:56:12 [WARNING] src.article_writer: Groq omitted required Blogger metadata; safely reconstructed title, meta_description, labels from the topic/article. Article body, sources, and evidence were not modified.
+16:56:12 [WARNING] src.article_writer: Removed 10 citation(s) that research did not verify: ['https://craftnote.com', 'https://www.notion.com', 'https://claude.ai', 'https://www.perplexity.ai', 'https://todoist.com', 'https://chatgpt.com', 'https://www.grammarly.com', 'https://motion.ai', 'https://zapier.com', 'https://superhuman.com']
+16:56:12 [INFO] src.report: [STAGE Article Generation] Status: SUCCESS (8.23s) - Generated draft '10 Best AI Tools for Productivity in 2026' (1482 words, Live groq (openai/gpt-oss-120b)).
+16:56:12 [INFO] src.report: [STAGE Screenshot Capture] Status: SKIPPED (0.00s) - No trusted screenshot target is configured; no synthetic interface image will be embedded.
+16:56:12 [INFO] src.report: [STAGE Quality Gate] Status: SUCCESS (0.01s) - Passed all 10 quality criteria (Plain English & Safety verified).
+16:56:14 [INFO] src.screenshot_capture: Screenshot committed to repository and served via CDN: https://cdn.jsdelivr.net/gh/lubinda2003/Blogger@main/assets/covers/10-best-ai-tools-for-productivity-in-2026-8c919121ba.webp
+16:56:14 [INFO] src.report: [STAGE Featured Image] Status: SUCCESS (2.24s) - Generated and hosted: https://cdn.jsdelivr.net/gh/lubinda2003/Blogger@main/assets/covers/10-best-ai-tools-for-productivity-in-2026-8c919121ba.webp
+16:56:15 [INFO] pipeline: Article accessibility scan: 0 violation(s), 28 passed rule(s).
+16:56:17 [INFO] pipeline: Saved responsive article previews: output/visual-previews/article-mobile.png, output/visual-previews/article-desktop.png
+16:56:17 [INFO] src.report: [STAGE Final HTML Validation] Status: SUCCESS (0.00s) - Completed Blogger HTML passed structure, image, link, and safety checks.
+16:56:18 [INFO] src.blogger_client: Submitting post to Blogger API (Blog ID: ***, isDraft=true)...
+16:56:18 [INFO] src.blogger_client: Blogger post successfully created! ID: 3922260863171362187, URL: https://digitaltoolkitguide.blogspot.com/
+16:56:18 [INFO] src.report: [STAGE Blogger Publication] Status: SUCCESS (4.39s) - Created Blogger Draft post (ID: 3922260863171362187)
+16:56:18 [INFO] src.state_store: Recorded completed topic '10-best-ai-tools-for-productivity-in-2026' in persistent state (data/processed_topics.json).
+16:56:18 [INFO] src.report: [STAGE State Persistence] Status: SUCCESS (0.07s) - Topic '10-best-ai-tools-for-productivity-in-2026' recorded in data/processed_topics.json for repository persistence.
+16:56:18 [INFO] pipeline: Pipeline completed successfully!

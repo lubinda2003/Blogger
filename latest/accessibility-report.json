@@ -1,0 +1,15 @@
+{
+  "available": true,
+  "target": "article-body fragment in an isolated browser document; Blogger theme/page-shell checks are excluded",
+  "violations": [],
+  "passes": 28,
+  "incomplete": 0,
+  "error": null,
+  "excluded_rules": [
+    "document-title",
+    "html-has-lang",
+    "landmark-one-main",
+    "page-has-heading-one",
+    "region"
+  ]
+}
